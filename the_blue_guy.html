@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>The Blue Guy</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#1e1e2e; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:monospace; overflow:hidden; }
+canvas { border:2px solid #334; display:block; }
+#ui { color:#eee; font-size:13px; padding:6px 12px; display:flex; gap:20px; }
+a { color:#4fc3f7; font-size:12px; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <span id="lvlDisplay">Level 1</span>
+  <span id="coinDisplay">Coins: 0/0</span>
+  <span style="color:#888">WASD/Arrows: Move | Space: Jump (double jump!)</span>
+  <a href="index.html">← Back</a>
+</div>
+<canvas id="c"></canvas>
+<script>
+const W=1024,H=768;
+const c=document.getElementById('c');
+const ctx=c.getContext('2d');
+c.width=W; c.height=H;
+
+const GRAVITY=0.8, JUMP=-15, DJUMP=-12, SPEED=5, ESPEED=2, BSPEED=1.5, PSPEED=5;
+const BLUE=[80,150,220], RED=[220,80,80], YELLOW=[255,220,100], PURPLE=[150,100,200], GREEN=[100,200,100], GRAY=[120,120,120], WHITE=[255,255,255];
+function rgb(c){return `rgb(${c[0]},${c[1]},${c[2]})`;}
+
+const keys={};
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space'){e.preventDefault();jump();}});
+document.addEventListener('keyup',e=>{keys[e.code]=false;});
+
+// Camera
+let camX=0,camY=0;
+
+// Player
+let player={x:50,y:650,w:20,h:20,vx:0,vy:0,onGround:false,dj:true};
+
+// Game state
+let state='menu'; // menu, playing, intro, tutorial
+let introTimer=0;
+let menuGrad=0;
+let selectedOpt=0;
+let startLevel=1;
+let currentLevel=0;
+let coinsCollected=0;
+let gameCompleted=false;
+let particles=[];
+
+// Level objects
+let platforms=[], enemies=[], boss=null, coins=[], spikes=[], exitRect=null, projectiles=[];
+
+function mkRect(x,y,w,h){return {x,y,w,h};}
+
+function createLevels(){
+  return [
+    // L1
+    {plats:[mkRect(0,700,200,68),mkRect(300,600,150,20),mkRect(500,500,150,20),mkRect(750,400,200,20),mkRect(1000,300,100,20),mkRect(1200,200,200,568)],
+     enemies:[{sx:320,x:320,y:580,pd:100,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:350,y:570},{x:550,y:470},{x:800,y:370},{x:1030,y:270}],
+     spikes:[{x:250,y:680},{x:270,y:680}],spawn:[50,650],exit:[1250,150]},
+    // L2
+    {plats:[mkRect(0,700,150,68),mkRect(200,650,100,20),mkRect(350,550,100,20),mkRect(200,450,100,20),mkRect(50,350,100,20),mkRect(200,250,100,20),mkRect(350,150,100,20),mkRect(500,50,200,20),mkRect(750,150,100,20),mkRect(900,250,100,20),mkRect(1050,350,100,20),mkRect(1200,200,200,568)],
+     enemies:[{sx:220,x:220,y:430,pd:60,dir:1,w:18,h:18},{sx:920,x:920,y:230,pd:60,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:230,y:620},{x:370,y:520},{x:70,y:320},{x:520,y:20},{x:770,y:120},{x:1070,y:320}],
+     spikes:[{x:320,y:630},{x:340,y:630},{x:360,y:630},{x:150,y:630},{x:170,y:630}],spawn:[50,650],exit:[1250,150]},
+    // L3
+    {plats:[mkRect(0,700,150,68),mkRect(200,600,200,20),mkRect(450,500,200,20),mkRect(700,400,200,20),mkRect(950,300,200,20),mkRect(1200,200,200,568)],
+     enemies:[{sx:220,x:220,y:580,pd:160,dir:1,w:18,h:18},{sx:470,x:470,y:480,pd:160,dir:1,w:18,h:18},{sx:720,x:720,y:380,pd:160,dir:1,w:18,h:18},{sx:970,x:970,y:280,pd:160,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:250,y:570},{x:300,y:570},{x:500,y:470},{x:550,y:470},{x:750,y:370},{x:1000,y:270}],
+     spikes:[{x:410,y:580},{x:430,y:580},{x:660,y:480},{x:680,y:480},{x:910,y:380},{x:930,y:380}],spawn:[50,650],exit:[1250,150]},
+    // L4
+    {plats:[mkRect(0,700,100,68),mkRect(150,650,50,20),mkRect(250,600,50,20),mkRect(350,550,50,20),mkRect(450,500,50,20),mkRect(550,450,50,20),mkRect(650,400,100,20),mkRect(800,350,50,20),mkRect(900,300,50,20),mkRect(1000,250,50,20),mkRect(1100,200,50,20),mkRect(1200,150,200,618)],
+     enemies:[{sx:660,x:660,y:380,pd:80,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:170,y:620},{x:270,y:570},{x:470,y:470},{x:570,y:420},{x:820,y:320},{x:1020,y:220}],
+     spikes:[{x:120,y:680},{x:140,y:680},{x:320,y:680},{x:340,y:680},{x:360,y:680},{x:520,y:680},{x:540,y:680},{x:560,y:680}],spawn:[50,650],exit:[1250,100]},
+    // L5
+    {plats:[mkRect(0,700,120,68),mkRect(200,650,80,20),mkRect(350,600,80,20),mkRect(500,550,80,20),mkRect(350,500,80,20),mkRect(200,450,80,20),mkRect(50,400,80,20),mkRect(200,350,80,20),mkRect(350,300,80,20),mkRect(500,250,80,20),mkRect(650,200,80,20),mkRect(800,300,80,20),mkRect(950,400,80,20),mkRect(1100,300,80,20),mkRect(1250,200,80,20),mkRect(1400,100,200,668)],
+     enemies:[{sx:220,x:220,y:430,pd:60,dir:1,w:18,h:18},{sx:370,x:370,y:280,pd:60,dir:1,w:18,h:18},{sx:520,x:520,y:230,pd:60,dir:1,w:18,h:18},{sx:970,x:970,y:380,pd:60,dir:1,w:18,h:18},{sx:1120,x:1120,y:280,pd:60,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:220,y:620},{x:370,y:570},{x:520,y:520},{x:70,y:370},{x:370,y:270},{x:670,y:170},{x:970,y:370},{x:1270,y:170}],
+     spikes:[{x:150,y:680},{x:170,y:680},{x:190,y:680},{x:300,y:680},{x:320,y:680},{x:340,y:680}],spawn:[50,650],exit:[1450,50]},
+    // L6
+    {plats:[mkRect(0,700,150,68),mkRect(200,600,100,20),mkRect(400,500,100,20),mkRect(600,400,100,20),mkRect(800,300,100,20),mkRect(1000,200,100,20),mkRect(1200,100,200,668)],
+     enemies:[{sx:220,x:220,y:580,pd:80,dir:1,w:18,h:18},{sx:620,x:620,y:380,pd:80,dir:1,w:18,h:18},{sx:820,x:820,y:280,pd:80,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:250,y:570},{x:450,y:470},{x:650,y:370},{x:850,y:270},{x:1050,y:170}],
+     spikes:[{x:350,y:680},{x:370,y:680},{x:550,y:580},{x:570,y:580}],spawn:[50,650],exit:[1250,50]},
+    // L7
+    {plats:[mkRect(0,700,100,68),mkRect(150,650,50,20),mkRect(250,600,50,20),mkRect(350,550,50,20),mkRect(450,500,50,20),mkRect(550,450,50,20),mkRect(650,400,50,20),mkRect(750,350,50,20),mkRect(850,300,50,20),mkRect(950,250,50,20),mkRect(1050,200,50,20),mkRect(1150,150,50,20),mkRect(1250,100,200,668)],
+     enemies:[{sx:170,x:170,y:630,pd:30,dir:1,w:18,h:18},{sx:370,x:370,y:530,pd:30,dir:1,w:18,h:18},{sx:670,x:670,y:380,pd:30,dir:1,w:18,h:18},{sx:970,x:970,y:230,pd:30,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:170,y:620},{x:270,y:570},{x:370,y:520},{x:470,y:470},{x:570,y:420},{x:1070,y:170}],
+     spikes:[{x:120,y:680},{x:140,y:680},{x:220,y:680},{x:240,y:680},{x:320,y:680},{x:340,y:680}],spawn:[50,650],exit:[1300,50]},
+    // L8
+    {plats:[mkRect(0,700,150,68),mkRect(200,650,100,20),mkRect(350,600,100,20),mkRect(500,550,100,20),mkRect(650,500,100,20),mkRect(800,450,100,20),mkRect(950,400,100,20),mkRect(1100,350,100,20),mkRect(1250,300,200,468)],
+     enemies:[{sx:220,x:220,y:630,pd:80,dir:1,w:18,h:18},{sx:520,x:520,y:530,pd:80,dir:1,w:18,h:18},{sx:820,x:820,y:430,pd:80,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:230,y:620},{x:370,y:570},{x:520,y:520},{x:670,y:470},{x:820,y:420},{x:970,y:370}],
+     spikes:[{x:150,y:680},{x:170,y:680},{x:300,y:680},{x:320,y:680},{x:340,y:680},{x:450,y:680},{x:470,y:680},{x:490,y:680}],spawn:[50,650],exit:[1300,250]},
+    // L9
+    {plats:[mkRect(0,700,120,68),mkRect(200,600,80,20),mkRect(350,500,80,20),mkRect(200,400,80,20),mkRect(50,300,80,20),mkRect(200,200,80,20),mkRect(350,100,80,20),mkRect(500,50,200,20),mkRect(750,100,80,20),mkRect(900,200,80,20),mkRect(1050,300,80,20),mkRect(1200,400,80,20),mkRect(1350,300,200,468)],
+     enemies:[{sx:220,x:220,y:580,pd:60,dir:1,w:18,h:18},{sx:370,x:370,y:480,pd:60,dir:1,w:18,h:18},{sx:220,x:220,y:380,pd:60,dir:1,w:18,h:18},{sx:920,x:920,y:180,pd:60,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:230,y:570},{x:370,y:470},{x:70,y:270},{x:230,y:170},{x:520,y:20},{x:1070,y:270}],
+     spikes:[{x:150,y:680},{x:170,y:680},{x:300,y:680},{x:320,y:680}],spawn:[50,650],exit:[1400,250]},
+    // L10 - BOSS
+    {plats:[mkRect(0,700,200,68),mkRect(300,600,200,20),mkRect(600,500,200,20),mkRect(900,400,200,20),mkRect(1200,300,200,20),mkRect(1500,200,200,568)],
+     enemies:[],boss:{x:1550,y:150,w:50,h:50,hp:5,maxHp:5,dir:1,sx:1550,pd:200,sTimer:0},
+     coins:[{x:350,y:570},{x:450,y:570},{x:650,y:470},{x:750,y:470},{x:950,y:370},{x:1050,y:370}],
+     spikes:[{x:250,y:680},{x:270,y:680},{x:290,y:680},{x:510,y:680},{x:530,y:680},{x:550,y:680}],spawn:[50,650],exit:[1600,150]},
+    // L11
+    {plats:[mkRect(0,700,200,68),mkRect(300,650,150,20),mkRect(500,600,150,20),mkRect(700,550,150,20),mkRect(900,500,150,20),mkRect(1100,450,150,20),mkRect(1300,400,150,20),mkRect(1500,350,150,20),mkRect(1700,300,200,468)],
+     enemies:[{sx:320,x:320,y:630,pd:100,dir:1,w:18,h:18},{sx:520,x:520,y:580,pd:100,dir:1,w:18,h:18},{sx:720,x:720,y:530,pd:100,dir:1,w:18,h:18},{sx:920,x:920,y:480,pd:100,dir:1,w:18,h:18},{sx:1120,x:1120,y:430,pd:100,dir:1,w:18,h:18},{sx:1320,x:1320,y:380,pd:100,dir:1,w:18,h:18},{sx:1520,x:1520,y:330,pd:100,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:350,y:620},{x:550,y:570},{x:750,y:520},{x:950,y:470},{x:1150,y:420},{x:1350,y:370},{x:1550,y:320}],
+     spikes:[{x:250,y:680},{x:270,y:680},{x:290,y:680},{x:450,y:680},{x:470,y:680}],spawn:[50,650],exit:[1750,250]},
+    // L12
+    {plats:[mkRect(0,700,100,68),mkRect(150,650,50,20),mkRect(250,600,50,20),mkRect(350,550,50,20),mkRect(450,500,50,20),mkRect(550,450,50,20),mkRect(650,400,50,20),mkRect(750,350,50,20),mkRect(850,300,50,20),mkRect(950,250,200,468)],
+     enemies:[{sx:170,x:170,y:630,pd:30,dir:1,w:18,h:18},{sx:370,x:370,y:530,pd:30,dir:1,w:18,h:18},{sx:770,x:770,y:330,pd:30,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:170,y:620},{x:270,y:570},{x:370,y:520},{x:470,y:470},{x:570,y:420},{x:770,y:320},{x:870,y:270}],
+     spikes:[{x:120,y:680},{x:140,y:680},{x:220,y:680},{x:240,y:680},{x:320,y:680},{x:340,y:680},{x:420,y:680},{x:440,y:680},{x:520,y:680},{x:540,y:680},{x:620,y:680},{x:640,y:680},{x:720,y:680},{x:740,y:680}],spawn:[50,650],exit:[1000,200]},
+    // L13
+    {plats:[mkRect(0,700,150,68),mkRect(200,650,100,20),mkRect(350,600,100,20),mkRect(500,550,100,20),mkRect(650,500,100,20),mkRect(800,450,100,20),mkRect(950,400,100,20),mkRect(1100,350,200,418)],
+     enemies:[{sx:220,x:220,y:630,pd:80,dir:1,w:18,h:18},{sx:370,x:370,y:580,pd:80,dir:1,w:18,h:18},{sx:520,x:520,y:530,pd:80,dir:1,w:18,h:18},{sx:670,x:670,y:480,pd:80,dir:1,w:18,h:18},{sx:820,x:820,y:430,pd:80,dir:1,w:18,h:18},{sx:970,x:970,y:380,pd:80,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:230,y:620},{x:370,y:570},{x:520,y:520},{x:670,y:470},{x:820,y:420},{x:970,y:370}],
+     spikes:[{x:150,y:680},{x:170,y:680},{x:300,y:680},{x:320,y:680},{x:450,y:680},{x:470,y:680},{x:600,y:680},{x:620,y:680}],spawn:[50,650],exit:[1150,300]},
+    // L14
+    {plats:[mkRect(0,700,120,68),mkRect(200,600,80,20),mkRect(350,500,80,20),mkRect(200,400,80,20),mkRect(50,300,80,20),mkRect(200,200,80,20),mkRect(350,100,80,20),mkRect(500,50,200,20),mkRect(750,100,80,20),mkRect(900,200,80,20),mkRect(1050,300,80,20),mkRect(1200,400,200,368)],
+     enemies:[{sx:220,x:220,y:580,pd:60,dir:1,w:18,h:18},{sx:370,x:370,y:480,pd:60,dir:1,w:18,h:18},{sx:220,x:220,y:380,pd:60,dir:1,w:18,h:18},{sx:920,x:920,y:180,pd:60,dir:1,w:18,h:18},{sx:1070,x:1070,y:280,pd:60,dir:1,w:18,h:18}],boss:null,
+     coins:[{x:230,y:570},{x:370,y:470},{x:70,y:270},{x:230,y:170},{x:520,y:20},{x:770,y:70},{x:1070,y:270}],
+     spikes:[{x:150,y:680},{x:170,y:680},{x:300,y:680},{x:320,y:680}],spawn:[50,650],exit:[1250,350]},
+    // L15 - FINAL BOSS
+    {plats:[mkRect(0,700,200,68),mkRect(300,600,150,20),mkRect(500,500,150,20),mkRect(700,400,150,20),mkRect(900,300,150,20),mkRect(1100,200,150,20),mkRect(1300,100,200,668)],
+     enemies:[{sx:320,x:320,y:580,pd:100,dir:1,w:18,h:18},{sx:720,x:720,y:380,pd:100,dir:1,w:18,h:18}],boss:{x:1350,y:50,w:50,h:50,hp:7,maxHp:7,dir:1,sx:1350,pd:200,sTimer:0},
+     coins:[{x:350,y:570},{x:450,y:570},{x:550,y:470},{x:650,y:470},{x:750,y:370},{x:850,y:370},{x:950,y:270}],
+     spikes:[{x:250,y:680},{x:270,y:680},{x:290,y:680},{x:410,y:680},{x:430,y:680},{x:450,y:680}],spawn:[50,650],exit:[1400,50]},
+  ];
+}
+
+const levels=createLevels();
+
+function loadLevel(idx){
+  if(idx>=levels.length){gameCompleted=true;state='intro';introTimer=0;return;}
+  currentLevel=idx;
+  const lv=levels[idx];
+  platforms=[...lv.plats];
+  enemies=lv.enemies.map(e=>({...e}));
+  boss=lv.boss?{...lv.boss}:null;
+  coins=lv.coins.map(c=>({...c,w:16,h:16,collected:false}));
+  spikes=lv.spikes.map(s=>({...s,w:20,h:20}));
+  exitRect={...{w:40,h:40},...(()=>{let e=lv.exit;return{x:e[0],y:e[1]}})()};
+  projectiles=[];
+  coinsCollected=0;
+  player.x=lv.spawn[0]; player.y=lv.spawn[1];
+  player.vx=0; player.vy=0; player.onGround=false; player.dj=true;
+  camX=0; camY=0;
+  document.getElementById('lvlDisplay').textContent=`Level ${idx+1}`;
+  document.getElementById('coinDisplay').textContent=`Coins: 0/${coins.length}`;
+}
+
+function respawn(){
+  const lv=levels[currentLevel];
+  player.x=lv.spawn[0]; player.y=lv.spawn[1];
+  player.vx=0; player.vy=0; player.onGround=false; player.dj=true;
+}
+
+function jump(){
+  if(state!=='playing') return;
+  if(player.onGround){player.vy=JUMP; player.onGround=false;}
+  else if(player.dj){player.vy=DJUMP; player.dj=false;}
+}
+
+function collideRect(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;
+}
+
+function resolvePlayer(){
+  // Move X
+  player.x+=player.vx;
+  for(const p of platforms){
+    if(collideRect(player.x,player.y,player.w,player.h,p.x,p.y,p.w,p.h)){
+      if(player.vx>0) player.x=p.x-player.w;
+      else if(player.vx<0) player.x=p.x+p.w;
+      player.vx=0;
+    }
+  }
+  // Move Y
+  player.y+=player.vy;
+  player.onGround=false;
+  for(const p of platforms){
+    if(collideRect(player.x,player.y,player.w,player.h,p.x,p.y,p.w,p.h)){
+      if(player.vy>0){player.y=p.y-player.h;player.vy=0;player.onGround=true;player.dj=true;}
+      else if(player.vy<0){player.y=p.y+p.h;player.vy=0;}
+    }
+  }
+}
+
+function updatePlayer(){
+  if(keys['ArrowLeft']||keys['KeyA']) player.vx=Math.max(player.vx-1,-SPEED);
+  else if(keys['ArrowRight']||keys['KeyD']) player.vx=Math.min(player.vx+1,SPEED);
+  else {player.vx*=0.8; if(Math.abs(player.vx)<0.5) player.vx=0;}
+  player.vy+=GRAVITY;
+  resolvePlayer();
+}
+
+function updateEnemies(){
+  for(const e of enemies){
+    e.x+=ESPEED*e.dir;
+    if(Math.abs(e.x-e.sx)>=e.pd) e.dir*=-1;
+    // platform collision for enemy
+    for(const p of platforms){
+      if(collideRect(e.x,e.y,e.w,e.h,p.x,p.y,p.w,p.h)){
+        if(e.dir>0) e.x=p.x-e.w; else e.x=p.x+p.w;
+        e.dir*=-1;
+      }
+    }
+  }
+}
+
+function updateBoss(){
+  if(!boss) return;
+  boss.x+=BSPEED*boss.dir;
+  if(Math.abs(boss.x-boss.sx)>=boss.pd) boss.dir*=-1;
+  for(const p of platforms){
+    if(collideRect(boss.x,boss.y,boss.w,boss.h,p.x,p.y,p.w,p.h)){
+      if(boss.dir>0) boss.x=p.x-boss.w; else boss.x=p.x+boss.w;
+      boss.dir*=-1;
+    }
+  }
+  boss.sTimer++;
+  if(boss.sTimer>=120){
+    const dx=player.x-boss.x, dy=player.y-boss.y;
+    const dist=Math.sqrt(dx*dx+dy*dy)||1;
+    projectiles.push({x:boss.x+boss.w/2,y:boss.y,vx:dx/dist*PSPEED,vy:dy/dist*PSPEED,w:10,h:10});
+    boss.sTimer=0;
+  }
+}
+
+function updateProjectiles(){
+  for(let i=projectiles.length-1;i>=0;i--){
+    const p=projectiles[i];
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<-50||p.x>3000||p.y<-50||p.y>2000){projectiles.splice(i,1);continue;}
+    if(collideRect(p.x,p.y,p.w,p.h,player.x,player.y,player.w,player.h)){
+      projectiles.splice(i,1); respawn();
+    }
+  }
+}
+
+function checkCollisions(){
+  // Coins
+  for(const co of coins){
+    if(!co.collected&&collideRect(player.x,player.y,player.w,player.h,co.x,co.y,co.w,co.h)){
+      co.collected=true; coinsCollected++;
+      document.getElementById('coinDisplay').textContent=`Coins: ${coinsCollected}/${coins.length}`;
+      for(let i=0;i<8;i++) particles.push({x:co.x+8,y:co.y+8,vx:(Math.random()-0.5)*4,vy:(Math.random()-3)*3,life:40,color:YELLOW});
+    }
+  }
+  // Spikes
+  for(const s of spikes){
+    if(collideRect(player.x,player.y,player.w,player.h,s.x,s.y,s.w,s.h)) respawn();
+  }
+  // Enemies
+  for(const e of enemies){
+    if(collideRect(player.x,player.y,player.w,player.h,e.x,e.y,e.w,e.h)) respawn();
+  }
+  // Boss
+  if(boss){
+    if(collideRect(player.x,player.y,player.w,player.h,boss.x,boss.y,boss.w,boss.h)){
+      // Stomp from above
+      if(player.vy>0&&player.y+player.h<=boss.y+10){
+        boss.hp--; player.vy=JUMP;
+        if(boss.hp<=0) boss=null;
+      } else {respawn();}
+    }
+  }
+  // Exit
+  if(exitRect&&collideRect(player.x,player.y,player.w,player.h,exitRect.x,exitRect.y,exitRect.w,exitRect.h)){
+    loadLevel(currentLevel+1);
+    state='playing';
+  }
+  // Fall off screen
+  if(player.y>1200) respawn();
+}
+
+function updateCamera(){
+  const tx=player.x-W/2, ty=player.y-H/2;
+  camX+=(tx-camX)*0.1;
+  camY+=(ty-camY)*0.1;
+  if(camY<-200) camY=-200;
+}
+
+// Drawing
+function drawBg(){
+  ctx.fillStyle='#1e1e2e';
+  ctx.fillRect(0,0,W,H);
+  // Parallax dots
+  for(let i=0;i<5;i++){
+    ctx.fillStyle=`rgba(${60+i*10},${60+i*10},${80+i*20},0.4)`;
+    for(let x=-3;x<8;x++){
+      for(let y=-3;y<6;y++){
+        const rx=x*150-(camX*(0.1+i*0.02))%150;
+        const ry=y*150-(camY*(0.1+i*0.02))%150;
+        const r=Math.max(1,13-i*2);
+        ctx.beginPath(); ctx.arc(rx,ry,r,0,Math.PI*2); ctx.fill();
+      }
+    }
+  }
+}
+
+function wx(x){return x-camX;}
+function wy(y){return y-camY;}
+
+function drawRect(x,y,w,h,col){
+  ctx.fillStyle=rgb(col);
+  ctx.fillRect(wx(x),wy(y),w,h);
+}
+
+function drawPlayer(){
+  const bounce=player.onGround?Math.sin(Date.now()*0.01)*2:0;
+  drawRect(player.x,player.y+bounce,player.w,player.h,BLUE);
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(wx(player.x+6),wy(player.y+6+bounce),2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(wx(player.x+14),wy(player.y+6+bounce),2,0,Math.PI*2); ctx.fill();
+}
+
+function drawEnemies(){
+  const t=Date.now();
+  for(const e of enemies){
+    const w=Math.sin(t*0.02)*1;
+    drawRect(e.x,e.y+w,e.w,e.h,RED);
+    ctx.fillStyle=rgb(YELLOW);
+    ctx.beginPath(); ctx.arc(wx(e.x+5),wy(e.y+5+w),2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(wx(e.x+13),wy(e.y+5+w),2,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawBoss(){
+  if(!boss) return;
+  const w=Math.sin(Date.now()*0.015)*2;
+  drawRect(boss.x,boss.y+w,boss.w,boss.h,PURPLE);
+  ctx.fillStyle=rgb(YELLOW);
+  ctx.beginPath(); ctx.arc(wx(boss.x+15),wy(boss.y+15+w),5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(wx(boss.x+35),wy(boss.y+15+w),5,0,Math.PI*2); ctx.fill();
+  // HP bar
+  ctx.fillStyle='#f44';
+  ctx.fillRect(wx(boss.x),wy(boss.y-10+w),boss.w*(boss.hp/boss.maxHp),5);
+}
+
+function drawCoins(){
+  const t=Date.now();
+  for(const co of coins){
+    if(co.collected) continue;
+    const scale=Math.abs(Math.sin(t*0.01));
+    const sw=Math.max(2,co.w*scale);
+    ctx.fillStyle=rgb(YELLOW);
+    ctx.beginPath(); ctx.ellipse(wx(co.x+co.w/2),wy(co.y+co.h/2),sw/2,co.h/2,0,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawSpikes(){
+  for(const s of spikes){
+    ctx.fillStyle=rgb(GRAY);
+    ctx.beginPath();
+    ctx.moveTo(wx(s.x),wy(s.y+s.h));
+    ctx.lineTo(wx(s.x+s.w/2),wy(s.y));
+    ctx.lineTo(wx(s.x+s.w),wy(s.y+s.h));
+    ctx.fill();
+    ctx.strokeStyle='white'; ctx.lineWidth=1; ctx.stroke();
+  }
+}
+
+function drawProjectiles(){
+  ctx.fillStyle=rgb(RED);
+  for(const p of projectiles){
+    ctx.beginPath(); ctx.arc(wx(p.x+5),wy(p.y+5),5,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawPlatforms(){
+  for(const p of platforms){
+    ctx.fillStyle='white'; ctx.fillRect(wx(p.x),wy(p.y),p.w,p.h);
+    ctx.strokeStyle=rgb(GRAY); ctx.lineWidth=2; ctx.strokeRect(wx(p.x),wy(p.y),p.w,p.h);
+  }
+}
+
+function drawExit(){
+  if(!exitRect) return;
+  ctx.fillStyle=rgb(GREEN);
+  ctx.fillRect(wx(exitRect.x),wy(exitRect.y),exitRect.w,exitRect.h);
+  ctx.fillStyle='white'; ctx.font='10px monospace'; ctx.textAlign='center';
+  ctx.fillText('EXIT',wx(exitRect.x+20),wy(exitRect.y+24));
+}
+
+function drawParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    ctx.fillStyle=`rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.life/40})`;
+    ctx.beginPath(); ctx.arc(wx(p.x),wy(p.y),3,0,Math.PI*2); ctx.fill();
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.2; p.life--;
+    if(p.life<=0) particles.splice(i,1);
+  }
+}
+
+// Menu
+function drawMenu(){
+  menuGrad=(menuGrad||0)+0.01;
+  for(let y=0;y<H;y++){
+    const t=Math.sin(menuGrad+y*0.005)*0.5+0.5;
+    ctx.fillStyle=`rgb(${30+t*20|0},${30+t*50|0},${50+t*50|0})`;
+    ctx.fillRect(0,y,W,1);
+  }
+  // Title
+  ctx.font='bold 72px monospace';
+  ctx.fillStyle='white'; ctx.textAlign='center';
+  ctx.fillText('The Blue Guy',W/2+2,202);
+  ctx.fillStyle=`rgba(255,220,100,${0.7+Math.sin(Date.now()*0.005)*0.3})`;
+  ctx.fillText('The Blue Guy',W/2,200);
+  // Options
+  const opts=['Start Game',`Start Level: ${startLevel}`,'Exit'];
+  ctx.font='36px monospace';
+  opts.forEach((o,i)=>{
+    const sel=i===selectedOpt;
+    ctx.fillStyle=sel?rgb(YELLOW):'white';
+    ctx.fillText(o,W/2,350+i*60);
+    if(sel){ctx.fillStyle=rgb(YELLOW);ctx.fillText('>',W/2-200,350+i*60);}
+  });
+  ctx.font='18px monospace'; ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.fillText('↑↓: Select  Enter: Confirm  ←→: Change Level',W/2,600);
+  ctx.fillText('A/D or Arrows: Move  Space: Jump',W/2,630);
+}
+
+function drawIntro(){
+  ctx.fillStyle='#1e1e2e'; ctx.fillRect(0,0,W,H);
+  const prog=introTimer/180;
+  ctx.save();
+  ctx.translate(W/2,H/2);
+  const scale=0.5+prog*0.5;
+  ctx.scale(scale,scale);
+  const rot=(introTimer*2)*Math.PI/180;
+  ctx.rotate(rot);
+  ctx.font='bold 72px monospace'; ctx.textAlign='center';
+  if(gameCompleted){
+    ctx.fillStyle=rgb(YELLOW); ctx.fillText('You Win!',0,0);
+    ctx.font='24px monospace'; ctx.fillStyle='white';
+    ctx.fillText('Press ESC to return to menu',0,60);
+  } else {
+    ctx.fillStyle='white'; ctx.fillText('The Blue Guy',0,0);
+  }
+  ctx.restore();
+  // particles
+  if(introTimer%3===0){
+    for(let i=0;i<2;i++) particles.push({x:W/2+camX,y:H/2+camY,vx:(Math.random()-0.5)*5,vy:(Math.random()-3)*3,life:60,color:YELLOW});
+  }
+  drawParticles();
+}
+
+function drawCompleted(){
+  ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,W,H);
+  ctx.font='48px monospace'; ctx.fillStyle='white'; ctx.textAlign='center';
+  ctx.fillText('Game Completed!',W/2,H/2);
+  ctx.font='24px monospace';
+  ctx.fillText('Press ESC to return to menu',W/2,H/2+50);
+}
+
+// Event listeners for menu
+document.addEventListener('keydown',e=>{
+  if(state==='menu'){
+    if(e.code==='ArrowUp'){selectedOpt=(selectedOpt-1+3)%3;}
+    if(e.code==='ArrowDown'){selectedOpt=(selectedOpt+1)%3;}
+    if(e.code==='ArrowLeft'&&selectedOpt===1){
+      startLevel=startLevel<=1?15:startLevel-1;
+    }
+    if(e.code==='ArrowRight'&&selectedOpt===1){
+      startLevel=startLevel>=15?1:startLevel+1;
+    }
+    if(e.code==='Enter'){
+      if(selectedOpt===0){loadLevel(0);state='playing';particles=[];}
+      else if(selectedOpt===1){loadLevel(startLevel-1);state='playing';particles=[];}
+      else if(selectedOpt===2){document.title='Bye!';}
+    }
+  }
+  if(e.code==='Escape'){
+    if(state==='playing'||state==='tutorial'){state='intro';introTimer=0;gameCompleted=false;particles=[];}
+    else {state='menu';}
+  }
+});
+
+function gameLoop(){
+  requestAnimationFrame(gameLoop);
+
+  if(state==='intro'){
+    introTimer++;
+    drawIntro();
+    if(introTimer>180&&!gameCompleted){state='menu';particles=[];}
+    return;
+  }
+
+  if(state==='menu'){
+    drawMenu();
+    return;
+  }
+
+  if(state==='playing'){
+    updatePlayer();
+    updateEnemies();
+    updateBoss();
+    updateProjectiles();
+    checkCollisions();
+    updateCamera();
+
+    drawBg();
+    drawPlatforms();
+    drawExit();
+    drawCoins();
+    drawSpikes();
+    drawEnemies();
+    drawBoss();
+    drawProjectiles();
+    drawParticles();
+    drawPlayer();
+
+    if(gameCompleted) drawCompleted();
+  }
+}
+
+// Start
+state='intro'; introTimer=0; gameCompleted=false;
+loadLevel(0);
+gameLoop();
+</script>
+</body>
+</html>

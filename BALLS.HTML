@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0; background:#111; overflow:hidden; color:white; font-family:sans-serif;">
+<div style="position:absolute; padding:20px;">Click anywhere to add a sound ball</div>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let balls = [];
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// Pentatonic Scale (C4, D4, E4, G4, A4)
+const scale = [261.63, 293.66, 329.63, 392.00, 440.00];
+
+function playTone(freq) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 1);
+}
+
+class Ball {
+    constructor(x, y) {
+        this.x = x; this.y = y;
+        this.vx = (Math.random() - 0.5) * 10;
+        this.vy = (Math.random() - 0.5) * 10;
+        this.radius = 15;
+        this.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
+    }
+    update() {
+        this.x += this.vx; this.y += this.vy;
+        if (this.x < 0 || this.x > canvas.width) {
+            this.vx *= -1; playTone(scale[0]);
+        }
+        if (this.y < 0 || this.y > canvas.height) {
+            this.vy *= -1; playTone(scale[Math.floor(Math.random() * scale.length)]);
+        }
+    }
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function animate() {
+    ctx.fillStyle = 'rgba(17, 17, 17, 0.2)'; // Trail effect
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    balls.forEach(b => { b.update(); b.draw(); });
+    requestAnimationFrame(animate);
+}
+
+window.addEventListener('mousedown', (e) => {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    balls.push(new Ball(e.clientX, e.clientY));
+});
+
+animate();
+</script>
+</body>
+</html>

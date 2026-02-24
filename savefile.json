@@ -1,0 +1,91 @@
+{
+  "bank_coins": 443,
+  "shop_coins": 1098,
+  "levels_beaten": [
+    0,
+    1,
+    2,
+    3,
+    5,
+    6,
+    7,
+    29
+  ],
+  "stickers_found": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    29
+  ],
+  "best_times": {
+    "5": 463,
+    "6": 699,
+    "29": 2392,
+    "2": 240,
+    "3": 296,
+    "0": 602,
+    "1": 220,
+    "7": 1195
+  },
+  "max_combo": 2,
+  "clicker_clicks": 108,
+  "clicker_cps": 4,
+  "clicker_upgrades": {
+    "eyes": 2,
+    "hat": 1,
+    "cape": 1,
+    "shoes": 1,
+    "auto": 4
+  },
+  "hat_equipped": "halo",
+  "color_equipped": [
+    80,
+    150,
+    220
+  ],
+  "hats_owned": [
+    "halo",
+    "wizard",
+    "crown",
+    "cowboy",
+    "party"
+  ],
+  "colors_owned": [
+    [
+      80,
+      150,
+      220
+    ]
+  ],
+  "current_level": 29,
+  "cutscenes_seen": [
+    8,
+    4
+  ],
+  "tv_on": true,
+  "tv_channel": 32,
+  "achievements": [
+    "home_owner",
+    "clicker_100",
+    "hat_owner",
+    "tv_watcher",
+    "speed_run",
+    "all_coins_1",
+    "all_hats",
+    "boss1",
+    "first_blood",
+    "no_damage",
+    "shopper",
+    "sticker_5"
+  ],
+  "total_deaths": 4,
+  "daily_completed": false,
+  "daily_seed": 739662,
+  "high_score": 100,
+  "runs_completed": 0
+}

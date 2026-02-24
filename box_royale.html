@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Box Royale Ultimate - Everything Edition</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a12;color:white;font-family:'Segoe UI',sans-serif;overflow:hidden;height:100vh;}
+canvas{display:block;}
+#ui{position:fixed;top:0;left:0;right:0;padding:8px 16px;background:rgba(0,0,0,0.7);display:flex;align-items:center;gap:16px;font-size:12px;z-index:10;border-bottom:1px solid #333;}
+#ui a{color:#ff6ec7;font-size:11px;}
+#hud{position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:rgba(0,0,0,0.7);display:flex;gap:16px;align-items:center;font-size:11px;z-index:10;}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;}
+#overlay h1{font-size:36px;color:#ff6ec7;text-shadow:0 0 30px #ff6ec7;margin-bottom:8px;}
+#overlay p{color:#aaa;margin-bottom:24px;font-size:14px;}
+.btn{background:linear-gradient(135deg,#ff6ec7,#a020f0);border:none;color:white;padding:12px 32px;font-size:14px;font-weight:bold;cursor:pointer;border-radius:8px;margin:4px;transition:all 0.15s;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,110,199,0.4);}
+.btn.secondary{background:rgba(255,255,255,0.1);border:1px solid #555;}
+#shopPanel{position:fixed;right:0;top:40px;bottom:40px;width:220px;background:#0f0f1a;border-left:2px solid #ff6ec7;padding:12px;overflow-y:auto;display:none;z-index:15;}
+.shop-item{padding:8px;margin-bottom:6px;border:1px solid #333;cursor:pointer;transition:all 0.15s;font-size:11px;}
+.shop-item:hover{border-color:#ff6ec7;background:rgba(255,110,199,0.1);}
+.shop-item.owned{border-color:#4dff91;background:rgba(77,255,145,0.05);}
+#chat{position:fixed;left:0;bottom:40px;width:200px;background:rgba(0,0,0,0.6);padding:8px;max-height:120px;overflow-y:auto;font-size:10px;}
+.chat-msg{margin-bottom:2px;padding:2px 4px;}
+#emojiBar{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);display:flex;gap:6px;background:rgba(0,0,0,0.7);padding:6px 12px;border-radius:20px;}
+.emote-btn{font-size:20px;cursor:pointer;transition:transform 0.1s;}
+.emote-btn:hover{transform:scale(1.3);}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <span id="raceInfo">BOX ROYALE ULTIMATE</span>
+  <span id="posDisplay" style="color:#ffd700;"></span>
+  <span id="timerDisplay" style="color:#4dff91;"></span>
+  <span id="coinsDisplay" style="color:#ffd700;">🪙 0</span>
+  <span id="hatDisplay"></span>
+  <span style="margin-left:auto;display:flex;gap:8px;">
+    <button class="btn" style="padding:4px 10px;font-size:10px;" onclick="toggleShop()">🛒 SHOP</button>
+    <a href="index.html">← Back</a>
+  </span>
+</div>
+
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <span>WASD/Arrows: Move</span>
+  <span id="speedBoostHud"></span>
+  <span id="comboHud"></span>
+  <span style="margin-left:auto;">Lives: <span id="livesHud">3</span> ❤</span>
+</div>
+
+<!-- Main overlay -->
+<div id="overlay">
+  <h1>📦 BOX ROYALE</h1>
+  <p>ULTIMATE EVERYTHING EDITION</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;">
+    <button class="btn" onclick="startGame(1)">🏁 Easy Race</button>
+    <button class="btn" onclick="startGame(2)">⚡ Normal Race</button>
+    <button class="btn" onclick="startGame(3)">💀 Chaos Race</button>
+  </div>
+  <div style="font-size:11px;color:#666;margin-bottom:12px;">2-4 players on same keyboard: WASD vs Arrows vs IJKL vs TFGH</div>
+  <button class="btn secondary" onclick="startSolo()">🤖 Solo vs Bots</button>
+</div>
+
+<!-- Shop -->
+<div id="shopPanel">
+  <div style="font-size:13px;font-weight:bold;color:#ff6ec7;margin-bottom:10px;border-bottom:1px solid #333;padding-bottom:6px;">🛒 SHOP</div>
+  <div id="shopItems"></div>
+  <button class="btn secondary" style="width:100%;margin-top:8px;font-size:10px;" onclick="toggleShop()">Close</button>
+</div>
+
+<!-- Chat -->
+<div id="chat"></div>
+
+<!-- Emotes -->
+<div id="emojiBar" style="display:none;">
+  <span class="emote-btn" onclick="emote('🎉')">🎉</span>
+  <span class="emote-btn" onclick="emote('👑')">👑</span>
+  <span class="emote-btn" onclick="emote('😤')">😤</span>
+  <span class="emote-btn" onclick="emote('💨')">💨</span>
+  <span class="emote-btn" onclick="emote('🔥')">🔥</span>
+  <span class="emote-btn" onclick="emote('💀')">💀</span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// BOX ROYALE ULTIMATE - Full HTML5 remake
+// ═══════════════════════════════════════════════════════════════
+
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+window.addEventListener('resize',resize); resize();
+const W=()=>canvas.width, H=()=>canvas.height;
+
+// Colors
+const COLORS=['#ff6ec7','#80f0ff','#80ff96','#ffd700','#ff8844','#cc88ff','#ff4444','#44ffff'];
+const COLOR_NAMES=['Pink','Cyan','Green','Gold','Orange','Purple','Red','Teal'];
+
+// Game state
+const gs={
+  players:[],
+  obstacles:[],
+  items:[],
+  raceTrack:[],
+  finish:null,
+  running:false,
+  countdown:0,
+  difficulty:1,
+  coins:0,
+  hats:{},
+  ownedHats:['none'],
+  equippedHat:'none',
+  frame:0,
+  chatLog:[],
+  raceTime:0,
+  numPlayers:1,
+};
+
+// Hat shop
+const HATS=[
+  {id:'none',name:'No Hat',icon:'',cost:0},
+  {id:'crown',name:'Crown',icon:'👑',cost:100},
+  {id:'fire',name:'Fire',icon:'🔥',cost:150},
+  {id:'wizard',name:'Wizard',icon:'🧙',cost:200},
+  {id:'ninja',name:'Ninja',icon:'🥷',cost:250},
+  {id:'party',name:'Party',icon:'🎉',cost:100},
+  {id:'alien',name:'Alien',icon:'👽',cost:300},
+  {id:'cool',name:'Cool',icon:'😎',cost:150},
+];
+
+// Track generation
+function generateTrack(difficulty){
+  const segments=[];
+  const trackW=80;
+  let x=200, y=H()-200;
+  const totalLen=30+difficulty*10;
+  for(let i=0;i<totalLen;i++){
+    const type=i===0?'straight':(Math.random()<0.4?'turn':'straight');
+    segments.push({x,y,w:trackW,type,
+      angle:Math.random()*40-20,
+      hasObstacle:i>2&&Math.random()<0.3*difficulty,
+      hasCoin:Math.random()<0.4,
+      hasItem:Math.random()<0.2,
+    });
+    if(type==='turn'){
+      x+=Math.random()<0.5?120:-120;
+      y-=80+Math.random()*40;
+    } else {
+      y-=100+Math.random()*30;
+      x+=(Math.random()-0.5)*60;
+    }
+  }
+  gs.finish={x:segments[segments.length-1].x,y:segments[segments.length-1].y};
+  return segments;
+}
+
+// Player factory
+function createPlayer(idx,isBot,keys){
+  return {
+    x:200+idx*100, y:H()-150,
+    vx:0, vy:0,
+    color:COLORS[idx%COLORS.length],
+    colorName:COLOR_NAMES[idx%COLOR_NAMES.length],
+    name:isBot?'BOT-'+idx:(idx===0?'P1':idx===1?'P2':idx===2?'P3':'P4'),
+    isBot, keys,
+    w:28, h:28,
+    onGround:false,
+    lives:3, dead:false, finished:false,
+    finishPos:0,
+    speedBoost:0, shieldTimer:0,
+    hat:idx===0?gs.equippedHat:'none',
+    emote:'', emoteTimer:0,
+    coins:0,
+    segment:0, // current track segment
+    botTarget:0,
+  };
+}
+
+const KEYS1={left:'ArrowLeft',right:'ArrowRight',up:'ArrowUp',down:'ArrowDown'};
+const KEYS2={left:'KeyA',right:'KeyD',up:'KeyW',down:'KeyS'};
+const KEYS3={left:'KeyJ',right:'KeyL',up:'KeyI',down:'KeyK'};
+const KEYS4={left:'KeyF',right:'KeyH',up:'KeyT',down:'KeyG'};
+
+const keysDown={};
+document.addEventListener('keydown',e=>{keysDown[e.code]=true;});
+document.addEventListener('keyup',e=>{keysDown[e.code]=false;});
+
+function startSolo(){startGame(2,1);}
+function startGame(diff,numPlayers){
+  numPlayers=numPlayers||gs.numPlayers||1;
+  gs.difficulty=diff;
+  gs.running=false;
+  gs.countdown=180; // 3 seconds
+  gs.raceTime=0;
+  gs.frame=0;
+
+  gs.raceTrack=generateTrack(diff);
+
+  // Create players (P1 + bots)
+  gs.players=[];
+  gs.players.push(createPlayer(0,false,KEYS1));
+  if(numPlayers>=2) gs.players.push(createPlayer(1,false,KEYS2));
+  if(numPlayers>=3) gs.players.push(createPlayer(2,false,KEYS3));
+  if(numPlayers>=4) gs.players.push(createPlayer(3,false,KEYS4));
+  // Add bots to fill
+  const totalPlayers=Math.max(4,numPlayers);
+  for(let i=numPlayers;i<totalPlayers;i++){
+    gs.players.push(createPlayer(i,true,null));
+  }
+
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('emojiBar').style.display='flex';
+  chatMsg('🏁 Race starting soon!');
+}
+
+function endRace(){
+  gs.running=false;
+  const finished=gs.players.filter(p=>p.finished).sort((a,b)=>a.finishPos-b.finishPos);
+  const p1=gs.players[0];
+  const pos=p1.finishPos||99;
+  const coins=Math.max(0,20-pos*4);
+  gs.coins+=coins;
+  document.getElementById('coinsDisplay').textContent='🪙 '+gs.coins;
+
+  const overlay=document.getElementById('overlay');
+  overlay.style.display='flex';
+  overlay.innerHTML=`
+    <h1 style="color:${pos===1?'#ffd700':'#ff6ec7'}">${pos===1?'🏆 YOU WIN!':'📦 RACE OVER!'}</h1>
+    <p style="font-size:18px;margin:8px 0;">Position: ${pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'#'+pos}</p>
+    <p style="color:#888;margin-bottom:20px;">+${coins} coins earned! Total: ${gs.coins} 🪙</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      <button class="btn" onclick="startGame(${gs.difficulty})">🔄 Race Again</button>
+      <button class="btn secondary" onclick="showMainMenu()">🏠 Main Menu</button>
+    </div>
+  `;
+}
+
+function showMainMenu(){
+  document.getElementById('overlay').innerHTML=`
+    <h1>📦 BOX ROYALE</h1>
+    <p>ULTIMATE EVERYTHING EDITION</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;">
+      <button class="btn" onclick="startGame(1)">🏁 Easy Race</button>
+      <button class="btn" onclick="startGame(2)">⚡ Normal Race</button>
+      <button class="btn" onclick="startGame(3)">💀 Chaos Race</button>
+    </div>
+    <div style="font-size:11px;color:#666;margin-bottom:12px;">2-4 players on same keyboard: WASD vs Arrows vs IJKL vs TFGH</div>
+    <button class="btn secondary" onclick="startSolo()">🤖 Solo vs Bots</button>
+  `;
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('emojiBar').style.display='none';
+}
+
+function toggleShop(){
+  const sp=document.getElementById('shopPanel');
+  sp.style.display=sp.style.display==='none'?'block':'none';
+  renderShop();
+}
+
+function renderShop(){
+  const el=document.getElementById('shopItems');
+  el.innerHTML='';
+  HATS.forEach(h=>{
+    const owned=gs.ownedHats.includes(h.id);
+    const equipped=gs.equippedHat===h.id;
+    const div=document.createElement('div');
+    div.className='shop-item'+(owned?' owned':'');
+    div.innerHTML=`<span style="font-size:18px;">${h.icon||'🎩'}</span> ${h.name}<br>
+      <span style="color:${owned?'#4dff91':'#ffd700'};font-size:10px;">${owned?(equipped?'✅ EQUIPPED':'✓ Owned'):'🪙 '+h.cost}</span>`;
+    div.onclick=()=>{
+      if(owned){gs.equippedHat=h.id;if(gs.players[0])gs.players[0].hat=h.id;renderShop();document.getElementById('hatDisplay').textContent=h.icon;}
+      else if(gs.coins>=h.cost){gs.coins-=h.cost;gs.ownedHats.push(h.id);gs.equippedHat=h.id;if(gs.players[0])gs.players[0].hat=h.id;document.getElementById('coinsDisplay').textContent='🪙 '+gs.coins;renderShop();}
+      else{chatMsg('Not enough coins! Need '+h.cost+' 🪙');}
+    };
+    el.appendChild(div);
+  });
+}
+
+function emote(e){
+  if(gs.players[0]){gs.players[0].emote=e;gs.players[0].emoteTimer=120;}
+  chatMsg('P1: '+e);
+}
+
+function chatMsg(msg){
+  gs.chatLog.unshift(msg);
+  if(gs.chatLog.length>8)gs.chatLog.pop();
+  const el=document.getElementById('chat');
+  el.innerHTML=gs.chatLog.map(m=>`<div class="chat-msg">${m}</div>`).join('');
+}
+
+// Physics
+const GRAVITY=0.5, SPEED=4, JUMP=-12, FRICTION=0.85;
+const OBSTACLE_COLS=['#ff4444','#ff8844','#ff44ff'];
+
+// Build track wall rects from segments
+function getTrackRects(){
+  const rects=[];
+  gs.raceTrack.forEach((seg,i)=>{
+    // Each segment is a platform
+    rects.push({x:seg.x-50,y:seg.y,w:140,h:20,seg:i});
+  });
+  return rects;
+}
+
+function updatePlayer(p,dt){
+  if(p.dead||p.finished)return;
+
+  if(p.isBot){
+    // Simple bot AI: find next segment above and move toward it
+    const nextSeg=gs.raceTrack[Math.min(p.botTarget,gs.raceTrack.length-1)];
+    if(nextSeg){
+      if(p.x<nextSeg.x-20)p.vx+=0.8;
+      else if(p.x>nextSeg.x+20)p.vx-=0.8;
+      if(p.onGround&&p.y>nextSeg.y+50)p.vy=JUMP*(0.9+Math.random()*0.2);
+    }
+  } else {
+    const k=p.keys;
+    const speed=SPEED*(1+p.speedBoost*0.5)*(gs.difficulty===3?1.2:1);
+    if(keysDown[k.left])p.vx-=1.2;
+    if(keysDown[k.right])p.vx+=1.2;
+    p.vx=Math.max(-speed,Math.min(speed,p.vx));
+    if((keysDown[k.up])&&p.onGround){p.vy=JUMP;p.onGround=false;}
+  }
+
+  p.vy+=GRAVITY;
+  p.vx*=FRICTION;
+  p.x+=p.vx; p.y+=p.vy;
+  p.onGround=false;
+
+  // Platform collision
+  const rects=getTrackRects();
+  for(const r of rects){
+    if(p.x+p.w>r.x&&p.x<r.x+r.w&&p.y+p.h>r.y&&p.y<r.y+r.h){
+      if(p.vy>=0&&p.y+p.h-p.vy<=r.y+5){
+        p.y=r.y-p.h; p.vy=0; p.onGround=true;
+        if(p.isBot&&r.seg>p.botTarget)p.botTarget=r.seg;
+      } else if(p.vy<0&&p.y>r.y){
+        p.y=r.y+r.h; p.vy=0;
+      } else {
+        if(p.vx>0)p.x=r.x-p.w;
+        else p.x=r.x+r.w;
+        p.vx=0;
+      }
+    }
+  }
+
+  // Boundary
+  p.x=Math.max(0,Math.min(W()-p.w,p.x));
+
+  // Fall off
+  if(p.y>H()+100){
+    if(p.lives>1){p.lives--;p.y=H()-100;p.vy=JUMP;chatMsg(p.name+' fell! ❌');}
+    else {p.dead=true;chatMsg(p.name+' eliminated! 💀');}
+    document.getElementById('livesHud').textContent=gs.players[0]?.lives||0;
+  }
+
+  // Check finish
+  const fin=gs.finish;
+  if(fin&&Math.abs(p.x-fin.x)<60&&Math.abs(p.y-fin.y)<60&&!p.finished){
+    p.finished=true;
+    const pos=gs.players.filter(pp=>pp.finished).length;
+    p.finishPos=pos;
+    chatMsg(p.name+' finished! '+(pos===1?'🥇':pos===2?'🥈':'🥉'));
+    if(!p.isBot)endRace();
+  }
+
+  // Emote timer
+  if(p.emoteTimer>0)p.emoteTimer--;
+  if(p.speedBoost>0)p.speedBoost-=dt;
+}
+
+// Camera: follows P1
+let camY=0;
+function updateCamera(){
+  const p1=gs.players[0];
+  if(!p1)return;
+  const target=p1.y-H()*0.6;
+  camY+=(target-camY)*0.08;
+}
+
+function drawTrack(){
+  // BG
+  ctx.fillStyle='#0a0a12';
+  ctx.fillRect(0,0,W(),H());
+
+  // Stars
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  for(let i=0;i<80;i++){
+    ctx.fillRect((i*137.5)%W(),(i*79.3+camY*0.1)%H()+camY*0.05,2,2);
+  }
+
+  // Track segments
+  gs.raceTrack.forEach((seg,i)=>{
+    const sy=seg.y-camY;
+    // Platform
+    const grad=ctx.createLinearGradient(seg.x-50,sy,seg.x-50,sy+20);
+    grad.addColorStop(0,'#334');
+    grad.addColorStop(1,'#223');
+    ctx.fillStyle=grad;
+    ctx.fillRect(seg.x-50,sy,140,20);
+    ctx.strokeStyle='rgba(255,110,199,0.4)'; ctx.lineWidth=2;
+    ctx.strokeRect(seg.x-50,sy,140,20);
+
+    // Obstacle
+    if(seg.hasObstacle){
+      const t=Date.now()*0.003;
+      ctx.fillStyle=OBSTACLE_COLS[i%3];
+      ctx.fillRect(seg.x+20,sy-24,16,24);
+      ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1;
+      ctx.strokeRect(seg.x+20,sy-24,16,24);
+      // Moving obstacles on chaos mode
+      if(gs.difficulty===3){
+        const ox=Math.sin(t+i)*30;
+        ctx.fillStyle='rgba(255,100,100,0.8)';
+        ctx.fillRect(seg.x-20+ox,sy-20,12,20);
+      }
+    }
+
+    // Coin
+    if(seg.hasCoin){
+      const t=Date.now()*0.004;
+      ctx.fillStyle='#ffd700';
+      ctx.shadowColor='#ffd700'; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.arc(seg.x+60,sy-16+Math.sin(t+i)*3,8,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.fillStyle='#fff8'; ctx.font='8px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('$',seg.x+60,sy-13+Math.sin(t+i)*3);
+    }
+
+    // Finish flag on last segment
+    if(i===gs.raceTrack.length-1){
+      ctx.font='28px serif'; ctx.textAlign='center';
+      ctx.fillText('🏁',seg.x+20,sy-20);
+      ctx.fillStyle='rgba(255,215,0,0.2)'; ctx.fillRect(seg.x-50,sy-40,140,40);
+    }
+  });
+}
+
+function drawPlayer(p){
+  const sy=p.y-camY;
+  if(sy<-100||sy>H()+100)return;
+
+  // Shield
+  if(p.shieldTimer>0){
+    ctx.strokeStyle='rgba(0,200,255,0.5)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(p.x+p.w/2,sy+p.h/2,p.w,0,Math.PI*2); ctx.stroke();
+  }
+
+  // Speed trail
+  if(p.speedBoost>0){
+    ctx.fillStyle=p.color+'44';
+    ctx.fillRect(p.x-4,sy,p.w+8,p.h);
+  }
+
+  // Body
+  const grad=ctx.createLinearGradient(p.x,sy,p.x,sy+p.h);
+  grad.addColorStop(0,p.color);
+  grad.addColorStop(1,p.color+'aa');
+  ctx.fillStyle=grad;
+  ctx.shadowColor=p.color; ctx.shadowBlur=12;
+  ctx.fillRect(p.x,sy,p.w,p.h);
+  ctx.shadowBlur=0;
+
+  // Eyes
+  if(!p.dead){
+    ctx.fillStyle='white';
+    ctx.fillRect(p.x+4,sy+6,7,7);
+    ctx.fillRect(p.x+17,sy+6,7,7);
+    ctx.fillStyle='#111';
+    ctx.fillRect(p.x+6,sy+8,4,4);
+    ctx.fillRect(p.x+19,sy+8,4,4);
+  } else {
+    ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='18px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('💀',p.x+p.w/2,sy+p.h/2+6);
+  }
+
+  // Hat
+  const hatObj=HATS.find(h=>h.id===p.hat);
+  if(hatObj?.icon){
+    ctx.font='18px serif'; ctx.textAlign='center';
+    ctx.fillText(hatObj.icon,p.x+p.w/2,sy-4);
+  }
+
+  // Name
+  ctx.fillStyle='white'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(p.name,p.x+p.w/2,sy-16);
+
+  // Emote
+  if(p.emoteTimer>0){
+    ctx.font='22px serif';
+    ctx.fillText(p.emote,p.x+p.w/2,sy-36);
+  }
+
+  // Finish ribbon
+  if(p.finished){
+    const pos=p.finishPos;
+    ctx.font='16px serif';
+    ctx.fillText(pos===1?'🥇':pos===2?'🥈':'🥉',p.x+p.w/2,sy-50);
+  }
+}
+
+function drawHUD(){
+  // Position indicator
+  const alive=gs.players.filter(p=>!p.dead&&!p.finished);
+  const p1=gs.players[0];
+  if(p1){
+    const pos=alive.filter(p=>p.y<p1.y).length+1;
+    document.getElementById('posDisplay').textContent='Position: '+(p1.finished?'#'+p1.finishPos:'#'+pos)+'/'+gs.players.length;
+    document.getElementById('speedBoostHud').textContent=p1.speedBoost>0?'⚡ BOOST '+Math.ceil(p1.speedBoost)+'s':'';
+  }
+  if(gs.countdown>0){
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(0,0,W(),H());
+    ctx.font='bold 80px sans-serif'; ctx.fillStyle='white'; ctx.textAlign='center';
+    const c=Math.ceil(gs.countdown/60);
+    ctx.fillText(c===0?'GO!':c,W()/2,H()/2);
+  }
+}
+
+// Check coin collection
+function checkCoins(){
+  const p1=gs.players[0];
+  if(!p1)return;
+  gs.raceTrack.forEach(seg=>{
+    if(seg.hasCoin){
+      const cx=seg.x+60, cy=seg.y-16;
+      if(Math.abs(p1.x+p1.w/2-cx)<24&&Math.abs(p1.y+p1.h/2-camY-cy+camY)<24){
+        seg.hasCoin=false; gs.coins+=5;
+        document.getElementById('coinsDisplay').textContent='🪙 '+gs.coins;
+      }
+    }
+    // Obstacle damage
+    if(seg.hasObstacle){
+      const ox=seg.x+20, oy=seg.y-24;
+      if(p1.x+p1.w>ox&&p1.x<ox+16&&p1.y+p1.h>oy-camY&&p1.y<oy+24-camY&&p1.shieldTimer<=0){
+        p1.shieldTimer=180; p1.lives--;
+        document.getElementById('livesHud').textContent=p1.lives;
+        chatMsg('Ouch! Hit an obstacle! ❤ '+p1.lives+' left');
+        if(p1.lives<=0){p1.dead=true;chatMsg('P1 eliminated! 💀');endRace();}
+      }
+    }
+  });
+}
+
+let lastTime=Date.now();
+function gameLoop(){
+  requestAnimationFrame(gameLoop);
+  const now=Date.now();
+  const dt=(now-lastTime)/1000;
+  lastTime=now;
+  gs.frame++;
+
+  if(document.getElementById('overlay').style.display!=='none'){
+    // Draw animated bg behind overlay
+    ctx.fillStyle='#0a0a12'; ctx.fillRect(0,0,W(),H());
+    for(let i=0;i<30;i++){
+      const t=Date.now()*0.001;
+      ctx.fillStyle=COLORS[i%COLORS.length]+'33';
+      ctx.beginPath();
+      ctx.arc((i*137.5+Math.sin(t+i)*50)%W(),(i*79.3+gs.frame*0.5)%H(),20,0,Math.PI*2);
+      ctx.fill();
+    }
+    return;
+  }
+
+  // Countdown
+  if(gs.countdown>0){
+    gs.countdown--;
+    if(gs.countdown===0){gs.running=true;chatMsg('🏁 GO!');}
+  }
+
+  if(gs.running){
+    gs.raceTime+=dt;
+    document.getElementById('timerDisplay').textContent='⏱ '+gs.raceTime.toFixed(1)+'s';
+    gs.players.forEach(p=>updatePlayer(p,dt));
+    checkCoins();
+    updateCamera();
+    if(gs.players[0]?.shieldTimer>0)gs.players[0].shieldTimer--;
+  }
+
+  // Draw
+  drawTrack();
+  gs.players.forEach(drawPlayer);
+  drawHUD();
+}
+
+// Init shop display
+renderShop();
+gameLoop();
+</script>
+</body>
+</html>

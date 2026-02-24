@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Forge Clicker - Mega Ultimate Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0f0800;color:#ffd700;font-family:'Press Start 2P',monospace;display:flex;flex-direction:column;height:100vh;overflow:hidden;user-select:none;}
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#1a0f00;border-bottom:2px solid #4a3000;font-size:8px;gap:10px;flex-shrink:0;}
+#topbar a{color:#ff9500;font-size:7px;text-decoration:none;}
+#main{display:flex;flex:1;overflow:hidden;}
+/* Left panel - clicker */
+#left{width:320px;display:flex;flex-direction:column;align-items:center;padding:16px;background:#120a00;border-right:2px solid #3a2000;flex-shrink:0;overflow-y:auto;}
+#cookieCount{font-size:14px;color:#ffd700;text-align:center;margin-bottom:4px;line-height:1.6;}
+#cps{font-size:7px;color:#ff9500;margin-bottom:16px;text-align:center;}
+#bigCookie{cursor:pointer;display:block;margin:0 auto;image-rendering:pixelated;transition:transform 0.07s;filter:drop-shadow(0 0 18px #ff8800);}
+#bigCookie:active{transform:scale(0.88) rotate(-6deg);}
+#goldenCookie{cursor:pointer;position:relative;display:none;animation:goldenPulse 1s ease-in-out infinite;image-rendering:pixelated;margin:8px auto 0;filter:drop-shadow(0 0 16px gold);}
+@keyframes goldenPulse{0%,100%{filter:drop-shadow(0 0 10px gold);}50%{filter:drop-shadow(0 0 30px gold) brightness(1.4);}}
+#clickParticles{position:fixed;pointer-events:none;z-index:999;}
+#upgradesPanel{width:100%;margin-top:12px;}
+.upg-title{font-size:7px;color:#ff9500;border-bottom:1px solid #3a2000;padding-bottom:4px;margin-bottom:8px;}
+.upg-btn{width:100%;background:#1a0f00;border:1px solid #4a3000;padding:6px 8px;margin-bottom:4px;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:6px;color:#ffd700;text-align:left;transition:all 0.1s;display:flex;justify-content:space-between;align-items:center;}
+.upg-btn:hover:not(:disabled){background:#2a1a00;border-color:#ff9500;}
+.upg-btn:disabled{opacity:0.4;cursor:default;}
+.upg-btn .cost{color:#ff9500;}
+/* Middle panel - buildings */
+#mid{flex:1;padding:12px;overflow-y:auto;background:#0f0800;}
+.mid-title{font-size:9px;color:#ffd700;border-bottom:2px solid #3a2000;padding-bottom:6px;margin-bottom:10px;}
+.building{display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:6px;background:#1a0f00;border:1px solid #3a2000;cursor:pointer;transition:all 0.15s;}
+.building:hover:not(.locked){background:#2a1a00;border-color:#ff9500;}
+.building.locked{opacity:0.3;}
+.b-icon{font-size:28px;flex-shrink:0;}
+.b-info{flex:1;min-width:0;}
+.b-name{font-size:7px;color:#ffd700;margin-bottom:3px;}
+.b-desc{font-size:5px;color:#996600;margin-bottom:3px;}
+.b-owned{font-size:8px;color:#ff9500;}
+.b-cost{font-size:6px;color:#ffcc00;margin-top:2px;}
+.b-cps{font-size:5px;color:#66ff66;margin-top:1px;}
+/* Right panel - stats/achievements */
+#right{width:240px;background:#0a0800;border-left:2px solid #3a2000;padding:10px;overflow-y:auto;flex-shrink:0;}
+.r-title{font-size:7px;color:#ff9500;border-bottom:1px solid #3a2000;padding-bottom:4px;margin-bottom:8px;}
+.stat-row{font-size:6px;color:#996600;margin-bottom:4px;display:flex;justify-content:space-between;}
+.stat-val{color:#ffd700;}
+.ach{padding:4px;margin-bottom:3px;border:1px solid;font-size:5px;}
+.ach.unlocked{border-color:#ffd700;background:#1a1000;color:#ffd700;}
+.ach.locked{border-color:#333;background:#0a0800;color:#333;}
+.season-banner{text-align:center;font-size:7px;margin:6px 0;padding:4px;border:1px solid;animation:seasonPulse 2s ease-in-out infinite;}
+@keyframes seasonPulse{0%,100%{opacity:0.8;}50%{opacity:1;}}
+.prestige-btn{width:100%;background:#1a0030;border:2px solid #6600ff;padding:6px;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:6px;color:#cc88ff;margin-top:8px;transition:all 0.15s;}
+.prestige-btn:hover{background:#2a0050;border-color:#aa44ff;}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:1000;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.toast-msg{background:#1a0f00;border:1px solid #ff9500;padding:6px 12px;font-family:'Press Start 2P',monospace;font-size:7px;color:#ffd700;animation:toastAnim 2.5s ease forwards;}
+@keyframes toastAnim{0%{opacity:0;transform:translateY(10px);}15%{opacity:1;transform:translateY(0);}85%{opacity:1;}100%{opacity:0;}}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span>🍪 FORGE CLICKER — MEGA ULTIMATE EDITION v7.0</span>
+  <span id="seasonDisplay"></span>
+  <a href="index.html">← Back to Pixel Forge Games</a>
+</div>
+<div id="main">
+  <!-- LEFT: Clicker -->
+  <div id="left">
+    <div id="cookieCount">0</div>
+    <div id="cps">0 per second</div>
+    <canvas id="bigCookie" width="128" height="128" onclick="clickCookie(event)"></canvas>
+    <canvas id="goldenCookie" width="80" height="80" onclick="catchGolden()"></canvas>
+    <div id="upgradesPanel">
+      <div class="upg-title">⬆ UPGRADES</div>
+      <div id="upgList"></div>
+    </div>
+  </div>
+  <!-- MID: Buildings -->
+  <div id="mid">
+    <div class="mid-title">🏗 BUILDINGS — Click to buy</div>
+    <div id="buildingList"></div>
+  </div>
+  <!-- RIGHT: Stats -->
+  <div id="right">
+    <div class="r-title">📊 STATS</div>
+    <div id="statsPanel"></div>
+    <div class="r-title" style="margin-top:10px;">🏆 ACHIEVEMENTS</div>
+    <div id="achPanel"></div>
+    <button class="prestige-btn" onclick="prestige()">♻ PRESTIGE<br><span style="font-size:5px;color:#aa88ff">Reset for permanent +10% CPS</span></button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// FORGE CLICKER - Full HTML5 remake
+// ═══════════════════════════════════════════════════════
+
+// ── PIXEL ART COOKIE ──
+const COOKIE_PIXELS = [
+  '...BBBBBBBB...',
+  '..BCCCCCCCCB..',
+  '.BCCCDDDDCCCB.',
+  'BCCDDDDDDDCCB.',
+  'BCDDDDXDDDCCB.',
+  'BCDDDDDDDXDCB.',
+  'BCCDDXDDDDCCB.',
+  'BCDDDDDDDDDCB.',
+  'BCDDDXDDDDDCB.',
+  'BCDDDDDDXDDCB.',
+  'BCCCDDDDDDCCB.',
+  '.BCCCCCCCCCB.',
+  '..BBBBBBBBB..',
+  '...............',
+];
+// . = transparent, B = dark edge, C = mid brown, D = cookie base, X = choc chip
+
+const CPMAP = {
+  'B':'#3d1a00','C':'#8b4513','D':'#c8762a','X':'#1a0800','.':`rgba(0,0,0,0)`
+};
+
+function drawPixelCookie(canvas, palette, scale) {
+  const ctx = canvas.getContext('2d');
+  const S = scale || Math.floor(canvas.width / COOKIE_PIXELS[0].length);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  COOKIE_PIXELS.forEach((row, y) => {
+    [...row].forEach((ch, x) => {
+      if (ch === '.') return;
+      ctx.fillStyle = palette ? (palette[ch] || CPMAP[ch]) : CPMAP[ch];
+      ctx.fillRect(x * S, y * S, S, S);
+    });
+  });
+}
+
+function drawGoldenCookie(canvas) {
+  const GOLD = {'B':'#7a5500','C':'#ffd700','D':'#ffe566','X':'#ff9500'};
+  drawPixelCookie(canvas, GOLD, Math.floor(canvas.width / COOKIE_PIXELS[0].length));
+}
+
+// Animate the main cookie (slow spin shimmer)
+let cookieAngle = 0;
+function animateCookie() {
+  const canvas = document.getElementById('bigCookie');
+  if (!canvas) return;
+  // Redraw with slight shimmer tint
+  const t = Date.now() * 0.002;
+  const shine = Math.sin(t) * 0.15 + 0.85;
+  const SHIM = {
+    'B':'#3d1a00',
+    'C':`rgb(${Math.floor(139*shine)},${Math.floor(69*shine)},${Math.floor(19*shine)})`,
+    'D':`rgb(${Math.floor(200*shine)},${Math.floor(118*shine)},${Math.floor(42*shine)})`,
+    'X':'#1a0800'
+  };
+  drawPixelCookie(canvas, SHIM);
+}
+
+// Save/load
+function save(){try{localStorage.setItem('forgeClicker',JSON.stringify(g));}catch(e){}}
+function load(){try{const d=localStorage.getItem('forgeClicker');if(d)Object.assign(g,JSON.parse(d));}catch(e){}}
+
+// Game state
+const g={
+  cookies:0,
+  totalCookies:0,
+  cps:0,
+  clicks:0,
+  cookiesPerClick:1,
+  prestigeLevel:0,
+  prestigeBonus:1,
+  buildings:{},
+  upgrades:{},
+  achievements:[],
+  goldenCookies:0,
+  combo:0,
+  comboTimer:0,
+  season:'spring',
+  lastSave:Date.now(),
+};
+
+// Buildings definition
+const BUILDINGS=[
+  {id:'cursor',name:'Cursor',icon:'👆',desc:'Autoclicks the cookie',baseCost:15,baseCps:0.1,owned:0},
+  {id:'grandma',name:'Grandma',icon:'👵',desc:'A friendly grandma to bake cookies',baseCost:100,baseCps:0.5,owned:0},
+  {id:'farm',name:'Farm',icon:'🌾',desc:'Grows cookie plants',baseCost:1100,baseCps:4,owned:0},
+  {id:'mine',name:'Mine',icon:'⛏',desc:'Digs deep for cookie dough',baseCost:12000,baseCps:10,owned:0},
+  {id:'factory',name:'Factory',icon:'🏭',desc:'Mass produces cookies',baseCost:130000,baseCps:40,owned:0},
+  {id:'bank',name:'Bank',icon:'🏦',desc:'Generates cookies from interest',baseCost:1400000,baseCps:100,owned:0},
+  {id:'temple',name:'Cookie Temple',icon:'🏛',desc:'Ancient cookie gods bless you',baseCost:20000000,baseCps:400,owned:0},
+  {id:'tower',name:'Wizard Tower',icon:'🧙',desc:'Conjures cookies from thin air',baseCost:330000000,baseCps:1666,owned:0},
+  {id:'shipment',name:'Shipment',icon:'🚀',desc:'Cookies from outer space',baseCost:5100000000,baseCps:7777,owned:0},
+  {id:'alchemy',name:'Alchemy Lab',icon:'⚗',desc:'Turns gold into cookies',baseCost:75000000000,baseCps:50000,owned:0},
+];
+
+// Upgrades
+const UPGRADES=[
+  {id:'cursor1',name:'Reinforced Index Finger',desc:'+1 per click',cost:100,effect:()=>g.cookiesPerClick+=1,req:()=>getBuildingOwned('cursor')>=1},
+  {id:'cursor2',name:'Carpal Tunnel Prevention Cream',desc:'+1 per click',cost:500,effect:()=>g.cookiesPerClick+=1,req:()=>getBuildingOwned('cursor')>=1},
+  {id:'grandma1',name:'Forwards from Grandma',desc:'Grandmas 2x',cost:1000,effect:()=>scaleCps('grandma',2),req:()=>getBuildingOwned('grandma')>=1},
+  {id:'grandma2',name:'Steel-Plated Rolling Pins',desc:'Grandmas 2x',cost:5000,effect:()=>scaleCps('grandma',2),req:()=>getBuildingOwned('grandma')>=5},
+  {id:'farm1',name:'Cheap Hoes',desc:'Farms 2x',cost:11000,effect:()=>scaleCps('farm',2),req:()=>getBuildingOwned('farm')>=1},
+  {id:'farm2',name:'Fertilizer',desc:'Farms 2x',cost:55000,effect:()=>scaleCps('farm',2),req:()=>getBuildingOwned('farm')>=5},
+  {id:'mine1',name:'Sugar Gas',desc:'Mines 2x',cost:120000,effect:()=>scaleCps('mine',2),req:()=>getBuildingOwned('mine')>=1},
+  {id:'factory1',name:'Sturdier Conveyor Belts',desc:'Factories 2x',cost:1300000,effect:()=>scaleCps('factory',2),req:()=>getBuildingOwned('factory')>=1},
+  {id:'bank1',name:'Taller Tellers',desc:'Banks 2x',cost:14000000,effect:()=>scaleCps('bank',2),req:()=>getBuildingOwned('bank')>=1},
+  {id:'click1',name:'Thousand Fingers',desc:'+5 per click',cost:1000000,effect:()=>g.cookiesPerClick+=5,req:()=>g.totalCookies>=100000},
+  {id:'click2',name:'Million Fingers',desc:'+25 per click',cost:100000000,effect:()=>g.cookiesPerClick+=25,req:()=>g.totalCookies>=10000000},
+  {id:'golden1',name:'Lucky Day',desc:'Golden cookies last longer',cost:777777,effect:()=>g.goldenDuration=(g.goldenDuration||15)+10,req:()=>g.goldenCookies>=1},
+  {id:'prestige1',name:'Kitten Workers',desc:'+10% CPS per prestige',cost:100,effect:()=>{},req:()=>g.prestigeLevel>=1},
+];
+
+// Achievements
+const ACHIEVEMENTS=[
+  {id:'first',name:'First Cookie',desc:'Bake 1 cookie',icon:'🍪',check:()=>g.totalCookies>=1},
+  {id:'hundred',name:'Centurion',desc:'Bake 100 cookies',icon:'💯',check:()=>g.totalCookies>=100},
+  {id:'thousand',name:'Mass Production',desc:'Bake 1,000 cookies',icon:'🏭',check:()=>g.totalCookies>=1000},
+  {id:'million',name:'Millionaire',desc:'Bake 1,000,000 cookies',icon:'💰',check:()=>g.totalCookies>=1000000},
+  {id:'billion',name:'Billionaire',desc:'Bake 1,000,000,000 cookies',icon:'💎',check:()=>g.totalCookies>=1000000000},
+  {id:'firstBuilding',name:'Builder',desc:'Buy your first building',icon:'🏗',check:()=>BUILDINGS.some(b=>getBuildingOwned(b.id)>=1)},
+  {id:'allBuildings',name:'Empire',desc:'Own at least 1 of each building',icon:'🏆',check:()=>BUILDINGS.every(b=>getBuildingOwned(b.id)>=1)},
+  {id:'golden',name:'Lucky!',desc:'Catch a golden cookie',icon:'✨',check:()=>g.goldenCookies>=1},
+  {id:'prestige',name:'Ascended',desc:'Prestige once',icon:'♻',check:()=>g.prestigeLevel>=1},
+  {id:'clicks100',name:'Click Master',desc:'Click 100 times',icon:'👆',check:()=>g.clicks>=100},
+  {id:'clicks1000',name:'Carpal Tunnel',desc:'Click 1000 times',icon:'💪',check:()=>g.clicks>=1000},
+  {id:'cps100',name:'Automatic',desc:'Reach 100 CPS',icon:'⚡',check:()=>g.cps>=100},
+  {id:'cps1000',name:'Industrial',desc:'Reach 1000 CPS',icon:'🏭',check:()=>g.cps>=1000},
+];
+
+const SEASONS=['spring','summer','fall','winter'];
+const SEASON_EMOJI={'spring':'🌸','summer':'☀','fall':'🍂','winter':'❄'};
+const SEASON_BONUS={'spring':1.1,'summer':1.2,'fall':1.0,'winter':0.9};
+
+let frame=0, goldenTimer=0, goldenVisible=false, goldenBoost=false, goldenBoostTimer=0;
+let cpsMultipliers={};
+
+function getBuildingOwned(id){return g.buildings[id]||0;}
+function setBuildingOwned(id,v){g.buildings[id]=v;}
+function scaleCps(id,mult){if(!cpsMultipliers[id])cpsMultipliers[id]=1;cpsMultipliers[id]*=mult;}
+
+function getBuildingCost(b){
+  const owned=getBuildingOwned(b.id);
+  return Math.floor(b.baseCost*Math.pow(1.15,owned));
+}
+
+function getBuildingCps(b){
+  const mult=cpsMultipliers[b.id]||1;
+  return b.baseCps*getBuildingOwned(b.id)*mult;
+}
+
+function recalcCps(){
+  let total=0;
+  BUILDINGS.forEach(b=>total+=getBuildingCps(b));
+  total*=g.prestigeBonus;
+  total*=SEASON_BONUS[g.season]||1;
+  if(goldenBoost)total*=2;
+  g.cps=total;
+}
+
+function fmt(n){
+  if(n>=1e12)return(n/1e12).toFixed(1)+'T';
+  if(n>=1e9)return(n/1e9).toFixed(1)+'B';
+  if(n>=1e6)return(n/1e6).toFixed(1)+'M';
+  if(n>=1e3)return(n/1e3).toFixed(1)+'K';
+  return Math.floor(n).toLocaleString();
+}
+
+function clickCookie(e){
+  const mult=goldenBoost?10:1;
+  const gain=g.cookiesPerClick*mult*(1+g.combo*0.1);
+  g.cookies+=gain; g.totalCookies+=gain; g.clicks++;
+  g.combo=Math.min(g.combo+1,10); g.comboTimer=120;
+  // Particle
+  const el=document.createElement('div');
+  el.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY-20}px;color:#ffd700;font-family:'Press Start 2P',monospace;font-size:10px;pointer-events:none;z-index:999;animation:float 1s ease forwards;`;
+  el.textContent='+'+fmt(gain);
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+  checkAchievements();
+}
+
+function buyBuilding(b){
+  const cost=getBuildingCost(b);
+  if(g.cookies<cost){toast('Not enough cookies!');return;}
+  g.cookies-=cost;
+  setBuildingOwned(b.id,(getBuildingOwned(b.id)||0)+1);
+  recalcCps(); renderBuildings(); renderUpgrades(); renderStats(); checkAchievements();
+  toast(b.icon+' '+b.name+' purchased!');
+}
+
+function buyUpgrade(u){
+  if(g.upgrades[u.id])return;
+  if(g.cookies<u.cost){toast('Not enough cookies!');return;}
+  g.cookies-=u.cost;
+  g.upgrades[u.id]=true;
+  u.effect(); recalcCps(); renderUpgrades(); renderStats();
+  toast('✅ '+u.name+' unlocked!');
+}
+
+function catchGolden(){
+  if(!goldenVisible)return;
+  goldenVisible=false;
+  document.getElementById('goldenCookie').style.display='none';
+  g.goldenCookies++;
+  goldenBoost=true; goldenBoostTimer=15*60;
+  toast('✨ Golden Cookie! 2x CPS + 10x clicks for 15s!');
+  recalcCps(); checkAchievements();
+}
+
+function prestige(){
+  if(g.totalCookies<1000000){toast('Need 1M total cookies to prestige!');return;}
+  g.prestigeLevel++;
+  g.prestigeBonus=1+g.prestigeLevel*0.1;
+  g.cookies=0; g.totalCookies=0; g.cps=0;
+  BUILDINGS.forEach(b=>{g.buildings[b.id]=0;});
+  g.upgrades={}; cpsMultipliers={};
+  g.cookiesPerClick=1;
+  recalcCps(); renderAll();
+  toast('♻ Prestige '+g.prestigeLevel+'! +10% permanent CPS bonus!');
+}
+
+function checkAchievements(){
+  let newUnlock=false;
+  ACHIEVEMENTS.forEach(a=>{
+    if(!g.achievements.includes(a.id)&&a.check()){
+      g.achievements.push(a.id);
+      toast(a.icon+' Achievement: '+a.name+'!');
+      newUnlock=true;
+    }
+  });
+  if(newUnlock) renderAchievements();
+}
+
+// Rendering
+function renderAll(){renderBuildings();renderUpgrades();renderStats();renderAchievements();}
+
+function renderBuildings(){
+  const el=document.getElementById('buildingList');
+  el.innerHTML='';
+  BUILDINGS.forEach(b=>{
+    const owned=getBuildingOwned(b.id);
+    const cost=getBuildingCost(b);
+    const cps=getBuildingCps(b);
+    const locked=g.totalCookies<b.baseCost/10&&owned===0;
+    const div=document.createElement('div');
+    div.className='building'+(locked?' locked':'');
+    div.onclick=()=>buyBuilding(b);
+    div.innerHTML=`
+      <div class="b-icon">${b.icon}</div>
+      <div class="b-info">
+        <div class="b-name">${b.name}</div>
+        <div class="b-desc">${b.desc}</div>
+        <div class="b-cost">💰 ${fmt(cost)}</div>
+        ${owned>0?`<div class="b-cps">+${fmt(cps)}/s total</div>`:''}
+      </div>
+      <div class="b-owned" style="color:${owned>0?'#ffd700':'#444'}">${owned}</div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+function renderUpgrades(){
+  const el=document.getElementById('upgList');
+  el.innerHTML='';
+  UPGRADES.forEach(u=>{
+    if(g.upgrades[u.id])return;
+    if(!u.req())return;
+    const btn=document.createElement('button');
+    btn.className='upg-btn';
+    btn.disabled=g.cookies<u.cost;
+    btn.onclick=()=>buyUpgrade(u);
+    btn.innerHTML=`<span>${u.name}<br><span style="color:#996600;font-size:5px;">${u.desc}</span></span><span class="cost">${fmt(u.cost)}</span>`;
+    el.appendChild(btn);
+  });
+}
+
+function renderStats(){
+  const el=document.getElementById('statsPanel');
+  el.innerHTML=`
+    <div class="stat-row"><span>Cookies owned</span><span class="stat-val">${fmt(g.cookies)}</span></div>
+    <div class="stat-row"><span>All time baked</span><span class="stat-val">${fmt(g.totalCookies)}</span></div>
+    <div class="stat-row"><span>Per second</span><span class="stat-val">${fmt(g.cps)}</span></div>
+    <div class="stat-row"><span>Per click</span><span class="stat-val">${fmt(g.cookiesPerClick)}</span></div>
+    <div class="stat-row"><span>Total clicks</span><span class="stat-val">${g.clicks}</span></div>
+    <div class="stat-row"><span>Golden cookies</span><span class="stat-val">${g.goldenCookies}</span></div>
+    <div class="stat-row"><span>Prestige level</span><span class="stat-val">${g.prestigeLevel}</span></div>
+    <div class="stat-row"><span>Season</span><span class="stat-val">${SEASON_EMOJI[g.season]} ${g.season}</span></div>
+    <div class="stat-row"><span>Combo</span><span class="stat-val">x${g.combo}</span></div>
+    ${goldenBoost?`<div class="stat-row" style="color:#ffd700;"><span>🌟 GOLDEN BOOST</span><span class="stat-val">${Math.ceil(goldenBoostTimer/60)}s</span></div>`:''}
+  `;
+}
+
+function renderAchievements(){
+  const el=document.getElementById('achPanel');
+  el.innerHTML='';
+  ACHIEVEMENTS.forEach(a=>{
+    const unlocked=g.achievements.includes(a.id);
+    const div=document.createElement('div');
+    div.className='ach '+(unlocked?'unlocked':'locked');
+    div.innerHTML=`${a.icon} ${unlocked?a.name:'???'}<br><span style="color:#666;font-size:4px;">${unlocked?a.desc:'Locked'}</span>`;
+    el.appendChild(div);
+  });
+}
+
+function toast(msg){
+  const el=document.createElement('div');
+  el.className='toast-msg'; el.textContent=msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>el.remove(),2600);
+}
+
+// CSS for float animation
+const style=document.createElement('style');
+style.textContent='@keyframes float{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-60px);}}';
+document.head.appendChild(style);
+
+// Main game loop
+let lastTime=Date.now();
+function gameLoop(){
+  requestAnimationFrame(gameLoop);
+  const now=Date.now();
+  const dt=(now-lastTime)/1000;
+  lastTime=now;
+  frame++;
+
+  // Produce cookies
+  const gain=g.cps*dt;
+  g.cookies+=gain; g.totalCookies+=gain;
+
+  // Combo decay
+  if(g.comboTimer>0){g.comboTimer--;} else {g.combo=Math.max(0,g.combo-1);}
+
+  // Golden cookie logic
+  goldenTimer--;
+  if(goldenTimer<=0){
+    goldenTimer=Math.floor(Math.random()*900)+300;
+    if(!goldenVisible){
+      goldenVisible=true;
+      const gc=document.getElementById('goldenCookie');
+      gc.style.display='block';
+      gc.style.marginTop='16px';
+      drawGoldenCookie(gc);
+      setTimeout(()=>{
+        if(goldenVisible){goldenVisible=false;gc.style.display='none';}
+      },(g.goldenDuration||15)*1000);
+    }
+  }
+
+  // Golden boost timer
+  if(goldenBoostTimer>0){goldenBoostTimer--; if(goldenBoostTimer===0){goldenBoost=false;recalcCps();toast('Golden boost ended!');}}
+
+  // Season change every 5 minutes
+  if(frame%18000===0){
+    const si=(SEASONS.indexOf(g.season)+1)%4;
+    g.season=SEASONS[si];
+    recalcCps();
+    toast(SEASON_EMOJI[g.season]+' Season changed to '+g.season+'!');
+  }
+
+  // Auto-save every 30s
+  if(frame%1800===0) save();
+
+  // Check achievements every 60 frames
+  if(frame%60===0) checkAchievements();
+
+  // Update UI every 10 frames
+  if(frame%10===0){
+    document.getElementById('cookieCount').textContent=fmt(g.cookies)+' cookies';
+    document.getElementById('cps').textContent=fmt(g.cps)+' per second';
+    renderStats();
+    // Season display
+    document.getElementById('seasonDisplay').textContent=
+      SEASON_EMOJI[g.season]+' '+g.season.toUpperCase()+' ('+((SEASON_BONUS[g.season]*100-100)>0?'+':'')+((SEASON_BONUS[g.season]*100-100).toFixed(0))+'% CPS)';
+    // Buildings update
+    renderBuildings();
+    renderUpgrades();
+  }
+}
+
+// Init
+load(); recalcCps(); renderAll();
+if(!g.season)g.season='spring';
+// Draw pixel cookies
+drawPixelCookie(document.getElementById('bigCookie'));
+drawGoldenCookie(document.getElementById('goldenCookie'));
+// Start message
+toast('🍪 Welcome to Forge Clicker! Click the cookie to start!');
+gameLoop();
+// Animate cookie shimmer separately
+setInterval(animateCookie, 50);
+</script>
+</body>
+</html>

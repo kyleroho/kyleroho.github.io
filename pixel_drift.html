@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pixel Drift — Pixel Forge Games</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:#0a0500; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Press Start 2P',monospace; color:#ff9500; }
+canvas { border:2px solid #ff9500; box-shadow:0 0 30px rgba(255,149,0,0.4); image-rendering:pixelated; }
+#ui { margin-bottom:16px; font-size:10px; display:flex; gap:40px; color:#ffd700; }
+#instructions { margin-top:14px; font-size:7px; color:#664400; text-align:center; line-height:2; }
+a { color:#ff9500; }
+</style>
+</head>
+<body>
+<div id="ui"><span>SCORE: <span id="score">0</span></span><span>LIVES: <span id="lives">3</span></span><span>LEVEL: <span id="level">1</span></span></div>
+<canvas id="c" width="480" height="360"></canvas>
+<div id="instructions">ARROW KEYS / WASD — MOVE &nbsp;·&nbsp; SPACE — SHOOT<br>AVOID ASTEROIDS · SHOOT TO DESTROY<br><a href="index.html">← BACK TO PIXEL FORGE GAMES</a></div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const W = 480, H = 360;
+let score = 0, lives = 3, lvl = 1, dead = false, started = false;
+let invincible = 0;
+
+const ship = {x:W/2, y:H-50, w:14, h:16, vx:0, vy:0};
+const bullets = [];
+const asteroids = [];
+let shootCooldown = 0;
+const keys = {};
+
+window.addEventListener('keydown', e=>{
+  keys[e.key] = true;
+  if(!started && (e.key===' '||e.key.startsWith('Arrow')||e.key==='w')){started=true;}
+  if(e.key===' ' && !dead) shoot();
+  e.preventDefault();
+});
+window.addEventListener('keyup', e=>{keys[e.key]=false;});
+
+function shoot() {
+  if(shootCooldown>0) return;
+  bullets.push({x:ship.x, y:ship.y-8, vy:-8});
+  shootCooldown = 12;
+}
+
+function spawnAsteroid() {
+  const side = Math.floor(Math.random()*3);
+  let x,y,vx,vy;
+  if(side===0){x=Math.random()*W;y=-20;vx=(Math.random()-0.5)*2;vy=1+Math.random()*lvl*0.5;}
+  else if(side===1){x=-20;y=Math.random()*H;vx=1+Math.random()*lvl*0.5;vy=(Math.random()-0.5)*2;}
+  else{x=W+20;y=Math.random()*H;vx=-(1+Math.random()*lvl*0.5);vy=(Math.random()-0.5)*2;}
+  asteroids.push({x,y,vx,vy,r:12+Math.random()*14,angle:Math.random()*Math.PI*2,aVel:(Math.random()-0.5)*0.05,hp:1});
+}
+
+let spawnTimer = 0;
+const spawnRate = () => Math.max(20, 80 - lvl*8);
+
+function drawAsteroid(a) {
+  ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.angle);
+  ctx.fillStyle='#3a2000';ctx.strokeStyle='#ff9500';ctx.lineWidth=2;
+  ctx.beginPath();
+  const pts=7;
+  for(let i=0;i<pts;i++){
+    const ang=i/pts*Math.PI*2;
+    const rad=a.r*(0.65+Math.sin(i*2+a.angle*3)*0.35);
+    i===0?ctx.moveTo(Math.cos(ang)*rad,Math.sin(ang)*rad):ctx.lineTo(Math.cos(ang)*rad,Math.sin(ang)*rad);
+  }
+  ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.restore();
+}
+
+function drawShip() {
+  if(invincible>0 && Math.floor(invincible/5)%2===0) return;
+  ctx.save();ctx.translate(ship.x,ship.y);
+  ctx.fillStyle='#ff9500';ctx.shadowColor='#ff9500';ctx.shadowBlur=12;
+  ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(8,10);ctx.lineTo(-8,10);ctx.closePath();ctx.fill();
+  // cockpit
+  ctx.fillStyle='#ffd700';ctx.fillRect(-3,-4,6,6);
+  // exhaust flicker
+  if(Math.random()>0.4){
+    ctx.fillStyle='rgba(255,80,0,0.8)';ctx.beginPath();ctx.moveTo(-5,10);ctx.lineTo(5,10);ctx.lineTo(0,18+Math.random()*8);ctx.closePath();ctx.fill();
+  }
+  ctx.shadowBlur=0;ctx.restore();
+}
+
+function rect(a,bx,by,bw,bh){
+  return a.x-a.r<bx+bw&&a.x+a.r>bx&&a.y-a.r<by+bh&&a.y+a.r>by;
+}
+
+function update() {
+  if(dead||!started) return;
+  // ship movement
+  if(keys['ArrowLeft']||keys['a']||keys['A']) ship.vx-=0.5;
+  if(keys['ArrowRight']||keys['d']||keys['D']) ship.vx+=0.5;
+  if(keys['ArrowUp']||keys['w']||keys['W']) ship.vy-=0.5;
+  if(keys['ArrowDown']||keys['s']||keys['S']) ship.vy+=0.5;
+  ship.vx*=0.88; ship.vy*=0.88;
+  ship.x+=ship.vx; ship.y+=ship.vy;
+  ship.x=Math.max(12,Math.min(W-12,ship.x));
+  ship.y=Math.max(16,Math.min(H-16,ship.y));
+
+  if(shootCooldown>0) shootCooldown--;
+
+  // bullets
+  for(let i=bullets.length-1;i>=0;i--){
+    bullets[i].y+=bullets[i].vy;
+    if(bullets[i].y<-10) bullets.splice(i,1);
+  }
+
+  // asteroids
+  spawnTimer++;
+  if(spawnTimer>=spawnRate()){spawnAsteroid();spawnTimer=0;}
+  for(let i=asteroids.length-1;i>=0;i--){
+    const a=asteroids[i];
+    a.x+=a.vx;a.y+=a.vy;a.angle+=a.aVel;
+    // bullet hits
+    let hit=false;
+    for(let j=bullets.length-1;j>=0;j--){
+      const b=bullets[j];
+      if(Math.hypot(b.x-a.x,b.y-a.y)<a.r+4){
+        bullets.splice(j,1);hit=true;
+        score+=10;
+        document.getElementById('score').textContent=score;
+        lvl=Math.floor(score/100)+1;
+        document.getElementById('level').textContent=lvl;
+        break;
+      }
+    }
+    if(hit||a.x<-50||a.x>W+50||a.y<-50||a.y>H+50) asteroids.splice(i,1);
+    // ship hit
+    else if(invincible<=0 && rect(a,ship.x-7,ship.y-10,14,20)){
+      lives--;invincible=120;
+      document.getElementById('lives').textContent=lives;
+      if(lives<=0){dead=true;}
+    }
+  }
+  if(invincible>0) invincible--;
+}
+
+function draw() {
+  // bg
+  ctx.fillStyle='#0a0500';ctx.fillRect(0,0,W,H);
+  // stars
+  ctx.fillStyle='rgba(255,200,100,0.25)';
+  [[30,20],[90,80],[160,40],[240,110],[320,30],[400,90],[450,150],[80,160],[200,200],[360,180]].forEach(([x,y])=>ctx.fillRect(x,y,2,2));
+
+  if(!started) {
+    ctx.fillStyle='#ff9500';ctx.font='10px "Press Start 2P"';
+    ctx.fillText('PIXEL DRIFT',W/2-70,H/2-30);
+    ctx.fillStyle='#ffd700';ctx.font='7px "Press Start 2P"';
+    ctx.fillText('PRESS ARROW KEY OR SPACE',W/2-98,H/2+10);
+    ctx.fillText('TO START',W/2-36,H/2+30);
+  } else if(dead) {
+    ctx.fillStyle='#ff3300';ctx.font='12px "Press Start 2P"';
+    ctx.fillText('GAME OVER',W/2-65,H/2-20);
+    ctx.fillStyle='#ffd700';ctx.font='7px "Press Start 2P"';
+    ctx.fillText(`FINAL SCORE: ${score}`,W/2-65,H/2+10);
+    ctx.fillText('REFRESH TO PLAY AGAIN',W/2-88,H/2+35);
+  } else {
+    asteroids.forEach(drawAsteroid);
+    bullets.forEach(b=>{ctx.fillStyle='#ffd700';ctx.shadowColor='#ffd700';ctx.shadowBlur=8;ctx.fillRect(b.x-2,b.y-5,4,10);ctx.shadowBlur=0;});
+    drawShip();
+  }
+}
+
+function loop() {
+  update();draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

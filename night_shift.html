@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Night Shift: The Custom Five</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;color:#00ccff;font-family:'Courier New',monospace;display:flex;flex-direction:column;height:100vh;overflow:hidden;user-select:none;}
+#game{position:relative;flex:1;display:flex;}
+#office{flex:1;position:relative;overflow:hidden;cursor:none;}
+canvas#officeCanvas{width:100%;height:100%;display:block;}
+#sidebar{width:200px;background:#050510;border-left:2px solid #001133;display:flex;flex-direction:column;padding:10px;gap:8px;flex-shrink:0;}
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#050510;border-bottom:2px solid #001133;font-size:10px;flex-shrink:0;}
+#topbar a{color:#00ccff;font-size:9px;}
+/* Overlay screens */
+#overlay{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;}
+.night-title{font-size:36px;color:#00ccff;text-shadow:0 0 30px #00ccff;margin-bottom:8px;}
+.night-sub{font-size:12px;color:#4488aa;margin-bottom:30px;letter-spacing:4px;}
+.night-btn{background:transparent;border:2px solid #00ccff;color:#00ccff;padding:10px 28px;font-family:'Courier New',monospace;font-size:12px;cursor:pointer;margin:4px;transition:all 0.2s;letter-spacing:2px;}
+.night-btn:hover{background:#00ccff22;box-shadow:0 0 20px #00ccff66;}
+/* Camera views */
+.cam-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;flex:1;}
+.cam-view{border:1px solid #001133;position:relative;cursor:pointer;overflow:hidden;min-height:80px;}
+.cam-view.active{border-color:#00ccff;box-shadow:0 0 8px #00ccff44;}
+.cam-label{position:absolute;bottom:2px;left:4px;font-size:7px;color:#00ccff;z-index:2;}
+/* Controls */
+.ctrl-row{display:flex;gap:4px;}
+.ctrl-btn{flex:1;background:#000811;border:1px solid #001133;color:#00ccff;padding:6px 4px;font-family:'Courier New',monospace;font-size:8px;cursor:pointer;transition:all 0.15s;text-align:center;}
+.ctrl-btn:hover{background:#001133;border-color:#00ccff;}
+.ctrl-btn.active{background:#00ccff22;border-color:#00ccff;box-shadow:0 0 8px #00ccff44;}
+.power-bar{height:12px;background:#001133;border:1px solid #004466;position:relative;}
+.power-fill{height:100%;background:linear-gradient(90deg,#00cc44,#88ff00);transition:width 0.3s;}
+.power-fill.low{background:linear-gradient(90deg,#ff4400,#ffaa00);}
+/* Animatronics status */
+.anim-row{display:flex;align-items:center;gap:6px;padding:4px;border:1px solid #001133;font-size:8px;}
+.anim-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.danger-meter{flex:1;height:4px;background:#001133;}
+.danger-fill{height:100%;background:#ff4400;transition:width 0.5s;}
+/* Jumpscares */
+#jumpscare{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000;z-index:200;}
+#jumpscare.active{display:flex;animation:jsFlash 0.1s;}
+@keyframes jsFlash{0%,100%{background:#000;}50%{background:#ff0000;}}
+/* Static overlay */
+#static{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:50;mix-blend-mode:screen;}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <span>📷 NIGHT SHIFT: THE CUSTOM FIVE — EXPANDED EDITION</span>
+  <span id="nightDisplay" style="color:#ffd700;"></span>
+  <span id="timeDisplay" style="color:#00ccff;"></span>
+  <a href="index.html">← Back</a>
+</div>
+
+<div id="game">
+  <div id="office">
+    <canvas id="officeCanvas"></canvas>
+  </div>
+  <div id="sidebar">
+    <!-- Power -->
+    <div style="font-size:8px;color:#4488aa;margin-bottom:2px;">⚡ POWER</div>
+    <div class="power-bar"><div class="power-fill" id="powerFill" style="width:100%"></div></div>
+    <div id="powerPct" style="font-size:9px;text-align:right;">100%</div>
+
+    <!-- Animatronics -->
+    <div style="font-size:8px;color:#4488aa;margin-top:4px;margin-bottom:2px;">🤖 ANIMATRONICS</div>
+    <div id="animList"></div>
+
+    <!-- Camera views -->
+    <div style="font-size:8px;color:#4488aa;margin-top:4px;margin-bottom:2px;">📷 CAMERAS</div>
+    <div class="cam-grid" id="camGrid"></div>
+
+    <!-- Controls -->
+    <div style="font-size:8px;color:#4488aa;margin-top:4px;margin-bottom:2px;">🚪 DOORS & LIGHTS</div>
+    <div class="ctrl-row">
+      <button class="ctrl-btn" id="leftDoorBtn" onclick="toggleDoor('left')">LEFT<br>DOOR</button>
+      <button class="ctrl-btn" id="rightDoorBtn" onclick="toggleDoor('right')">RIGHT<br>DOOR</button>
+    </div>
+    <div class="ctrl-row">
+      <button class="ctrl-btn" id="leftLightBtn" onclick="toggleLight('left')">LEFT<br>LIGHT</button>
+      <button class="ctrl-btn" id="rightLightBtn" onclick="toggleLight('right')">RIGHT<br>LIGHT</button>
+    </div>
+
+    <!-- Status -->
+    <div id="statusMsg" style="font-size:8px;color:#888;margin-top:auto;line-height:1.6;"></div>
+  </div>
+</div>
+
+<!-- Overlay screens -->
+<div id="overlay">
+  <div class="night-title">🌙 NIGHT SHIFT</div>
+  <div class="night-sub">THE CUSTOM FIVE — EXPANDED</div>
+  <div id="overlayContent">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div id="nightSelectDisplay" style="font-size:28px;color:#ffd700;">NIGHT 1</div>
+      <div style="font-size:9px;color:#4488aa;margin-top:4px;">Survive from 12AM to 6AM</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+      <button class="night-btn" onclick="changeNight(-1)">◄ PREV</button>
+      <button class="night-btn" onclick="startNight()">▶ START NIGHT</button>
+      <button class="night-btn" onclick="changeNight(1)">NEXT ►</button>
+    </div>
+    <div style="margin-top:20px;font-size:9px;color:#4488aa;text-align:center;max-width:400px;line-height:1.8;">
+      📷 Watch cameras to track animatronics<br>
+      🚪 Close doors to block their entry<br>
+      💡 Use lights to check hallways<br>
+      ⚡ Manage power — it runs out!<br>
+      ⏰ Survive until 6AM
+    </div>
+  </div>
+</div>
+
+<div id="jumpscare">
+  <div style="font-size:80px;">😱</div>
+  <div style="font-size:24px;color:red;margin-top:20px;">YOU WERE GOT</div>
+</div>
+
+<canvas id="static" style="position:fixed;inset:0;width:100%;height:100%;"></canvas>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// NIGHT SHIFT: THE CUSTOM FIVE — HTML5 Remake
+// ═══════════════════════════════════════════════════════════════
+
+const canvas=document.getElementById('officeCanvas');
+const ctx=canvas.getContext('2d');
+const staticCanvas=document.getElementById('static');
+const sctx=staticCanvas.getContext('2d');
+
+function resize(){
+  canvas.width=canvas.offsetWidth;
+  canvas.height=canvas.offsetHeight;
+  staticCanvas.width=window.innerWidth;
+  staticCanvas.height=window.innerHeight;
+}
+window.addEventListener('resize',resize);
+
+// Game state
+const g={
+  night:1,
+  power:100,
+  powerDrain:0.01, // per frame
+  time:0, // 0=12AM, 1=6AM (360 frames per hour)
+  framesPerHour:1800,
+  running:false,
+  cameras:{
+    showing:null,
+    static:0,
+  },
+  doors:{left:false,right:false},
+  lights:{left:false,right:false},
+  frame:0,
+  survived:false,
+  dead:false,
+  jumpscared:false,
+  logMsgs:[],
+};
+
+// Camera locations
+const CAMS=[
+  {id:'CAM1',name:'Stage',icon:'🎭'},
+  {id:'CAM2',name:'Dining',icon:'🍕'},
+  {id:'CAM3',name:'Hallway L',icon:'🚪'},
+  {id:'CAM4',name:'Hallway R',icon:'🚪'},
+  {id:'CAM5',name:'Backstage',icon:'🎪'},
+  {id:'CAM6',name:'Kitchen',icon:'🍳'},
+];
+
+// Animatronics — 5 characters
+const ANIMATRONICS=[
+  {id:'freddy',name:'Freddy',icon:'🐻',color:'#884422',pos:'CAM1',target:'right',aggression:2,danger:0,active:false,inHallway:false,side:'right'},
+  {id:'bonnie',name:'Bonnie',icon:'🐰',color:'#4444cc',pos:'CAM2',target:'left',aggression:3,danger:0,active:false,inHallway:false,side:'left'},
+  {id:'chica',name:'Chica',icon:'🐥',color:'#cccc22',pos:'CAM2',target:'right',aggression:2,danger:0,active:false,inHallway:false,side:'right'},
+  {id:'foxy',name:'Foxy',icon:'🦊',color:'#cc4422',pos:'CAM5',target:'left',aggression:4,danger:0,active:false,inHallway:false,side:'left'},
+  {id:'shadow',name:'Shadow',icon:'👁',color:'#222255',pos:'CAM1',target:'both',aggression:5,danger:0,active:false,inHallway:false,side:'left'},
+];
+
+let selectedNight=1;
+function changeNight(d){
+  selectedNight=Math.max(1,Math.min(7,selectedNight+d));
+  document.getElementById('nightSelectDisplay').textContent='NIGHT '+selectedNight;
+}
+
+function startNight(){
+  g.night=selectedNight;
+  g.power=100;
+  g.time=0;
+  g.frame=0;
+  g.running=true;
+  g.dead=false;
+  g.survived=false;
+  g.jumpscared=false;
+  g.doors={left:false,right:false};
+  g.lights={left:false,right:false};
+  g.logMsgs=[];
+
+  // Set aggression based on night
+  ANIMATRONICS.forEach((a,i)=>{
+    a.danger=0; a.active=false; a.inHallway=false;
+    a.pos=CAMS[Math.floor(Math.random()*3)].id;
+    a.aggression=Math.min(10,i+g.night);
+  });
+
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('nightDisplay').textContent='NIGHT '+g.night;
+  renderAnimList();
+  renderCamGrid();
+  resize();
+  log('Night '+g.night+' started. Survive until 6AM.');
+  log('Watch for the animatronics on cameras!');
+}
+
+function log(msg){
+  g.logMsgs.unshift(msg);
+  if(g.logMsgs.length>4)g.logMsgs.pop();
+  document.getElementById('statusMsg').innerHTML=g.logMsgs.join('<br>');
+}
+
+function toggleDoor(side){
+  g.doors[side]=!g.doors[side];
+  const id=side+'DoorBtn';
+  document.getElementById(id).classList.toggle('active',g.doors[side]);
+  log(side.toUpperCase()+' door '+(g.doors[side]?'CLOSED':'OPENED'));
+}
+
+function toggleLight(side){
+  g.lights[side]=!g.lights[side];
+  const id=side+'LightBtn';
+  document.getElementById(id).classList.toggle('active',g.lights[side]);
+}
+
+function renderAnimList(){
+  const el=document.getElementById('animList');
+  el.innerHTML='';
+  ANIMATRONICS.forEach(a=>{
+    const div=document.createElement('div');
+    div.className='anim-row';
+    div.innerHTML=`
+      <div class="anim-dot" style="background:${a.active?a.color:'#222'};${a.active?'box-shadow:0 0 6px '+a.color:''}"></div>
+      <span style="width:50px;color:${a.active?a.color:'#444'}">${a.icon}${a.name}</span>
+      <div class="danger-meter"><div class="danger-fill" style="width:${a.danger}%"></div></div>
+      ${a.inHallway?`<span style="font-size:7px;color:#ff4400">⚠</span>`:''}
+    `;
+    el.appendChild(div);
+  });
+}
+
+function renderCamGrid(){
+  const el=document.getElementById('camGrid');
+  el.innerHTML='';
+  CAMS.forEach(cam=>{
+    const div=document.createElement('div');
+    div.className='cam-view'+(g.cameras.showing===cam.id?' active':'');
+    div.onclick=()=>switchCam(cam.id);
+    // Find animatronics in this cam
+    const here=ANIMATRONICS.filter(a=>a.pos===cam.id&&!a.inHallway);
+    div.innerHTML=`
+      <canvas width="80" height="60" id="camCanvas_${cam.id}"></canvas>
+      <div class="cam-label">${cam.id} ${here.map(a=>a.icon).join('')}</div>
+    `;
+    el.appendChild(div);
+  });
+  // Draw cam thumbnails
+  setTimeout(drawCamThumbnails,50);
+}
+
+function drawCamThumbnails(){
+  CAMS.forEach(cam=>{
+    const c=document.getElementById('camCanvas_'+cam.id);
+    if(!c)return;
+    const x=c.getContext('2d');
+    x.fillStyle='#030812';
+    x.fillRect(0,0,80,60);
+    // Static noise
+    for(let i=0;i<200;i++){
+      x.fillStyle=`rgba(0,200,255,${Math.random()*0.05})`;
+      x.fillRect(Math.random()*80,Math.random()*60,2,1);
+    }
+    // Animatronics in cam
+    const here=ANIMATRONICS.filter(a=>a.pos===cam.id&&!a.inHallway);
+    here.forEach((a,i)=>{
+      x.font='20px serif';
+      x.fillText(a.icon,10+i*30,40);
+      if(a.active){
+        x.fillStyle=a.color+'44';
+        x.fillRect(0,0,80,60);
+      }
+    });
+    // CAM overlay
+    x.strokeStyle='rgba(0,200,255,0.2)';
+    x.lineWidth=1;
+    x.strokeRect(0,0,80,60);
+  });
+}
+
+function switchCam(id){
+  g.cameras.showing=g.cameras.showing===id?null:id;
+  renderCamGrid();
+  if(g.cameras.showing) g.power-=0.5;
+}
+
+// Main game logic
+function updateGame(){
+  if(!g.running)return;
+  g.frame++;
+
+  // Power drain
+  let drain=g.powerDrain;
+  if(g.doors.left)drain+=0.015;
+  if(g.doors.right)drain+=0.015;
+  if(g.lights.left)drain+=0.008;
+  if(g.lights.right)drain+=0.008;
+  if(g.cameras.showing)drain+=0.005;
+  drain*=(1+g.night*0.05);
+  g.power=Math.max(0,g.power-drain);
+
+  // Time progress
+  g.time+=1/g.framesPerHour;
+
+  // Power out!
+  if(g.power<=0&&!g.dead){
+    g.power=0;
+    if(g.frame%60<30) log('⚡ POWER IS OUT!');
+    // Freddy comes when power is out
+    if(g.frame%300===0) jumpScare(ANIMATRONICS[0]);
+    return;
+  }
+
+  // Survived
+  if(g.time>=6&&!g.survived&&!g.dead){
+    g.survived=true;
+    g.running=false;
+    showResult(true);
+    return;
+  }
+
+  // Activate animatronics over time
+  const nightMult=g.night;
+  ANIMATRONICS.forEach((a,i)=>{
+    const threshold=Math.max(300,1800-i*200-nightMult*150);
+    if(g.frame>=threshold&&!a.active){
+      a.active=true;
+      log('⚠ '+a.name+' is now active!');
+      renderAnimList();
+    }
+    if(!a.active)return;
+
+    // Increase danger
+    const moveChance=a.aggression*nightMult*0.0002;
+    if(Math.random()<moveChance){
+      a.danger=Math.min(100,a.danger+5);
+      // Move through cameras
+      if(a.danger>80&&!a.inHallway){
+        a.inHallway=true;
+        a.pos='HALLWAY';
+        log('⚠ '+a.name+' is in the '+a.side.toUpperCase()+' HALLWAY!');
+        renderAnimList();
+      }
+      if(a.danger>60){
+        // Move cameras
+        const camIdx=Math.floor(Math.random()*CAMS.length);
+        a.pos=CAMS[camIdx].id;
+      }
+    }
+
+    // Try to enter office
+    if(a.inHallway){
+      const doorOpen=!g.doors[a.side];
+      if(doorOpen&&Math.random()<0.003*nightMult){
+        // JUMPSCARE
+        jumpScare(a);
+      }
+      // Can be scared off by light
+      if(g.lights[a.side]&&Math.random()<0.05){
+        a.inHallway=false;
+        a.danger=Math.max(0,a.danger-30);
+        a.pos=CAMS[0].id;
+        log(a.name+' retreated from the light!');
+        renderAnimList();
+      }
+      // Door keeps them out but drains power
+      if(!doorOpen){
+        if(g.frame%120===0) log(a.name+' is at the '+a.side.toUpperCase()+' door!');
+      }
+    }
+  });
+
+  // Update displays
+  if(g.frame%30===0){
+    renderAnimList();
+    renderCamGrid();
+    const pct=Math.round(g.power);
+    document.getElementById('powerFill').style.width=pct+'%';
+    document.getElementById('powerFill').className='power-fill'+(pct<20?' low':'');
+    document.getElementById('powerPct').textContent=pct+'%';
+    const hours=['12AM','1AM','2AM','3AM','4AM','5AM','6AM'];
+    const h=Math.min(6,Math.floor(g.time));
+    document.getElementById('timeDisplay').textContent=hours[h];
+  }
+}
+
+function jumpScare(anim){
+  if(g.jumpscared||g.dead)return;
+  g.jumpscared=true;
+  g.dead=true;
+  g.running=false;
+  const el=document.getElementById('jumpscare');
+  el.innerHTML=`<div style="font-size:100px;">${anim.icon}</div><div style="font-size:28px;color:red;margin-top:16px;">${anim.name.toUpperCase()} GOT YOU!</div>`;
+  el.style.display='flex';
+  // Shake effect
+  document.body.style.animation='shake 0.3s ease';
+  setTimeout(()=>{
+    el.style.display='none';
+    document.body.style.animation='';
+    showResult(false,anim);
+  },2000);
+}
+
+function showResult(won,killer){
+  const overlay=document.getElementById('overlay');
+  overlay.style.display='flex';
+  overlay.innerHTML=`
+    <div class="night-title" style="color:${won?'#00ff88':'#ff2200'}">${won?'✅ YOU SURVIVED!':'❌ YOU WERE GOT!'}</div>
+    <div class="night-sub">${won?('NIGHT '+g.night+' COMPLETE!'):(killer?killer.icon+' '+killer.name+' got you!':'Power went out...')}</div>
+    <div style="font-size:11px;color:#4488aa;margin-bottom:24px;">
+      Power remaining: ${Math.round(g.power)}%<br>
+      Time reached: ${Math.floor(g.time)}AM
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+      ${won&&selectedNight<7?`<button class="night-btn" onclick="changeNight(1);selectedNight++;startNight()">NIGHT ${g.night+1} ►</button>`:''}
+      <button class="night-btn" onclick="startNight()">TRY AGAIN</button>
+      <button class="night-btn" onclick="document.getElementById('overlay').innerHTML=document.getElementById('overlayTemplate').innerHTML;document.getElementById('overlay').style.display='flex';">MENU</button>
+    </div>
+  `;
+}
+
+// Office renderer
+function drawOffice(){
+  const W=canvas.width,H=canvas.height;
+  // Background - office
+  ctx.fillStyle='#030810';
+  ctx.fillRect(0,0,W,H);
+
+  // Desk
+  ctx.fillStyle='#1a1205';
+  ctx.fillRect(0,H*0.65,W,H*0.35);
+  ctx.fillStyle='#2a1d08';
+  ctx.fillRect(0,H*0.62,W,H*0.05);
+
+  // Walls
+  ctx.fillStyle='#050812';
+  ctx.fillRect(0,0,W,H*0.65);
+
+  // Posters on wall
+  ['🎪','🎭','🎠'].forEach((emoji,i)=>{
+    ctx.fillStyle='#0a0f1a';
+    ctx.fillRect(60+i*200,H*0.1,120,150);
+    ctx.strokeStyle='#1a2a3a';ctx.lineWidth=3;
+    ctx.strokeRect(60+i*200,H*0.1,120,150);
+    ctx.font='60px serif';ctx.textAlign='center';
+    ctx.fillText(emoji,120+i*200,H*0.1+100);
+  });
+
+  // Left hallway
+  const leftAlpha=g.lights.left?0.8:0.1;
+  const leftAnimHere=ANIMATRONICS.find(a=>a.inHallway&&a.side==='left');
+  ctx.fillStyle=`rgba(0,10,30,${1-leftAlpha})`;
+  ctx.fillRect(0,H*0.1,150,H*0.55);
+  if(g.lights.left){
+    const lg=ctx.createLinearGradient(0,0,200,0);
+    lg.addColorStop(0,'rgba(255,200,100,0.3)');lg.addColorStop(1,'transparent');
+    ctx.fillStyle=lg; ctx.fillRect(0,H*0.1,200,H*0.55);
+  }
+  if(leftAnimHere){
+    ctx.font='48px serif'; ctx.textAlign='center';
+    const vis=g.lights.left?1:0.2;
+    ctx.globalAlpha=vis;
+    ctx.fillText(leftAnimHere.icon,75,H*0.45);
+    ctx.globalAlpha=1;
+    if(!g.lights.left) log('Something in the left hallway...');
+  }
+  // Left door display
+  if(g.doors.left){
+    ctx.fillStyle='#1a2a1a';
+    ctx.fillRect(0,H*0.1,30,H*0.55);
+    ctx.fillStyle='rgba(100,255,100,0.1)';
+    ctx.fillRect(0,H*0.1,30,H*0.55);
+  }
+
+  // Right hallway
+  const rightAlpha=g.lights.right?0.8:0.1;
+  const rightAnimHere=ANIMATRONICS.find(a=>a.inHallway&&a.side==='right');
+  ctx.fillStyle=`rgba(0,10,30,${1-rightAlpha})`;
+  ctx.fillRect(W-150,H*0.1,150,H*0.55);
+  if(g.lights.right){
+    const rg=ctx.createLinearGradient(W,0,W-200,0);
+    rg.addColorStop(0,'rgba(255,200,100,0.3)');rg.addColorStop(1,'transparent');
+    ctx.fillStyle=rg; ctx.fillRect(W-200,H*0.1,200,H*0.55);
+  }
+  if(rightAnimHere){
+    ctx.font='48px serif'; ctx.textAlign='center';
+    const vis=g.lights.right?1:0.2;
+    ctx.globalAlpha=vis;
+    ctx.fillText(rightAnimHere.icon,W-75,H*0.45);
+    ctx.globalAlpha=1;
+  }
+  if(g.doors.right){
+    ctx.fillStyle='#1a2a1a';
+    ctx.fillRect(W-30,H*0.1,30,H*0.55);
+    ctx.fillStyle='rgba(100,255,100,0.1)';
+    ctx.fillRect(W-30,H*0.1,30,H*0.55);
+  }
+
+  // Camera view overlay
+  if(g.cameras.showing){
+    ctx.fillStyle='rgba(0,0,0,0.7)';
+    ctx.fillRect(0,0,W,H*0.6);
+    ctx.fillStyle='rgba(0,200,255,0.08)';
+    ctx.fillRect(0,0,W,H*0.6);
+    // Static noise
+    for(let i=0;i<500;i++){
+      ctx.fillStyle=`rgba(0,200,255,${Math.random()*0.04})`;
+      ctx.fillRect(Math.random()*W,Math.random()*(H*0.6),3,1);
+    }
+    ctx.fillStyle='#00ccff'; ctx.font='bold 14px Courier New'; ctx.textAlign='left';
+    ctx.fillText('📷 '+g.cameras.showing,20,30);
+    const here=ANIMATRONICS.filter(a=>a.pos===g.cameras.showing&&!a.inHallway);
+    if(here.length>0){
+      ctx.font='80px serif'; ctx.textAlign='center';
+      here.forEach((a,i)=>ctx.fillText(a.icon,W/2+i*80,H*0.35));
+    } else {
+      ctx.fillStyle='rgba(0,200,255,0.2)';
+      ctx.font='12px Courier New'; ctx.textAlign='center';
+      ctx.fillText('[EMPTY]',W/2,H*0.3);
+    }
+    ctx.fillStyle='#00ccff44'; ctx.strokeStyle='#00ccff44'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(W,0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,H*0.6); ctx.lineTo(W,H*0.6); ctx.stroke();
+  }
+
+  // Power bar overlay
+  if(g.power<20){
+    ctx.fillStyle=`rgba(255,0,0,${0.1+Math.sin(Date.now()*0.005)*0.05})`;
+    ctx.fillRect(0,0,W,H);
+  }
+}
+
+// Static noise on static canvas
+function drawStatic(){
+  sctx.clearRect(0,0,staticCanvas.width,staticCanvas.height);
+  if(g.power<30){
+    const alpha=(30-g.power)/300;
+    for(let i=0;i<1000;i++){
+      sctx.fillStyle=`rgba(0,200,255,${Math.random()*alpha})`;
+      sctx.fillRect(Math.random()*staticCanvas.width,Math.random()*staticCanvas.height,3,1);
+    }
+  }
+}
+
+function gameLoop(){
+  requestAnimationFrame(gameLoop);
+  updateGame();
+  if(canvas.width!==canvas.offsetWidth||canvas.height!==canvas.offsetHeight) resize();
+  drawOffice();
+  drawStatic();
+}
+
+// Add shake animation
+const style=document.createElement('style');
+style.textContent='@keyframes shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-10px,-5px)}50%{transform:translate(10px,5px)}75%{transform:translate(-8px,3px)}}';
+document.head.appendChild(style);
+
+gameLoop();
+</script>
+</body>
+</html>
