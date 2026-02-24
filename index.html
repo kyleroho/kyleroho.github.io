@@ -1,69 +1,1485 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kyle.com - Home</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="script.js" defer></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Forge Games</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a12;
+    --bg2: #0f0f1a;
+    --panel: #12121f;
+    --border: #2a2a4a;
+    --accent: #4fc3f7;
+    --accent2: #ff6b6b;
+    --accent3: #ffd700;
+    --accent4: #a78bfa;
+    --text: #e0e0ff;
+    --text-dim: #8888aa;
+    --green: #69ff94;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.06) 2px,
+      rgba(0,0,0,0.06) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* Stars background */
+  .stars {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--d, 3s) ease-in-out infinite var(--delay, 0s);
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.4); }
+  }
+
+  /* Header */
+  header {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 48px 24px 24px;
+    border-bottom: 2px solid var(--border);
+    background: linear-gradient(180deg, rgba(79,195,247,0.07) 0%, transparent 100%);
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 12px;
+  }
+
+  .logo-pixel {
+    display: grid;
+    grid-template-columns: repeat(5, 8px);
+    grid-template-rows: repeat(5, 8px);
+    gap: 2px;
+  }
+  .logo-pixel .p { width: 8px; height: 8px; background: var(--accent); border-radius: 1px; }
+  .logo-pixel ._ { width: 8px; height: 8px; }
+
+  .site-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(18px, 3.5vw, 36px);
+    color: var(--accent3);
+    text-shadow: 0 0 20px rgba(255,215,0,0.5), 2px 2px 0 #7a5000;
+    letter-spacing: 2px;
+    line-height: 1.3;
+  }
+
+  .site-subtitle {
+    font-family: 'VT323', monospace;
+    font-size: 24px;
+    color: var(--text-dim);
+    letter-spacing: 6px;
+    margin-top: 6px;
+  }
+
+  /* Pixel art decoration */
+  .pixel-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    margin: 16px 0;
+  }
+  .pixel-divider span {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--accent);
+  }
+  .pixel-divider .line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    flex: 1;
+    max-width: 200px;
+  }
+
+  /* Nav */
+  nav {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  nav a {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  nav a:hover {
+    color: var(--accent3);
+    border-color: var(--accent3);
+    background: rgba(255,215,0,0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 0 rgba(255,215,0,0.3);
+  }
+
+  /* Main content */
+  main {
+    position: relative;
+    z-index: 10;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* Section headers */
+  .section-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 4px;
+    margin-bottom: 24px;
+    padding-left: 12px;
+    border-left: 3px solid var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label .badge {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 2px 8px;
+    font-size: 9px;
+  }
+
+  /* Games grid */
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    margin-bottom: 60px;
+  }
+
+  /* Game card */
+  .game-card {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    position: relative;
+    transition: all 0.2s;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .game-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent, var(--accent));
+  }
+  .game-card:hover {
+    border-color: var(--card-accent, var(--accent));
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px var(--card-glow, rgba(79,195,247,0.2));
+  }
+
+  .game-screen {
+    width: 100%;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: var(--card-bg, #080820);
+  }
+
+  /* Animated pixel art previews */
+  .game-canvas {
+    position: absolute;
+    width: 100%; height: 100%;
+  }
+
+  .game-info {
+    padding: 16px 18px 18px;
+  }
+
+  .game-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 10px;
+  }
+
+  .game-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .platform-badges {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .badge-platform {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    padding: 3px 6px;
+    border: 1px solid;
+  }
+  .badge-win {
+    color: #0078d4;
+    border-color: #0078d4;
+    background: rgba(0,120,212,0.1);
+  }
+  .badge-mac {
+    color: #aaaaaa;
+    border-color: #888;
+    background: rgba(150,150,150,0.1);
+  }
+  .badge-web {
+    color: var(--green);
+    border-color: var(--green);
+    background: rgba(105,255,148,0.1);
+  }
+
+  .game-desc {
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+
+  .game-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .tag {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 3px 7px;
+    background: rgba(255,255,255,0.03);
+  }
+
+  .game-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .dl-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 8px 14px;
+    background: var(--card-accent, var(--accent));
+    color: var(--bg);
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .dl-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 16px var(--card-accent, var(--accent));
+  }
+
+  .game-meta {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--text-dim);
+  }
+
+  /* Special featured card */
+  .game-card.featured {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .game-card.featured .game-screen {
+    height: 100%;
+    min-height: 220px;
+  }
+  @media (max-width: 640px) {
+    .game-card.featured {
+      grid-template-columns: 1fr;
+    }
+    .game-card.featured .game-screen {
+      min-height: 160px;
+    }
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 40px;
+  }
+  .stat-item {
+    text-align: center;
+    border-right: 1px solid var(--border);
+    padding: 0 12px;
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    color: var(--accent3);
+    display: block;
+  }
+  .stat-lbl {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--text-dim);
+    display: block;
+    margin-top: 4px;
+  }
+
+  /* Ticker */
+  .ticker {
+    overflow: hidden;
+    background: var(--accent);
+    color: var(--bg);
+    padding: 8px 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    white-space: nowrap;
+    margin-bottom: 30px;
+  }
+  .ticker-inner {
+    display: inline-block;
+    animation: ticker 30s linear infinite;
+  }
+  @keyframes ticker {
+    from { transform: translateX(100vw); }
+    to { transform: translateX(-100%); }
+  }
+
+  /* Footer */
+  footer {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 24px;
+    border-top: 2px solid var(--border);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--text-dim);
+    line-height: 2.2;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* Animated pixel character */
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes run { 0%,100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
+
+  /* Scroll reveal */
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ── Inline game iframe ── */
+  .play-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    color: white;
+    background: rgba(0,0,0,0.55);
+    letter-spacing: 2px;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .play-overlay:hover { background: rgba(0,0,0,0.3); }
+  .game-screen iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  /* ── Python Code Section ── */
+  .py-file-card {
+    background: #0a120a;
+    border: 2px solid #1a3a1a;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 10;
+    transition: border-color 0.2s;
+  }
+  .py-file-card:hover { border-color: #69ff94; }
+  .py-file-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .py-file-header:hover { background: rgba(105,255,148,0.05); }
+  .py-icon { font-size: 32px; flex-shrink: 0; }
+  .py-file-info { flex: 1; min-width: 0; }
+  .py-file-name { font-family: 'Press Start 2P', monospace; font-size: 10px; margin-bottom: 5px; }
+  .py-file-desc { font-family: 'VT323', monospace; font-size: 17px; color: var(--text-dim); }
+  .py-file-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .py-lines { font-family: 'Press Start 2P', monospace; font-size: 8px; color: #69ff94; }
+  .py-fname { font-family: 'VT323', monospace; font-size: 16px; color: #4488aa; }
+  .py-file-btns { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .py-dl-btn { font-size: 9px !important; padding: 5px 10px !important; }
+  .py-toggle-arrow { font-family: 'Press Start 2P', monospace; font-size: 10px; color: #69ff94; width: 16px; text-align: center; transition: transform 0.2s; }
+  .py-toggle-arrow.open { transform: rotate(180deg); }
+  .py-code-wrap {
+    border-top: 1px solid #1a3a1a;
+    max-height: 500px;
+    overflow: auto;
+    background: #060d06;
+  }
+  .py-code {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #a0ffa0;
+    padding: 16px 20px;
+    white-space: pre;
+    tab-size: 4;
+  }
+  /* Syntax-ish coloring via CSS */
+  .py-code code { color: #a0ffa0; }
+</style>
 </head>
 <body>
-    <header>
-        <div class="logo">
-            <img src="logo.png" alt="Kyle OS Logo">
-            <h1>Kyle.com</h1>
-        </div>
-        <nav>
-            <ul>
-                <li><a href="#about">About</a></li>
-                <li><a href="#contact">Contact</a></li>
-                <li><a href="#services">Services</a></li>
-            </ul>
-        </nav>
-    </header>
 
-    <section id="hero">
-        <div class="hero-content">
-            <h2>Welcome to Kyle.com</h2>
-            <p>Your gateway to the future of OS technology and entertainment.</p>
-            <button onclick="window.location.href='#services'">Explore Our Services</button>
-        </div>
-    </section>
+<!-- Stars -->
+<div class="stars" id="stars"></div>
 
-    <section id="about">
-        <h2>About Us</h2>
-        <p>Kyle.com is the official website for all things related to the Kyle OS. From updates to new apps, we've got it all.</p>
-    </section>
+<!-- Header -->
+<header>
+  <div class="logo-row">
+    <canvas id="logoCanvas" width="60" height="60" style="image-rendering:pixelated;"></canvas>
+    <div>
+      <div class="site-title">PIXEL FORGE<br>GAMES</div>
+      <div class="site-subtitle">▸ INDIE GAME STUDIO ◂</div>
+    </div>
+    <canvas id="logoCanvas2" width="60" height="60" style="image-rendering:pixelated;"></canvas>
+  </div>
+  <div class="pixel-divider">
+    <div class="line"></div>
+    <span>★ EST. 2024 ★</span>
+    <div class="line"></div>
+  </div>
+  <nav>
+    <a href="#games">GAMES</a>
+    <a href="#python" style="color:#69ff94;">🐍 PYTHON CODE</a>
+    <a href="#web">▶ PLAY NOW</a>
+    <a href="#about">ABOUT</a>
+    <a href="savefile.json" download>SAVE DATA</a>
+  </nav>
+</header>
 
-    <section id="services">
-        <h2>Our Services</h2>
-        <div class="service-card">
-            <h3>Latest Apps</h3>
-            <p>Explore the latest apps available on the Kyle OS.</p>
-        </div>
-        <div class="service-card">
-            <h3>Updates</h3>
-            <p>Stay up-to-date with the latest updates for Kyle OS.</p>
-        </div>
-        <div class="service-card">
-            <h3>Support</h3>
-            <p>Need help? Visit our support section for assistance.</p>    
-        </div>
-    </section>
+<!-- Ticker -->
+<div class="ticker">
+  <span class="ticker-inner">
+    ★ NEW RELEASE: THE BLUE GUY — DOWNLOAD NOW &nbsp;&nbsp;&nbsp; ★ NIGHT SHIFT: THE CUSTOM FIVE EXPANDED — AVAILABLE &nbsp;&nbsp;&nbsp; ★ CYBER PLATFORMER 2X ENHANCED EDITION &nbsp;&nbsp;&nbsp; ★ BLOB PARTY — PLAY IN BROWSER &nbsp;&nbsp;&nbsp; ★ SOUND BALLS — INTERACTIVE MUSIC TOY &nbsp;&nbsp;&nbsp; ★ PIXEL FORGE GAMES — HANDCRAFTED WITH LOVE &nbsp;&nbsp;&nbsp;
+  </span>
+</div>
 
-    <section id="contact">
-        <h2>Contact Us</h2>
-        <form>
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
-            <label for="message">Message:</label>
-            <textarea id="message" name="message" rows="4" required></textarea>
-            <button type="submit">Send</button>
-        </form>
-    </section>
+<main>
 
-    <footer>
-        <p>&copy; 2024 Kyle.com. All rights reserved.</p>
-    </footer>
+  <!-- Stats -->
+  <div class="stats-bar reveal" id="stats">
+    <div class="stat-item">
+      <span class="stat-val" id="cnt-games">9</span>
+      <span class="stat-lbl">GAMES MADE</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-val">30</span>
+      <span class="stat-lbl">LEVELS</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-val">443</span>
+      <span class="stat-lbl">COINS BANKED</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-val">12</span>
+      <span class="stat-lbl">ACHIEVEMENTS</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-val">4</span>
+      <span class="stat-lbl">TOTAL DEATHS</span>
+    </div>
+  </div>
+
+  <!-- Download Games -->
+  <div id="games">
+    <div class="section-label reveal">
+      🐍 PYTHON GAMES
+      <span class="badge">WIN + MAC DOWNLOAD</span>
+    </div>
+
+    <div class="games-grid">
+
+      <!-- Featured: The Blue Guy -->
+      <div class="game-card featured reveal" style="--card-accent:#4fc3f7;--card-glow:rgba(79,195,247,0.25);--card-bg:#060820;">
+        <div class="game-screen">
+          <canvas class="game-canvas" id="blueGuyCanvas"></canvas>
+        </div>
+        <div class="game-info" style="display:flex;flex-direction:column;justify-content:center;">
+          <div class="game-title-row">
+            <div class="game-name">THE BLUE GUY</div>
+            <div class="platform-badges">
+              <span class="badge-platform badge-win">WIN</span>
+              <span class="badge-platform badge-mac">MAC</span>
+            </div>
+          </div>
+          <div class="game-desc">A tight precision platformer with 30 handcrafted levels, boss fights, double-jumps, and a full coin system. Arrow keys to move, Space to jump. Stomp enemies, dodge spikes, reach the exit.</div>
+          <div class="game-tags">
+            <span class="tag">PLATFORMER</span>
+            <span class="tag">DOUBLE JUMP</span>
+            <span class="tag">BOSS FIGHTS</span>
+            <span class="tag">30 LEVELS</span>
+            <span class="tag">COINS</span>
+          </div>
+          <div class="game-meta" style="margin-bottom:10px;">v1.0 · Python/Pygame</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a class="dl-btn" href="c.py" download="TheBlueGuy.py">▼ WINDOWS (.py)</a>
+            <a class="dl-btn" style="background:#888;" href="c.pyw" download="TheBlueGuy.pyw">▼ MAC (.pyw)</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Minimal Platformer 4 -->
+      <div class="game-card reveal" style="--card-accent:#ff6b6b;--card-glow:rgba(255,107,107,0.25);--card-bg:#120808;">
+        <div class="game-screen" style="background:#120808;">
+          <canvas class="game-canvas" id="mp4Canvas"></canvas>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">MINIMAL PLATFORMER 4:<br>THE RED UPRISING</div>
+            <div class="platform-badges">
+              <span class="badge-platform badge-win">WIN</span>
+              <span class="badge-platform badge-mac">MAC</span>
+            </div>
+          </div>
+          <div class="game-desc">The dramatic fourth chapter of the Minimal Platformer series. Red takes over. New mechanics, new atmosphere.</div>
+          <div class="game-tags"><span class="tag">PLATFORMER</span><span class="tag">SEQUEL</span><span class="tag">DRAMATIC</span></div>
+          <div class="game-footer">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="dl-btn" style="background:#ff6b6b;" href="c4.py" download="MinimalPlatformer4.py">▼ WINDOWS (.py)</a>
+              <a class="dl-btn" style="background:#884040;" href="c4.py" download="MinimalPlatformer4.pyw">▼ MAC (.pyw)</a>
+            </div>
+            <div class="game-meta">v4.0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Minimal Platformer 3 -->
+      <div class="game-card reveal" style="--card-accent:#a78bfa;--card-glow:rgba(167,139,250,0.25);--card-bg:#0d0820;">
+        <div class="game-screen" style="background:#0d0820;">
+          <canvas class="game-canvas" id="mp3Canvas"></canvas>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">MINIMAL PLATFORMER 3</div>
+            <div class="platform-badges">
+              <span class="badge-platform badge-win">WIN</span>
+              <span class="badge-platform badge-mac">MAC</span>
+            </div>
+          </div>
+          <div class="game-desc">The third entry in the series. More levels, more challenge, same tight controls.</div>
+          <div class="game-tags"><span class="tag">PLATFORMER</span><span class="tag">SERIES</span><span class="tag">PURPLE</span></div>
+          <div class="game-footer">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="dl-btn" style="background:#a78bfa;" href="c3.py" download="MinimalPlatformer3.py">▼ WINDOWS (.py)</a>
+              <a class="dl-btn" style="background:#5a4a88;" href="c3.py" download="MinimalPlatformer3.pyw">▼ MAC (.pyw)</a>
+            </div>
+            <div class="game-meta">v3.0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cyber Platformer 2X -->
+      <div class="game-card reveal" style="--card-accent:#00ffff;--card-glow:rgba(0,255,255,0.25);--card-bg:#020f12;">
+        <div class="game-screen" style="background:#020f12;">
+          <canvas class="game-canvas" id="cp2xCanvas"></canvas>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">CYBER PLATFORMER 2X<br>ENHANCED EDITION</div>
+            <div class="platform-badges">
+              <span class="badge-platform badge-win">WIN</span>
+              <span class="badge-platform badge-mac">MAC</span>
+            </div>
+          </div>
+          <div class="game-desc">Neon-soaked cyberpunk platforming with enhanced visuals. Run through glowing circuits and dodge laser grids.</div>
+          <div class="game-tags"><span class="tag">CYBERPUNK</span><span class="tag">NEON</span><span class="tag">ENHANCED</span></div>
+          <div class="game-footer">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="dl-btn" style="background:#00ffff;color:#000;" href="c2x.py" download="CyberPlatformer2X.py">▼ WINDOWS (.py)</a>
+              <a class="dl-btn" style="background:#006666;color:#00ffff;" href="c2x.py" download="CyberPlatformer2X.pyw">▼ MAC (.pyw)</a>
+            </div>
+            <div class="game-meta">v2X</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Night Shift -->
+      <div class="game-card reveal" style="--card-accent:#ffd700;--card-glow:rgba(255,215,0,0.25);--card-bg:#06060f;">
+        <div class="game-screen" style="background:#06060f;">
+          <canvas class="game-canvas" id="nightCanvas"></canvas>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">NIGHT SHIFT:<br>THE CUSTOM FIVE</div>
+            <div class="platform-badges">
+              <span class="badge-platform badge-win">WIN</span>
+              <span class="badge-platform badge-mac">MAC</span>
+            </div>
+          </div>
+          <div class="game-desc">A Five Nights-style survival horror game. Survive until dawn, manage cameras, and keep the animatronics at bay. Expanded edition with new characters.</div>
+          <div class="game-tags"><span class="tag">HORROR</span><span class="tag">SURVIVAL</span><span class="tag">FNAF-LIKE</span><span class="tag">NIGHTS</span></div>
+          <div class="game-footer">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="dl-btn" style="background:#ffd700;color:#000;" href="no_nights.py" download="NightShift.py">▼ WINDOWS (.py)</a>
+              <a class="dl-btn" style="background:#887700;color:#ffd700;" href="no_nights.py" download="NightShift.pyw">▼ MAC (.pyw)</a>
+            </div>
+            <div class="game-meta">EXPANDED</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Box Royale -->
+      <div class="game-card reveal" style="--card-accent:#ff6ec7;--card-glow:rgba(255,110,199,0.25);--card-bg:#120010;">
+        <div class="game-screen" style="background:#120010;">
+          <canvas class="game-canvas" id="boxRoyaleCanvas"></canvas>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">BOX ROYALE ULTIMATE<br>EVERYTHING EDITION</div>
+            <div class="platform-badges">
+              <span class="badge-platform badge-win">WIN</span>
+              <span class="badge-platform badge-mac">MAC</span>
+            </div>
+          </div>
+          <div class="game-desc">Online multiplayer Fall Guys-style racing with shops, hats, pets, research trees, emotes, chat, multiple maps, particles, and full customization.</div>
+          <div class="game-tags"><span class="tag">MULTIPLAYER</span><span class="tag">RACING</span><span class="tag">ONLINE</span><span class="tag">SHOP</span><span class="tag">FALL GUYS</span></div>
+          <div class="game-footer">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="dl-btn" style="background:#ff6ec7;color:#000;" href="boxroyale.py" download="BoxRoyale.py">▼ WINDOWS (.py)</a>
+              <a class="dl-btn" style="background:#7a1060;color:#ff6ec7;" href="boxroyale.py" download="BoxRoyale.pyw">▼ MAC (.pyw)</a>
+            </div>
+            <div class="game-meta">ULTIMATE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Forge Clicker -->
+      <div class="game-card reveal" style="--card-accent:#ff8c00;--card-glow:rgba(255,140,0,0.25);--card-bg:#0f0800;">
+        <div class="game-screen" style="background:#0f0800;">
+          <canvas class="game-canvas" id="forgeClickerCanvas"></canvas>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">FORGE CLICKER<br>MEGA ULTIMATE EDITION</div>
+            <div class="platform-badges">
+              <span class="badge-platform badge-win">WIN</span>
+              <span class="badge-platform badge-mac">MAC</span>
+            </div>
+          </div>
+          <div class="game-desc">3500+ lines of clicker madness. Farming, 158 achievements, pets, quests, seasons, casino, alchemy, guilds, prestige, stock market, online multiplayer, and golden cookies.</div>
+          <div class="game-tags"><span class="tag">CLICKER</span><span class="tag">IDLE</span><span class="tag">FARMING</span><span class="tag">158 ACHIEVEMENTS</span><span class="tag">ONLINE</span></div>
+          <div class="game-footer">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="dl-btn" style="background:#ff8c00;color:#000;" href="forge_clicker.py" download="ForgeClicker.py">▼ WINDOWS (.py)</a>
+              <a class="dl-btn" style="background:#7a4000;color:#ff8c00;" href="forge_clicker.py" download="ForgeClicker.pyw">▼ MAC (.pyw)</a>
+            </div>
+            <div class="game-meta">v7.0 MEGA</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PYTHON SOURCE CODE SECTION                  -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="python" style="margin-top:40px;">
+    <div class="section-label reveal">
+      🐍 PYTHON SOURCE CODE
+      <span class="badge" style="background:#69ff94;color:#000;">DOWNLOAD &amp; RUN</span>
+    </div>
+    <div style="font-family:'VT323';font-size:18px;color:var(--text-dim);margin-bottom:24px;text-align:center;">
+      Download any game below. Requires Python 3 + Pygame. Run with <span style="color:#69ff94;">python game.py</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;position:relative;z-index:10;">
+
+      <div class="py-file-card">
+        <div class="py-file-header">
+          <span class="py-icon">🔵</span>
+          <div class="py-file-info">
+            <div class="py-file-name" style="color:#4fc3f7">The Blue Guy</div>
+            <div class="py-file-desc">A 15-level platformer with boss fights, double-jump, coins and spikes.</div>
+          </div>
+          <div class="py-file-meta"><span class="py-lines">1,260 lines</span><span class="py-fname">c.py</span></div>
+          <div class="py-file-btns">
+            <a class="dl-btn py-dl-btn" href="c.py" download="TheBlueGuy.py">▼ WIN .py</a>
+            <a class="dl-btn py-dl-btn" style="background:#2a2a4a;" href="c.py" download="TheBlueGuy.pyw">▼ MAC .pyw</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="py-file-card">
+        <div class="py-file-header">
+          <span class="py-icon">⚡</span>
+          <div class="py-file-info">
+            <div class="py-file-name" style="color:#ff6ec7">Cyber Platformer 2X Enhanced</div>
+            <div class="py-file-desc">Cyberpunk neon platformer with enhanced mechanics and visual style.</div>
+          </div>
+          <div class="py-file-meta"><span class="py-lines">1,143 lines</span><span class="py-fname">c2x.py</span></div>
+          <div class="py-file-btns">
+            <a class="dl-btn py-dl-btn" href="c2x.py" download="CyberPlatformer2X.py">▼ WIN .py</a>
+            <a class="dl-btn py-dl-btn" style="background:#2a2a4a;" href="c2x.py" download="CyberPlatformer2X.pyw">▼ MAC .pyw</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="py-file-card">
+        <div class="py-file-header">
+          <span class="py-icon">🟢</span>
+          <div class="py-file-info">
+            <div class="py-file-name" style="color:#69ff94">Minimal Platformer 3</div>
+            <div class="py-file-desc">22-level platformer — evolving challenge and tight design.</div>
+          </div>
+          <div class="py-file-meta"><span class="py-lines">1,614 lines</span><span class="py-fname">c3.py</span></div>
+          <div class="py-file-btns">
+            <a class="dl-btn py-dl-btn" href="c3.py" download="MinimalPlatformer3.py">▼ WIN .py</a>
+            <a class="dl-btn py-dl-btn" style="background:#2a2a4a;" href="c3.py" download="MinimalPlatformer3.pyw">▼ MAC .pyw</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="py-file-card">
+        <div class="py-file-header">
+          <span class="py-icon">🔴</span>
+          <div class="py-file-info">
+            <div class="py-file-name" style="color:#ff6b6b">Minimal Platformer 4: The Red Uprising</div>
+            <div class="py-file-desc">The biggest entry in the series — massive level count, full game.</div>
+          </div>
+          <div class="py-file-meta"><span class="py-lines">5,302 lines</span><span class="py-fname">c4.py</span></div>
+          <div class="py-file-btns">
+            <a class="dl-btn py-dl-btn" href="c4.py" download="MinimalPlatformer4.py">▼ WIN .py</a>
+            <a class="dl-btn py-dl-btn" style="background:#2a2a4a;" href="c4.py" download="MinimalPlatformer4.pyw">▼ MAC .pyw</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="py-file-card">
+        <div class="py-file-header">
+          <span class="py-icon">🌙</span>
+          <div class="py-file-info">
+            <div class="py-file-name" style="color:#ffd700">Night Shift: The Custom Five</div>
+            <div class="py-file-desc">FNAF-style horror — 7 nights, 5 animatronics, power management.</div>
+          </div>
+          <div class="py-file-meta"><span class="py-lines">6,569 lines</span><span class="py-fname">no_nights.py</span></div>
+          <div class="py-file-btns">
+            <a class="dl-btn py-dl-btn" href="no_nights.py" download="NightShift.py">▼ WIN .py</a>
+            <a class="dl-btn py-dl-btn" style="background:#2a2a4a;" href="no_nights.py" download="NightShift.pyw">▼ MAC .pyw</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="py-file-card">
+        <div class="py-file-header">
+          <span class="py-icon">📦</span>
+          <div class="py-file-info">
+            <div class="py-file-name" style="color:#a78bfa">Box Royale Ultimate</div>
+            <div class="py-file-desc">Multiplayer Fall Guys-style racing with shop, hats and research tree.</div>
+          </div>
+          <div class="py-file-meta"><span class="py-lines">1,203 lines</span><span class="py-fname">boxroyale.py</span></div>
+          <div class="py-file-btns">
+            <a class="dl-btn py-dl-btn" href="boxroyale.py" download="BoxRoyale.py">▼ WIN .py</a>
+            <a class="dl-btn py-dl-btn" style="background:#2a2a4a;" href="boxroyale.py" download="BoxRoyale.pyw">▼ MAC .pyw</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="py-file-card">
+        <div class="py-file-header">
+          <span class="py-icon">🍪</span>
+          <div class="py-file-info">
+            <div class="py-file-name" style="color:#ff9500">Forge Clicker Mega Ultimate</div>
+            <div class="py-file-desc">3500+ lines — 158 achievements, casino, farming, prestige and more.</div>
+          </div>
+          <div class="py-file-meta"><span class="py-lines">3,576 lines</span><span class="py-fname">forge_clicker.py</span></div>
+          <div class="py-file-btns">
+            <a class="dl-btn py-dl-btn" href="forge_clicker.py" download="ForgeClicker.py">▼ WIN .py</a>
+            <a class="dl-btn py-dl-btn" style="background:#2a2a4a;" href="forge_clicker.py" download="ForgeClicker.pyw">▼ MAC .pyw</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- HTML5 Games -->
+  <div id="web">
+    <div class="section-label reveal">
+      🌐 HTML5 GAMES — PLAY IN BROWSER
+      <span class="badge" style="background:var(--green);color:#000;">NO INSTALL</span>
+    </div>
+
+    <div class="games-grid">
+
+      <!-- The Blue Guy HTML5 -->
+      <div class="game-card reveal" style="--card-accent:#4fc3f7;--card-glow:rgba(79,195,247,0.25);--card-bg:#060820;">
+        <div class="game-screen" id="blueGuyScreen" style="background:#060820;cursor:pointer;position:relative;" onclick="launchGame('blueGuyScreen','the_blue_guy.html')">
+          <canvas class="game-canvas" id="blueGuyCanvas2"></canvas>
+          <div class="play-overlay" id="blueGuyOverlay">▶ PLAY</div>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">THE BLUE GUY</div>
+            <div class="platform-badges"><span class="badge-platform badge-web">WEB</span></div>
+          </div>
+          <div class="game-desc">Full HTML5 remake! All 15 levels, enemies, boss fights, double jump, coins and spikes. Runs right in your browser.</div>
+          <div class="game-tags"><span class="tag">PLATFORMER</span><span class="tag">15 LEVELS</span><span class="tag">BOSSES</span></div>
+          <div class="game-meta" style="padding:8px 0;">Click the screen above to play inline!</div>
+        </div>
+      </div>
+
+      <!-- Forge Clicker HTML5 -->
+      <div class="game-card reveal" style="--card-accent:#ff8c00;--card-glow:rgba(255,140,0,0.25);--card-bg:#0f0800;">
+        <div class="game-screen" id="forgeClickerScreen" style="background:#0f0800;cursor:pointer;position:relative;" onclick="launchGame('forgeClickerScreen','forge_clicker.html')">
+          <canvas class="game-canvas" id="forgeClickerCanvas2"></canvas>
+          <div class="play-overlay" id="forgeClickerOverlay">▶ PLAY</div>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">FORGE CLICKER</div>
+            <div class="platform-badges"><span class="badge-platform badge-web">WEB</span></div>
+          </div>
+          <div class="game-desc">Full HTML5 idle clicker! Buildings, upgrades, golden cookies, seasons, achievements, prestige system — all in your browser with save data.</div>
+          <div class="game-tags"><span class="tag">IDLE</span><span class="tag">CLICKER</span><span class="tag">PRESTIGE</span><span class="tag">SAVES</span></div>
+          <div class="game-meta" style="padding:8px 0;">Click the screen above to play inline!</div>
+        </div>
+      </div>
+
+      <!-- Box Royale HTML5 -->
+      <div class="game-card reveal" style="--card-accent:#ff6ec7;--card-glow:rgba(255,110,199,0.25);--card-bg:#120010;">
+        <div class="game-screen" id="boxRoyaleScreen" style="background:#120010;cursor:pointer;position:relative;" onclick="launchGame('boxRoyaleScreen','box_royale.html')">
+          <canvas class="game-canvas" id="boxRoyaleCanvas2"></canvas>
+          <div class="play-overlay" id="boxRoyaleOverlay">▶ PLAY</div>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">BOX ROYALE</div>
+            <div class="platform-badges"><span class="badge-platform badge-web">WEB</span></div>
+          </div>
+          <div class="game-desc">HTML5 racing game! Up to 4 players on the same keyboard, bots, coin shop, hat system, 3 difficulty tracks. Race to the top!</div>
+          <div class="game-tags"><span class="tag">RACING</span><span class="tag">4 PLAYER</span><span class="tag">SHOP</span><span class="tag">BOTS</span></div>
+          <div class="game-meta" style="padding:8px 0;">Click the screen above to play inline!</div>
+        </div>
+      </div>
+
+      <!-- Night Shift HTML5 -->
+      <div class="game-card reveal" style="--card-accent:#ffd700;--card-glow:rgba(255,215,0,0.25);--card-bg:#06060f;">
+        <div class="game-screen" id="nightShiftScreen" style="background:#06060f;cursor:pointer;position:relative;" onclick="launchGame('nightShiftScreen','night_shift.html')">
+          <canvas class="game-canvas" id="nightCanvas2"></canvas>
+          <div class="play-overlay" id="nightShiftOverlay">▶ PLAY</div>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">NIGHT SHIFT</div>
+            <div class="platform-badges"><span class="badge-platform badge-web">WEB</span></div>
+          </div>
+          <div class="game-desc">HTML5 horror remake! Watch cameras, close doors, manage power, survive until 6AM. All 5 animatronics hunting you across 7 nights.</div>
+          <div class="game-tags"><span class="tag">HORROR</span><span class="tag">7 NIGHTS</span><span class="tag">SURVIVAL</span></div>
+          <div class="game-meta" style="padding:8px 0;">Click the screen above to play inline!</div>
+        </div>
+      </div>
+
+      <!-- Blob Party -->
+      <div class="game-card reveal" style="--card-accent:#ff69b4;--card-glow:rgba(255,105,180,0.25);--card-bg:#120820;">
+        <div class="game-screen" style="background:#120820;">
+          <canvas class="game-canvas" id="blobCanvas"></canvas>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">BLOB PARTY</div>
+            <div class="platform-badges"><span class="badge-platform badge-web">WEB</span></div>
+          </div>
+          <div class="game-desc">Among Us-style impostor game with wobbly blobs! Tasks, voting, kills — all in browser. Up to 12 players on the same device.</div>
+          <div class="game-tags"><span class="tag">PARTY</span><span class="tag">IMPOSTOR</span><span class="tag">MULTIPLAYER</span></div>
+          <div class="game-footer">
+            <a class="dl-btn" style="background:#ff69b4;" href="blob_party.html" target="_blank">▶ PLAY NOW</a>
+            <div class="game-meta">HTML5</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sound Balls -->
+      <div class="game-card reveal" style="--card-accent:#69ff94;--card-glow:rgba(105,255,148,0.25);--card-bg:#061209;">
+        <div class="game-screen" style="background:#061209;">
+          <canvas class="game-canvas" id="ballsCanvas"></canvas>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">SOUND BALLS</div>
+            <div class="platform-badges"><span class="badge-platform badge-web">WEB</span></div>
+          </div>
+          <div class="game-desc">Click anywhere to summon musical balls that bounce and play pentatonic notes. An interactive music toy / screensaver.</div>
+          <div class="game-tags"><span class="tag">MUSIC</span><span class="tag">RELAXING</span><span class="tag">TOY</span></div>
+          <div class="game-footer">
+            <a class="dl-btn" style="background:#69ff94;color:#000;" href="BALLS.HTML" target="_blank">▶ PLAY NOW</a>
+            <div class="game-meta">HTML5 + WebAudio</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pixel Drift -->
+      <div class="game-card reveal" style="--card-accent:#ff9500;--card-glow:rgba(255,149,0,0.25);--card-bg:#120a00;">
+        <div class="game-screen" id="pixelDriftScreen" style="background:#120a00;cursor:pointer;position:relative;" onclick="launchGame('pixelDriftScreen','pixel_drift.html')">
+          <canvas class="game-canvas" id="asteroidsCanvas"></canvas>
+          <div class="play-overlay" id="pixelDriftOverlay">▶ PLAY</div>
+        </div>
+        <div class="game-info">
+          <div class="game-title-row">
+            <div class="game-name">PIXEL DRIFT</div>
+            <div class="platform-badges"><span class="badge-platform badge-web">WEB</span></div>
+          </div>
+          <div class="game-desc">Bonus arcade game! Dodge and shoot asteroids in your pixel ship. Arrow keys + Space. See how long you survive!</div>
+          <div class="game-tags"><span class="tag">ARCADE</span><span class="tag">SHOOTER</span><span class="tag">BONUS</span></div>
+          <div class="game-meta" style="padding:8px 0;">Click the screen above to play inline!</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- About -->
+  <div id="about" class="reveal" style="background:var(--panel);border:2px solid var(--border);padding:30px;margin-top:20px;">
+    <div class="section-label" style="margin-bottom:20px;">ABOUT PIXEL FORGE</div>
+    <div style="font-family:'VT323';font-size:22px;color:var(--text-dim);line-height:1.7;max-width:700px;">
+      Pixel Forge Games is an indie studio making tight, fun, handcrafted games.
+      All games are made with love and a lot of pygame.<br><br>
+      Run the Python files directly with <span style="color:var(--accent)">Python 3 + Pygame</span> installed.
+      Web games run directly in your browser — no install needed.<br><br>
+      <span style="color:var(--accent3)">★ Mac users:</span> download the .pyw file or run the .py file from terminal.<br>
+      <span style="color:var(--accent)">★ Windows users:</span> double-click the .py file (with Python installed).
+    </div>
+    <div style="margin-top:20px;font-family:'Press Start 2P';font-size:8px;color:var(--text-dim);">
+      pip install pygame &nbsp;·&nbsp; python game.py &nbsp;·&nbsp; HAVE FUN
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div>★ PIXEL FORGE GAMES ★</div>
+  <div style="margin-top:8px;">HANDCRAFTED INDIE GAMES · ALL RIGHTS RESERVED</div>
+  <div style="margin-top:8px;color:#555;">Made with Python, Pygame, HTML5, and a lot of ☕</div>
+</footer>
+
+<script>
+// === STARS ===
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 120; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = Math.random() * 2 + 1;
+  s.style.cssText = `
+    width:${size}px;height:${size}px;
+    left:${Math.random()*100}%;top:${Math.random()*100}%;
+    --d:${2+Math.random()*4}s;--delay:${-Math.random()*5}s;
+    opacity:${Math.random()*0.5+0.1};
+  `;
+  starsEl.appendChild(s);
+}
+
+// === LOGO PIXEL ART ===
+function drawLogo(id, flip) {
+  const c = document.getElementById(id);
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  // Simple pixel character
+  const px = 10;
+  function sq(x, y, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(flip ? (5-x)*px : x*px, y*px, px, px);
+  }
+  // Body: blue character
+  sq(2,0,'#ffd700'); sq(3,0,'#ffd700'); // head
+  sq(1,1,'#4fc3f7'); sq(2,1,'#4fc3f7'); sq(3,1,'#4fc3f7'); sq(4,1,'#4fc3f7');
+  sq(2,2,'#4fc3f7'); sq(3,2,'#4fc3f7');
+  sq(2,3,'#4fc3f7'); sq(3,3,'#4fc3f7');
+  sq(1,4,'#4fc3f7'); sq(4,4,'#4fc3f7');
+  // eyes
+  sq(2,1,'#fff'); sq(3,1,'#fff');
+
+  let frame = 0;
+  setInterval(() => {
+    ctx.clearRect(0,0,60,60);
+    const bounce = frame % 20 < 10 ? 0 : -px/2;
+    ctx.save(); ctx.translate(0, bounce);
+    sq(2,0,'#ffd700'); sq(3,0,'#ffd700');
+    sq(1,1,'#4fc3f7'); sq(2,1,'#4fc3f7'); sq(3,1,'#4fc3f7'); sq(4,1,'#4fc3f7');
+    sq(2,2,'#4fc3f7'); sq(3,2,'#4fc3f7');
+    sq(2,3,'#4fc3f7'); sq(3,3,'#4fc3f7');
+    if (frame % 20 < 10) {
+      sq(1,4,'#4fc3f7'); sq(4,4,'#4fc3f7');
+    } else {
+      sq(2,4,'#4fc3f7'); sq(3,4,'#4fc3f7');
+    }
+    // eyes white
+    ctx.fillStyle='white';
+    ctx.fillRect(flip?30:20,10,8,8);
+    ctx.fillRect(flip?20:30,10,8,8);
+    ctx.restore();
+    frame++;
+  }, 100);
+}
+drawLogo('logoCanvas', false);
+drawLogo('logoCanvas2', true);
+
+// === MINI GAME PREVIEWS ===
+
+// Blue Guy preview
+(function() {
+  const c = document.getElementById('blueGuyCanvas');
+  const ctx = c.getContext('2d');
+  c.width = c.offsetWidth; c.height = c.offsetHeight;
+  let px = {x:60, y:c.height-60, vy:0, onGround:true};
+  const platforms = [
+    {x:0, y:c.height-20, w:c.width, h:20},
+    {x:120, y:c.height-80, w:80, h:12},
+    {x:250, y:c.height-130, w:70, h:12},
+  ];
+  const coins = [{x:160, y:c.height-100, col:true},{x:285,y:c.height-150,col:true}];
+  let dir = 1, frame = 0;
+  function loop() {
+    ctx.fillStyle='#060820';ctx.fillRect(0,0,c.width,c.height);
+    // stars
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    [40,90,180,260,330].forEach((sx,i)=>ctx.fillRect(sx,(i*37+10)%80,2,2));
+    // platforms
+    platforms.forEach(p=>{ctx.fillStyle='#334';ctx.fillRect(p.x,p.y,p.w,p.h);});
+    // coins
+    coins.forEach(co=>{
+      if(co.col){ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(co.x,co.y,5,0,Math.PI*2);ctx.fill();}
+    });
+    // auto move player
+    px.x += dir*2;
+    if(px.x>c.width-60||px.x<40) dir*=-1;
+    px.vy+=0.8;px.y+=px.vy;
+    if(px.y>=c.height-40){px.y=c.height-40;px.vy=-12;px.onGround=true;}
+    platforms.slice(1).forEach(p=>{
+      if(px.x+14>p.x&&px.x<p.x+p.w&&px.y+16>p.y&&px.y+16<p.y+p.h+10&&px.vy>0){
+        px.y=p.y-16;px.vy=-10;
+      }
+    });
+    coins.forEach(co=>{if(co.col&&Math.abs(px.x-co.x)<16&&Math.abs(px.y-co.y)<16)co.col=false;});
+    if(coins.every(c=>!c.col))coins.forEach(c=>c.col=true);
+    // draw player
+    const b = frame%20<10?0:-2;
+    ctx.fillStyle='#4fc3f7';ctx.fillRect(px.x,px.y+b,16,16);
+    ctx.fillStyle='white';ctx.fillRect(px.x+3,px.y+3+b,4,4);ctx.fillRect(px.x+9,px.y+3+b,4,4);
+    frame++;
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// MP4 preview (red game)
+(function() {
+  const c = document.getElementById('mp4Canvas');
+  const ctx = c.getContext('2d');
+  c.width = c.offsetWidth; c.height = c.offsetHeight;
+  let px = {x:60,y:c.height-50,vy:0};
+  let dir=1, frame=0;
+  const plats = [{x:0,y:c.height-20,w:c.width,h:20},{x:100,y:c.height-80,w:90,h:10},{x:240,y:c.height-140,w:80,h:10}];
+  function loop() {
+    ctx.fillStyle='#120808';ctx.fillRect(0,0,c.width,c.height);
+    // bg glow
+    const g=ctx.createRadialGradient(c.width/2,c.height/2,0,c.width/2,c.height/2,150);
+    g.addColorStop(0,'rgba(255,50,50,0.08)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,c.width,c.height);
+    plats.forEach(p=>{ctx.fillStyle='#4a1a1a';ctx.fillRect(p.x,p.y,p.w,p.h);});
+    px.x+=dir*2.5;if(px.x>c.width-50||px.x<30)dir*=-1;
+    px.vy+=0.8;px.y+=px.vy;
+    if(px.y>=c.height-36){px.y=c.height-36;px.vy=-11;}
+    plats.slice(1).forEach(p=>{if(px.x+14>p.x&&px.x<p.x+p.w&&px.y+16>p.y&&px.y+16<p.y+p.h+8&&px.vy>0){px.y=p.y-16;px.vy=-9;}});
+    const b=frame%20<10?0:-2;
+    ctx.fillStyle='#ff6b6b';ctx.fillRect(px.x,px.y+b,16,16);
+    ctx.fillStyle='#ffaaaa';ctx.fillRect(px.x+3,px.y+3+b,4,4);ctx.fillRect(px.x+9,px.y+3+b,4,4);
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// MP3 preview (purple)
+(function() {
+  const c = document.getElementById('mp3Canvas');
+  const ctx = c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;
+  let px={x:50,y:c.height-50,vy:0},dir=1,frame=0;
+  function loop() {
+    ctx.fillStyle='#0d0820';ctx.fillRect(0,0,c.width,c.height);
+    [[0,c.height-20,c.width,20],[90,c.height-75,85,10],[220,c.height-130,90,10]].forEach(([x,y,w,h])=>{
+      ctx.fillStyle='#2a1a4a';ctx.fillRect(x,y,w,h);
+    });
+    px.x+=dir*2;if(px.x>c.width-50||px.x<30)dir*=-1;
+    px.vy+=0.8;px.y+=px.vy;
+    if(px.y>=c.height-36){px.y=c.height-36;px.vy=-10;}
+    const b=frame%20<10?0:-2;
+    ctx.fillStyle='#a78bfa';ctx.fillRect(px.x,px.y+b,16,16);
+    ctx.fillStyle='#e0d0ff';ctx.fillRect(px.x+3,px.y+3+b,4,4);ctx.fillRect(px.x+9,px.y+3+b,4,4);
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// Cyber 2X preview
+(function() {
+  const c = document.getElementById('cp2xCanvas');
+  const ctx = c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;
+  let px={x:50,y:c.height-50,vy:0},dir=1,frame=0;
+  const lasers=[{x:200,y:60,h:80,on:true}];
+  function loop() {
+    ctx.fillStyle='#020f12';ctx.fillRect(0,0,c.width,c.height);
+    // grid
+    ctx.strokeStyle='rgba(0,255,255,0.05)';ctx.lineWidth=1;
+    for(let i=0;i<c.width;i+=20){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,c.height);ctx.stroke();}
+    for(let i=0;i<c.height;i+=20){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(c.width,i);ctx.stroke();}
+    [[0,c.height-20,c.width,20],[100,c.height-70,80,8],[230,c.height-120,80,8]].forEach(([x,y,w,h])=>{
+      ctx.fillStyle='rgba(0,255,255,0.3)';ctx.fillRect(x,y,w,h);
+      ctx.shadowColor='#00ffff';ctx.shadowBlur=8;ctx.fillRect(x,y,w,2);ctx.shadowBlur=0;
+    });
+    if(frame%60<30)lasers[0].on=true;else lasers[0].on=false;
+    if(lasers[0].on){ctx.fillStyle='rgba(255,0,100,0.7)';ctx.shadowColor='#ff0064';ctx.shadowBlur=10;ctx.fillRect(lasers[0].x,lasers[0].y,4,lasers[0].h);ctx.shadowBlur=0;}
+    px.x+=dir*2.5;if(px.x>c.width-50||px.x<30)dir*=-1;
+    px.vy+=0.8;px.y+=px.vy;if(px.y>=c.height-36){px.y=c.height-36;px.vy=-10;}
+    const b=frame%20<10?0:-2;
+    ctx.shadowColor='#00ffff';ctx.shadowBlur=12;
+    ctx.fillStyle='#00ffff';ctx.fillRect(px.x,px.y+b,14,14);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#001a1a';ctx.fillRect(px.x+3,px.y+3+b,3,3);ctx.fillRect(px.x+8,px.y+3+b,3,3);
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// Night Shift preview
+(function() {
+  const c = document.getElementById('nightCanvas');
+  const ctx = c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;
+  let frame=0;
+  const eyes = [{x:80,y:70},{x:240,y:90},{x:380,y:60}];
+  function loop() {
+    ctx.fillStyle='#06060f';ctx.fillRect(0,0,c.width,c.height);
+    // vignette
+    const vg=ctx.createRadialGradient(c.width/2,c.height/2,40,c.width/2,c.height/2,c.width/2);
+    vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(0,0,0,0.8)');
+    ctx.fillStyle=vg;ctx.fillRect(0,0,c.width,c.height);
+    // flickering eyes
+    eyes.forEach((e,i)=>{
+      const blink = (frame+i*37)%120>5;
+      if(blink) {
+        const glow=Math.sin(frame*0.05+i)*0.3+0.7;
+        ctx.shadowColor='#ffd700';ctx.shadowBlur=15*glow;
+        ctx.fillStyle=`rgba(255,215,0,${glow})`;
+        ctx.beginPath();ctx.ellipse(e.x,e.y,6,4,0,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.ellipse(e.x+20,e.y,6,4,0,0,Math.PI*2);ctx.fill();
+        ctx.shadowBlur=0;
+      }
+    });
+    // timer display
+    const night = Math.floor(frame/200)%7+1;
+    ctx.fillStyle='rgba(0,200,255,0.8)';ctx.font='bold 14px monospace';
+    ctx.fillText(`NIGHT ${night}  ${String(Math.floor(frame/3)%60).padStart(2,'0')}:00 AM`,10,20);
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// Blob Party preview
+(function() {
+  const c = document.getElementById('blobCanvas');
+  const ctx = c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;
+  const blobs=Array.from({length:6},()=>({
+    x:Math.random()*c.width,y:Math.random()*c.height,
+    vx:(Math.random()-0.5)*3,vy:(Math.random()-0.5)*3,
+    r:18+Math.random()*15,
+    h:Math.random()*360,
+    wobble:Math.random()*Math.PI*2
+  }));
+  function loop() {
+    ctx.fillStyle='rgba(18,8,32,0.3)';ctx.fillRect(0,0,c.width,c.height);
+    blobs.forEach(b=>{
+      b.x+=b.vx;b.y+=b.vy;b.wobble+=0.08;
+      if(b.x<b.r||b.x>c.width-b.r)b.vx*=-1;
+      if(b.y<b.r||b.y>c.height-b.r)b.vy*=-1;
+      const wx=Math.sin(b.wobble)*4,wy=Math.cos(b.wobble)*4;
+      ctx.fillStyle=`hsla(${b.h},80%,65%,0.85)`;
+      ctx.shadowColor=`hsl(${b.h},80%,65%)`;ctx.shadowBlur=20;
+      ctx.beginPath();ctx.ellipse(b.x,b.y,b.r+wx,b.r+wy,b.wobble,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+    });
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// Sound Balls preview
+(function() {
+  const c = document.getElementById('ballsCanvas');
+  const ctx = c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;
+  const balls=Array.from({length:5},()=>({
+    x:Math.random()*c.width,y:Math.random()*c.height,
+    vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4,
+    r:12,color:`hsl(${Math.random()*360},70%,60%)`,trail:[]
+  }));
+  function loop() {
+    ctx.fillStyle='rgba(6,18,9,0.2)';ctx.fillRect(0,0,c.width,c.height);
+    balls.forEach(b=>{
+      b.trail.push({x:b.x,y:b.y});if(b.trail.length>20)b.trail.shift();
+      b.x+=b.vx;b.y+=b.vy;
+      if(b.x<b.r||b.x>c.width-b.r)b.vx*=-1;
+      if(b.y<b.r||b.y>c.height-b.r)b.vy*=-1;
+      b.trail.forEach((t,i)=>{
+        ctx.fillStyle=b.color.replace(')',`,${i/b.trail.length*0.4})`).replace('hsl','hsla');
+        ctx.beginPath();ctx.arc(t.x,t.y,b.r*(i/b.trail.length),0,Math.PI*2);ctx.fill();
+      });
+      ctx.fillStyle=b.color;
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();
+    });
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// Asteroids/Pixel Drift preview
+(function() {
+  const c = document.getElementById('asteroidsCanvas');
+  const ctx = c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;
+  const ship={x:c.width/2,y:c.height/2};
+  const asteroids=Array.from({length:8},()=>({
+    x:Math.random()*c.width,y:Math.random()*c.height,
+    vx:(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2,
+    r:10+Math.random()*15,angle:Math.random()*Math.PI*2
+  }));
+  let frame=0;
+  function loop() {
+    ctx.fillStyle='#120a00';ctx.fillRect(0,0,c.width,c.height);
+    // stars
+    ctx.fillStyle='rgba(255,200,100,0.3)';
+    [30,80,150,220,310,50,190].forEach((sx,i)=>ctx.fillRect(sx,(i*23+5)%c.height,2,2));
+    asteroids.forEach(a=>{
+      a.x+=a.vx;a.y+=a.vy;a.angle+=0.02;
+      if(a.x<-a.r)a.x=c.width+a.r;if(a.x>c.width+a.r)a.x=-a.r;
+      if(a.y<-a.r)a.y=c.height+a.r;if(a.y>c.height+a.r)a.y=-a.r;
+      ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.angle);
+      ctx.fillStyle='#4a3000';ctx.strokeStyle='#ff9500';ctx.lineWidth=2;
+      ctx.beginPath();
+      for(let i=0;i<6;i++){const ang=i/6*Math.PI*2,rad=a.r*(0.7+Math.sin(i*3+a.angle)*0.3);ctx.lineTo(Math.cos(ang)*rad,Math.sin(ang)*rad);}
+      ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.restore();
+    });
+    // draw ship
+    ship.x=c.width/2+Math.sin(frame*0.03)*60;
+    ship.y=c.height/2+Math.sin(frame*0.02)*30;
+    ctx.save();ctx.translate(ship.x,ship.y);
+    ctx.fillStyle='#ff9500';ctx.shadowColor='#ff9500';ctx.shadowBlur=10;
+    ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(7,8);ctx.lineTo(-7,8);ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;
+    // exhaust
+    if(frame%6<3){ctx.fillStyle='rgba(255,100,0,0.7)';ctx.beginPath();ctx.moveTo(-4,8);ctx.lineTo(4,8);ctx.lineTo(0,16);ctx.closePath();ctx.fill();}
+    ctx.restore();
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// Box Royale preview
+(function() {
+  const c = document.getElementById('boxRoyaleCanvas');
+  const ctx = c.getContext('2d');
+  c.width=c.offsetWidth; c.height=c.offsetHeight;
+  const players = [
+    {x:60,y:c.height-50,vx:2.5,vy:0,color:'#ff6ec7',hat:'👑'},
+    {x:130,y:c.height-50,vx:2.2,vy:0,color:'#80f0ff',hat:'🧙'},
+    {x:200,y:c.height-50,vx:2.8,vy:0,color:'#80ff96',hat:'🔥'},
+    {x:30,y:c.height-50,vx:1.8,vy:0,color:'#ffd700',hat:'🎉'},
+  ];
+  const obstacles = [{x:200,y:c.height-80,w:18,h:60},{x:350,y:c.height-70,w:18,h:50}];
+  const confetti = Array.from({length:18},()=>({x:Math.random()*c.width,y:Math.random()*c.height,vx:(Math.random()-0.5)*2,vy:Math.random()*1+0.5,color:`hsl(${Math.random()*360},90%,65%)`,size:5+Math.random()*5}));
+  const ground = c.height-20;
+  let frame=0;
+  function loop(){
+    ctx.fillStyle='rgba(18,0,16,0.3)';ctx.fillRect(0,0,c.width,c.height);
+    // ground
+    ctx.fillStyle='#3a1a3a';ctx.fillRect(0,ground,c.width,20);
+    ctx.fillStyle='#ff6ec7';ctx.fillRect(0,ground,c.width,2);
+    // obstacles
+    obstacles.forEach(o=>{ctx.fillStyle='#5a005a';ctx.fillRect(o.x,o.y,o.w,o.h);ctx.fillStyle='#ff6ec7';ctx.fillRect(o.x,o.y,o.w,2);});
+    // confetti
+    confetti.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.y>c.height)p.y=0;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;
+      ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size/2);
+    });
+    // players
+    players.forEach((p,i)=>{
+      p.x+=p.vx;
+      if(p.x>c.width+20)p.x=-20;
+      // jump over obstacles
+      obstacles.forEach(o=>{if(Math.abs(p.x-o.x)<30&&p.y>=ground-30&&p.vy>=0){p.vy=-10;}});
+      p.vy+=0.6;p.y+=p.vy;
+      if(p.y>=ground-20){p.y=ground-20;p.vy=0;}
+      const b=Math.sin(frame*0.15+i)*1.5;
+      ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=10;
+      ctx.fillRect(p.x-10,p.y-10+b,20,20);ctx.shadowBlur=0;
+      // eyes
+      ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(p.x-5,p.y-6+b,4,4);ctx.fillRect(p.x+1,p.y-6+b,4,4);
+      // hat emoji
+      ctx.font='12px serif';ctx.fillText(p.hat,p.x-8,p.y-12+b);
+    });
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// Forge Clicker preview
+(function() {
+  const c = document.getElementById('forgeClickerCanvas');
+  const ctx = c.getContext('2d');
+  c.width=c.offsetWidth; c.height=c.offsetHeight;
+  let clicks=0,cookies=1247,cps=42,frame=0;
+  const particles=[];
+  const buildings=[{emoji:'🏠',x:30},{emoji:'🏭',x:80},{emoji:'🏰',x:130},{emoji:'⚗️',x:180}];
+  const goldenCookie={x:c.width-60,y:50,pulse:0,visible:true};
+  function spawnParticle(){particles.push({x:c.width/2+(Math.random()-0.5)*40,y:c.height/2,vy:-2-Math.random()*2,life:40,color:`hsl(${Math.random()*60+20},100%,65%)`});}
+  function loop(){
+    ctx.fillStyle='rgba(15,8,0,0.25)';ctx.fillRect(0,0,c.width,c.height);
+    // bg glow
+    const g=ctx.createRadialGradient(c.width/2,c.height/2,0,c.width/2,c.height/2,120);
+    g.addColorStop(0,'rgba(255,140,0,0.06)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,c.width,c.height);
+    // big cookie
+    const pulse=Math.sin(frame*0.05)*3;
+    ctx.font=`${55+pulse}px serif`;ctx.textAlign='center';
+    ctx.shadowColor='#ff8c00';ctx.shadowBlur=20+pulse*2;
+    ctx.fillText('🍪',c.width/2,c.height/2+20);ctx.shadowBlur=0;
+    // golden cookie
+    goldenCookie.pulse+=0.08;
+    if(goldenCookie.visible){
+      const gp=Math.sin(goldenCookie.pulse)*4;
+      ctx.font=`${28+gp}px serif`;ctx.fillText('✨',goldenCookie.x,goldenCookie.y+gp);
+    }
+    if(frame%180===0)goldenCookie.visible=!goldenCookie.visible;
+    // buildings
+    buildings.forEach(b=>{ctx.font='18px serif';ctx.fillText(b.emoji,b.x,c.height-8);});
+    // stats
+    ctx.shadowBlur=0;ctx.textAlign='left';
+    ctx.fillStyle='#ff8c00';ctx.font='bold 11px "Press Start 2P",monospace';
+    ctx.fillText(`${(cookies+frame*cps/60)|0}`,10,20);
+    ctx.fillStyle='#ffaa44';ctx.font='8px "Press Start 2P",monospace';
+    ctx.fillText(`${cps} per sec`,10,36);
+    // particles
+    if(frame%8===0)spawnParticle();
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];p.y+=p.vy;p.life--;
+      ctx.fillStyle=p.color;ctx.globalAlpha=p.life/40;
+      ctx.font='14px serif';ctx.textAlign='center';ctx.fillText('🍪',p.x,p.y);
+      ctx.globalAlpha=1;
+      if(p.life<=0)particles.splice(i,1);
+    }
+    ctx.textAlign='left';
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// === INLINE GAME LAUNCHER ===
+function launchGame(screenId, src) {
+  window.open(src, '_blank');
+}
+
+// === PYTHON SECTION ===
+// Python source code is shown via download links
+
+function togglePy(i) {
+  const el = document.getElementById('pycode'+i);
+  const arrow = document.getElementById('pyarrow'+i);
+  if (!el) return;
+  const open = el.style.display === 'none';
+  el.style.display = open ? 'block' : 'none';
+  if (arrow) { arrow.textContent = open ? '▲' : '▼'; arrow.classList.toggle('open', open); }
+}
+
+</script>
 </body>
 </html>
