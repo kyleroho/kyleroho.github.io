@@ -145,7 +145,19 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
 @media(max-width:768px){.featured-card{grid-template-columns:1fr;}.featured-body{border-left:none;border-top:3px solid var(--yellow);}.manifesto{grid-template-columns:1fr;}.manifesto-cell:first-child{grid-column:1;}.stat-strip{grid-template-columns:repeat(3,1fr);}.stat-cell:nth-child(n+4){display:none;}.nav-links{display:none;}.dl-row{grid-template-columns:44px 1fr auto;}.dl-meta-cell{display:none;}}
 </style>
 </head>
-<body>
+<body><!-- ── NAME PROMPT ── -->
+<div id="nameModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center;">
+  <div style="background:#0f0f1e;border:2px solid #ffd700;border-radius:14px;padding:40px;text-align:center;max-width:360px;width:90%;box-shadow:0 0 40px rgba(255,215,0,.2);">
+    <div style="font-family:Impact,'Arial Black',sans-serif;font-size:28px;color:#ffd700;margin-bottom:8px;letter-spacing:3px;">WELCOME!</div>
+    <div style="color:#888;font-size:12px;margin-bottom:24px;">Enter your name to track your scores.<br>Only asked once!</div>
+    <input id="nameInput" maxlength="16" placeholder="YOUR NAME..." autocomplete="off"
+      style="font-family:inherit;font-size:18px;letter-spacing:3px;background:#0a0a18;color:#ffd700;border:2px solid #333;border-radius:6px;padding:10px 16px;width:100%;text-align:center;text-transform:uppercase;margin-bottom:16px;"
+      onkeydown="if(event.key==='Enter')saveName()">
+    <button onclick="saveName()" style="background:#ffd700;color:#111;border:none;font-family:inherit;font-size:14px;font-weight:bold;padding:12px 32px;border-radius:8px;cursor:pointer;letter-spacing:2px;width:100%;">LET'S GO ▶</button>
+  </div>
+</div>
+
+
 <div id="dot"></div>
 <div id="cross"></div>
 <div id="crt"></div>
@@ -387,6 +399,24 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
     </div>
   </div>
 </section>
+
+<!-- ── SCOREBOARD ── -->
+<section id="scoreboard" style="padding:60px 20px;max-width:900px;margin:0 auto;">
+  <div style="text-align:center;margin-bottom:30px;">
+    <div style="font-family:Impact,'Arial Black',sans-serif;font-size:36px;color:#ffd700;letter-spacing:4px;text-shadow:2px 2px 0 #7a4000;">🏆 SCOREBOARD</div>
+    <div style="color:#555577;font-size:12px;margin-top:6px;letter-spacing:2px;">YOUR BEST SCORES · SAVED LOCALLY</div>
+  </div>
+  <div id="sb-table" style="background:rgba(0,0,0,.4);border:1px solid rgba(255,215,0,.2);border-radius:12px;overflow:hidden;">
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr;padding:10px 20px;background:rgba(255,215,0,.08);border-bottom:1px solid rgba(255,215,0,.15);font-size:11px;color:#ffd700;letter-spacing:2px;">
+      <span>#</span><span>PLAYER</span><span>GAME</span><span>SCORE</span>
+    </div>
+    <div id="sb-rows" style="min-height:60px;"></div>
+  </div>
+  <div style="text-align:center;margin-top:12px;">
+    <button onclick="clearScores()" style="background:none;border:1px solid #333;color:#444;font-family:inherit;font-size:10px;padding:4px 12px;cursor:pointer;border-radius:4px;letter-spacing:1px;">CLEAR MY SCORES</button>
+  </div>
+</section>
+
 
 <footer>
   <div class="footer-brand">PIXEL FORGE</div>
@@ -720,6 +750,74 @@ function sc(id){const c=document.getElementById(id);if(!c)return null;const ctx=
     frame++;requestAnimationFrame(loop);
   }
   loop();
+})();
+
+// ── SCOREBOARD SYSTEM ──
+(function(){
+  const PLAYER_KEY = 'pfg_player_name';
+  const SCORES_KEY = 'pfg_scores';
+
+  function getPlayer(){ return localStorage.getItem(PLAYER_KEY)||''; }
+  function getScores(){ try{ return JSON.parse(localStorage.getItem(SCORES_KEY)||'[]'); }catch(e){return[];} }
+  function saveScores(s){ localStorage.setItem(SCORES_KEY, JSON.stringify(s)); }
+
+  // Show name modal if no name saved
+  window.saveName = function(){
+    const val = document.getElementById('nameInput').value.trim().toUpperCase();
+    if(!val){ document.getElementById('nameInput').style.borderColor='#ff4444'; return; }
+    localStorage.setItem(PLAYER_KEY, val);
+    document.getElementById('nameModal').style.display='none';
+    renderScoreboard();
+  };
+
+  window.clearScores = function(){
+    if(confirm('Clear all your scores?')){ saveScores([]); renderScoreboard(); }
+  };
+
+  // Called by games to post a score
+  window.PFG_postScore = function(game, score){
+    const player = getPlayer(); if(!player) return;
+    const scores = getScores();
+    // Update if better
+    const existing = scores.find(s=>s.player===player && s.game===game);
+    if(existing){
+      if(score > existing.score){ existing.score=score; existing.ts=Date.now(); }
+    } else {
+      scores.push({player, game, score, ts:Date.now()});
+    }
+    saveScores(scores);
+    renderScoreboard();
+  };
+
+  function renderScoreboard(){
+    const scores = getScores();
+    const rows = document.getElementById('sb-rows');
+    if(!rows) return;
+    if(scores.length===0){
+      rows.innerHTML='<div style="padding:24px;text-align:center;color:#444;font-size:12px;letter-spacing:2px;">NO SCORES YET — PLAY SOME GAMES!</div>';
+      return;
+    }
+    // Sort by score desc, take top 7
+    const sorted = [...scores].sort((a,b)=>b.score-a.score).slice(0,7);
+    const medals = ['🥇','🥈','🥉','4','5','6','7'];
+    rows.innerHTML = sorted.map((s,i)=>`
+      <div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;${i===0?'background:rgba(255,215,0,.05);':''}">
+        <span style="color:${i<3?'#ffd700':'#555'}">${medals[i]}</span>
+        <span style="color:#eeeeff;font-weight:bold">${s.player}</span>
+        <span style="color:#4fc3f7">${s.game}</span>
+        <span style="color:#50ff90">${s.score.toLocaleString()}</span>
+      </div>`).join('');
+  }
+
+  // Init on load
+  document.addEventListener('DOMContentLoaded', function(){
+    const modal = document.getElementById('nameModal');
+    if(!getPlayer()){
+      modal.style.display='flex';
+      setTimeout(()=>document.getElementById('nameInput').focus(), 100);
+    }
+    renderScoreboard();
+  });
 })();
 
 </script>
