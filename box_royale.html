@@ -135,7 +135,8 @@ const HATS=[
 function generateTrack(difficulty){
   const segments=[];
   const trackW=80;
-  let x=200, y=H()-200;
+  // Start near bottom of screen so players have room
+  let x=200, y=H()-120;
   const totalLen=30+difficulty*10;
   for(let i=0;i<totalLen;i++){
     const type=i===0?'straight':(Math.random()<0.4?'turn':'straight');
@@ -159,8 +160,12 @@ function generateTrack(difficulty){
 
 // Player factory
 function createPlayer(idx,isBot,keys){
+  // Spawn on top of first track segment
+  const firstSeg = gs.raceTrack && gs.raceTrack[0];
+  const spawnY = firstSeg ? firstSeg.y - 35 : H() - 250;
+  const spawnX = firstSeg ? firstSeg.x + 10 + idx * 35 : 200 + idx * 100;
   return {
-    x:200+idx*100, y:H()-150,
+    x:spawnX, y:spawnY,
     vx:0, vy:0,
     color:COLORS[idx%COLORS.length],
     colorName:COLOR_NAMES[idx%COLOR_NAMES.length],
@@ -352,7 +357,13 @@ function updatePlayer(p,dt){
 
   // Fall off
   if(p.y>H()+100){
-    if(p.lives>1){p.lives--;p.y=H()-100;p.vy=JUMP;chatMsg(p.name+' fell! ❌');}
+    if(p.lives>1){
+      p.lives--;
+      // Respawn on the segment the player last reached
+      const seg=gs.raceTrack[Math.max(0,p.botTarget||0)];
+      p.x=seg?seg.x+30:200; p.y=seg?seg.y-40:H()-250; p.vy=0; p.vx=0;
+      chatMsg(p.name+' fell! ❌');
+    }
     else {p.dead=true;chatMsg(p.name+' eliminated! 💀');}
     document.getElementById('livesHud').textContent=gs.players[0]?.lives||0;
   }
