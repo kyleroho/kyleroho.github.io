@@ -15,8 +15,16 @@ a { color:#4fc3f7; font-size:12px; }
 <div id="ui">
   <span id="lvlDisplay">Level 1</span>
   <span id="coinDisplay">Coins: 0/0</span>
+  <button id="upgradeBtn" onclick="toggleUpgrades()" style="background:#1a2a3a;border:1px solid #4fc3f7;color:#4fc3f7;font-family:monospace;font-size:11px;cursor:pointer;padding:2px 8px;">⬆ UPGRADES</button>
   <span style="color:#888">WASD/Arrows: Move | Space: Jump (double jump!)</span>
   <a href="index.html">← Back</a>
+</div>
+<!-- Upgrades Panel -->
+<div id="upgradesPanel" style="display:none;position:fixed;top:40px;left:50%;transform:translateX(-50%);background:#0d1a26;border:2px solid #4fc3f7;padding:16px;z-index:99;min-width:320px;font-family:monospace;color:#eee;">
+  <div style="font-size:13px;color:#4fc3f7;margin-bottom:10px;border-bottom:1px solid #4fc3f7;padding-bottom:6px;">⬆ UPGRADES <span style="float:right;cursor:pointer;color:#888" onclick="toggleUpgrades()">✕</span></div>
+  <div style="font-size:10px;color:#888;margin-bottom:10px;">Spend coins to unlock upgrades! Coins carry between levels.</div>
+  <div id="upgList"></div>
+  <div style="margin-top:10px;font-size:10px;color:#888">Total Coins Banked: <span id="totalCoinsDisplay" style="color:#ffd700">0</span></div>
 </div>
 <canvas id="c"></canvas>
 <script>
@@ -522,10 +530,101 @@ function gameLoop(){
   }
 }
 
+
+// === UPGRADES SYSTEM ===
+let totalCoinsEver = 0;
+let upgradePoints = 0;
+
+const UPGRADES_DEF = [
+  {id:'speed',name:'Speed Boost',desc:'Move 20% faster',cost:5,owned:false,apply:()=>{SPEED_MOD=6;}},
+  {id:'jump',name:'Higher Jump',desc:'Jump 15% higher',cost:5,owned:false,apply:()=>{JUMP_MOD=-17;}},
+  {id:'djump',name:'Super Double Jump',desc:'Double jump is much stronger',cost:8,owned:false,apply:()=>{DJUMP_MOD=-15;}},
+  {id:'coins2x',name:'Coin Magnet',desc:'Coins worth 2x for scoring',cost:10,owned:false,apply:()=>{coinMult=2;}},
+  {id:'shield',name:'Ghost Shield',desc:'Survive one hit without respawning',cost:15,owned:false,apply:()=>{shieldAvailable=true;}},
+];
+
+let SPEED_MOD=5, JUMP_MOD=-15, DJUMP_MOD=-12, coinMult=1, shieldAvailable=false, shieldUsed=false;
+
+function toggleUpgrades(){
+  const p=document.getElementById('upgradesPanel');
+  p.style.display=p.style.display==='none'?'block':'none';
+  renderUpgrades();
+}
+
+function renderUpgrades(){
+  const list=document.getElementById('upgList');
+  document.getElementById('totalCoinsDisplay').textContent=totalCoinsEver;
+  list.innerHTML=UPGRADES_DEF.map(u=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:6px;border:1px solid ${u.owned?'#ffd700':'#334'};background:${u.owned?'rgba(255,215,0,0.1)':'#0a1520'}">
+      <div><div style="font-size:11px;color:${u.owned?'#ffd700':'#eee'}">${u.owned?'✓ ':''} ${u.name}</div><div style="font-size:9px;color:#888">${u.desc}</div></div>
+      <button onclick="buyUpgrade('${u.id}')" ${u.owned||upgradePoints<u.cost?'disabled':''} style="background:${u.owned?'#1a2a1a':'#1a2a3a'};border:1px solid ${u.owned?'#ffd700':'#4fc3f7'};color:${u.owned?'#ffd700':'#4fc3f7'};font-family:monospace;font-size:10px;cursor:pointer;padding:3px 8px;opacity:${u.owned?1:upgradePoints>=u.cost?1:0.5}">${u.owned?'OWNED':'BUY '+u.cost+'🪙'}</button>
+    </div>
+  `).join('');
+}
+
+function buyUpgrade(id){
+  const u=UPGRADES_DEF.find(x=>x.id===id);
+  if(!u||u.owned||upgradePoints<u.cost) return;
+  upgradePoints-=u.cost;
+  u.owned=true;
+  u.apply();
+  renderUpgrades();
+}
+
+// Hook into coin collection to track total
+const _origCheckCollisions = checkCollisions;
+// Patch coin collection to also add upgrade points
+const _origLoadLevel = loadLevel;
+
+// Override respawn to handle shield
+const _origRespawn = respawn;
+function respawn(){
+  if(shieldAvailable && !shieldUsed){
+    shieldUsed=true;
+    shieldAvailable=false;
+    // flash effect
+    for(let i=0;i<12;i++) particles.push({x:player.x+10,y:player.y+10,vx:(Math.random()-0.5)*5,vy:(Math.random()-2)*4,life:50,color:[79,195,247]});
+    return;
+  }
+  shieldUsed=false;
+  _origRespawn();
+}
+
+// Patch: award upgrade points when coins are collected
+const _baseCoinCheck = checkCollisions;
+let _lastCoins=0;
+function checkCollisions(){
+  const before=coinsCollected;
+  _baseCoinCheck();
+  if(coinsCollected>before){
+    const earned=(coinsCollected-before)*coinMult;
+    upgradePoints+=earned;
+    totalCoinsEver+=earned;
+  }
+}
+
+// Apply current mods to movement
+const _origUpdatePlayer = updatePlayer;
+function updatePlayer(){
+  if(keys['ArrowLeft']||keys['KeyA']) player.vx=Math.max(player.vx-1,-SPEED_MOD);
+  else if(keys['ArrowRight']||keys['KeyD']) player.vx=Math.min(player.vx+1,SPEED_MOD);
+  else {player.vx*=0.8; if(Math.abs(player.vx)<0.5) player.vx=0;}
+  player.vy+=GRAVITY;
+  resolvePlayer();
+}
+
+function jump(){
+  if(state!=='playing') return;
+  if(player.onGround){player.vy=JUMP_MOD; player.onGround=false;}
+  else if(player.dj){player.vy=DJUMP_MOD; player.dj=false;}
+}
+// Remove old jump listener since we redefined it above (jump is called by keydown listener directly)
+
 // Start
 state='intro'; introTimer=0; gameCompleted=false;
 loadLevel(0);
 gameLoop();
+
 </script>
 </body>
 </html>
