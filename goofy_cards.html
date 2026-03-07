@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GOOFY CARDS — Ultimate Edition</title>
+<style>
+:root {
+  --bg: #0f0f19;
+  --bg2: #15152a;
+  --panel: #1a1a2e;
+  --gold: #ffd700;
+  --blue: #4fc3f7;
+  --green: #50ff90;
+  --red: #ff4444;
+  --purple: #c864ff;
+  --white: #eeeeff;
+  --dim: #555577;
+  --btn: #3a5a8a;
+  --btn-h: #5a7aaa;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: "Courier New", Courier, monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── STARS BG ── */
+#stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.star { position: absolute; background: #fff; border-radius: 50%; animation: twink var(--d,3s) ease-in-out infinite var(--dl,0s); }
+@keyframes twink { 0%,100%{opacity:.15;} 50%{opacity:.9;} }
+
+/* ── STATS BAR ── */
+#statsbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,10,22,.95);
+  border-bottom: 2px solid rgba(255,215,0,.3);
+  display: flex; align-items: center; gap: 20px;
+  padding: 8px 20px; font-size: 13px; flex-wrap: wrap;
+}
+#statsbar span { color: var(--gold); }
+#statsbar .val { color: var(--white); margin-left: 4px; }
+#statsbar .combo { color: #ff9900; font-weight: bold; animation: pulse .5s ease-in-out infinite alternate; }
+@keyframes pulse { from{transform:scale(1)} to{transform:scale(1.15)} }
+
+/* ── SCREENS ── */
+.screen { display: none; position: relative; z-index: 10; min-height: 100vh; padding: 70px 20px 40px; }
+.screen.active { display: flex; flex-direction: column; align-items: center; }
+
+/* ── TITLE ── */
+#s-title {
+  background: radial-gradient(ellipse at 50% 30%, #1a0a3a 0%, var(--bg) 70%);
+  justify-content: center;
+}
+.title-main {
+  font-size: clamp(40px, 8vw, 80px);
+  font-family: Impact, "Arial Black", sans-serif;
+  color: var(--gold);
+  text-shadow: 3px 3px 0 #7a4000, 0 0 40px rgba(255,215,0,.5);
+  text-align: center;
+  animation: float 3s ease-in-out infinite;
+  letter-spacing: 4px;
+}
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+.star-sprite {
+  display: inline-block;
+  animation: spinstar 2s linear infinite;
+  font-size: 40px;
+}
+@keyframes spinstar { to{transform:rotate(360deg)} }
+.face-wrap {
+  width: 120px; height: 120px; position: relative; margin: 20px auto;
+}
+.face {
+  width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffe0a0, #e8a040);
+  border: 3px solid #333;
+  position: relative; overflow: hidden;
+}
+.face::before { content: '😜'; font-size: 70px; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-52%); }
+.title-sub { color: var(--dim); font-size: 12px; letter-spacing: 6px; margin: 8px 0 30px; text-align: center; }
+.btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin: 10px 0; }
+.btn {
+  padding: 12px 24px; border: 2px solid var(--btn);
+  background: var(--btn); color: var(--white);
+  cursor: pointer; font-family: inherit; font-size: 13px;
+  border-radius: 8px; transition: all .15s; letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.btn:hover { background: var(--btn-h); border-color: var(--gold); color: var(--gold); transform: translateY(-2px); box-shadow: 0 4px 0 rgba(255,215,0,.3); }
+.btn:active { transform: translateY(0); }
+.btn.gold { background: var(--gold); color: #111; border-color: var(--gold); }
+.btn.gold:hover { background: #ffe84d; }
+.btn.red { background: #5a1a1a; border-color: var(--red); }
+.btn.red:hover { background: #7a2a2a; color: var(--red); }
+.btn.green { background: #1a4a2a; border-color: var(--green); }
+.btn.green:hover { background: #2a6a3a; color: var(--green); }
+.btn.disabled { opacity: .4; cursor: not-allowed; }
+.btn.disabled:hover { transform: none; box-shadow: none; }
+
+/* ── CODE INPUT ── */
+.code-popup {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,.8);
+  display: none; align-items: center; justify-content: center;
+}
+.code-popup.show { display: flex; }
+.code-box {
+  background: var(--panel); border: 2px solid var(--gold);
+  border-radius: 12px; padding: 30px 40px; text-align: center;
+  min-width: 320px;
+}
+.code-box h3 { color: var(--gold); margin-bottom: 16px; font-size: 18px; }
+#codeInput {
+  font-family: inherit; font-size: 20px; letter-spacing: 6px;
+  background: var(--bg2); color: var(--green); border: 2px solid var(--dim);
+  border-radius: 6px; padding: 10px 16px; width: 100%; text-align: center;
+  text-transform: uppercase; margin-bottom: 12px;
+}
+#codeInput:focus { outline: none; border-color: var(--gold); }
+
+/* ── HOME ── */
+#s-home { justify-content: flex-start; padding-top: 80px; }
+.home-title { font-size: 36px; color: var(--gold); text-align: center; margin-bottom: 8px; font-family: Impact, sans-serif; letter-spacing: 3px; }
+.home-sub { color: var(--dim); text-align: center; font-size: 13px; margin-bottom: 24px; }
+.menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 560px; width: 100%; }
+
+/* ── PACK ── */
+#s-pack .pack-title { font-size: 30px; color: var(--gold); font-family: Impact, sans-serif; margin-bottom: 20px; }
+.pack-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.card-anim { animation: cardDrop .4s cubic-bezier(.23,1,.32,1) backwards; }
+@keyframes cardDrop { from{opacity:0;transform:translateY(-80px) rotate(-10deg)} to{opacity:1;transform:none} }
+
+/* ── CARD COMPONENT ── */
+.card {
+  width: 155px; min-height: 230px;
+  border-radius: 12px; border: 3px solid;
+  padding: 8px; position: relative;
+  cursor: pointer; transition: transform .15s, box-shadow .15s;
+  background: linear-gradient(160deg, rgba(255,255,255,.08) 0%, transparent 60%);
+  display: flex; flex-direction: column;
+}
+.card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.card.selected { box-shadow: 0 0 0 4px var(--gold); }
+.card-art {
+  width: 100%; height: 90px; border-radius: 8px;
+  background: rgba(0,0,0,.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 52px; margin-bottom: 6px; position: relative;
+}
+.card-lv {
+  position: absolute; top: 4px; right: 6px;
+  background: var(--gold); color: #111; border-radius: 50%;
+  width: 22px; height: 22px; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold;
+}
+.card-name { font-size: 10px; font-weight: bold; color: #fff; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-hp { font-size: 10px; color: #ff8888; }
+.card-atk { font-size: 10px; color: #88ffaa; }
+.card-abil { font-size: 8px; color: rgba(255,255,255,.6); margin-top: 2px; font-style: italic; line-height: 1.3; }
+.card-rarity {
+  margin-top: auto; border-radius: 4px; text-align: center;
+  font-size: 9px; padding: 3px 0; font-weight: bold; letter-spacing: 1px;
+}
+
+/* Rarity glow effects */
+.rar-Common { border-color: #aaa; }
+.rar-Rare { border-color: #88aaff; box-shadow: 0 0 8px rgba(100,150,255,.3); }
+.rar-Epic { border-color: #cc66ff; box-shadow: 0 0 10px rgba(200,100,255,.4); }
+.rar-Legendary { border-color: var(--gold); box-shadow: 0 0 14px rgba(255,215,0,.5); }
+.rar-Mythic { border-color: #ff33cc; box-shadow: 0 0 16px rgba(255,50,200,.5); animation: mythicPulse 2s ease-in-out infinite; }
+@keyframes mythicPulse { 50%{box-shadow:0 0 28px rgba(255,50,200,.8)} }
+.rar-X1 { border-color: #00ffff; box-shadow: 0 0 18px rgba(0,255,255,.6); }
+.rar-X2 { border-color: #ff6600; box-shadow: 0 0 20px rgba(255,100,0,.6); }
+.rar-X3 { border-color: #9900ff; box-shadow: 0 0 22px rgba(150,0,255,.7); animation: x3Pulse 1.5s ease-in-out infinite; }
+@keyframes x3Pulse { 50%{box-shadow:0 0 36px rgba(150,0,255,1)} }
+.rar-XLKSE { border-color: #fff; box-shadow: 0 0 30px rgba(255,255,255,.8); animation: xlksePulse 1s ease-in-out infinite; }
+@keyframes xlksePulse { 0%,100%{box-shadow:0 0 20px rgba(255,255,255,.6)} 50%{box-shadow:0 0 50px rgba(255,255,255,1),0 0 80px rgba(200,200,255,.5)} }
+.rar-SECRET { border-color: #ff00ff; box-shadow: 0 0 30px rgba(255,0,255,.8); animation: secretPulse 0.8s ease-in-out infinite; }
+@keyframes secretPulse { 0%,100%{box-shadow:0 0 20px rgba(255,0,255,.5)} 50%{box-shadow:0 0 60px rgba(255,0,255,1)} }
+
+/* ── DECK ── */
+#s-deck .section-title { font-size: 24px; color: var(--gold); font-family: Impact, sans-serif; margin-bottom: 6px; }
+.deck-info { color: var(--dim); font-size: 12px; margin-bottom: 16px; }
+.cards-scroll { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 1100px; }
+.deck-section { width: 100%; max-width: 1100px; }
+.deck-section h3 { color: var(--blue); font-size: 14px; margin: 16px 0 8px; border-bottom: 1px solid rgba(100,180,255,.2); padding-bottom: 6px; }
+
+/* ── BATTLE ── */
+#s-battle { justify-content: flex-start; }
+.battle-arena {
+  display: flex; align-items: center; gap: 20px;
+  max-width: 900px; width: 100%; margin: 20px 0;
+  flex-wrap: wrap; justify-content: center;
+}
+.vs-text { font-size: 32px; color: var(--white); font-family: Impact, sans-serif; text-shadow: 2px 2px 0 #600; }
+.hp-bar-wrap { margin: 6px 0; }
+.hp-bar { height: 8px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,.1); }
+.hp-fill { height: 100%; border-radius: 4px; transition: width .4s; background: linear-gradient(90deg, var(--green), #00dd55); }
+.hp-fill.low { background: linear-gradient(90deg, #ff4400, var(--red)); }
+.shield-label { font-size: 11px; color: #66ccff; margin-top: 3px; }
+.battle-log {
+  max-width: 700px; width: 100%;
+  background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px; padding: 12px 16px;
+  font-size: 12px; line-height: 1.8;
+  max-height: 120px; overflow-y: auto;
+}
+.log-player { color: var(--green); }
+.log-enemy { color: var(--red); }
+.log-sys { color: var(--gold); }
+.battle-btns { display: flex; gap: 10px; margin: 12px 0; flex-wrap: wrap; justify-content: center; }
+.cooldown-note { font-size: 11px; color: #ff9900; text-align: center; }
+.battle-result {
+  font-size: 36px; font-family: Impact, sans-serif;
+  letter-spacing: 3px; text-align: center; padding: 8px 0;
+}
+.win { color: var(--green); text-shadow: 0 0 20px rgba(80,255,144,.6); }
+.lose { color: var(--red); text-shadow: 0 0 20px rgba(255,68,68,.6); }
+
+/* ── SHOP ── */
+#s-shop .section-title { font-size: 28px; color: var(--gold); font-family: Impact, sans-serif; margin-bottom: 20px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; max-width: 900px; width: 100%; }
+.shop-item {
+  background: var(--panel); border: 2px solid rgba(255,255,255,.1);
+  border-radius: 10px; padding: 18px;
+}
+.shop-item h3 { color: var(--blue); margin-bottom: 6px; font-size: 14px; }
+.shop-item p { color: var(--dim); font-size: 11px; margin-bottom: 12px; line-height: 1.5; }
+
+/* ── UPGRADE ── */
+#s-upgrade .section-title { font-size: 28px; color: var(--gold); font-family: Impact, sans-serif; margin-bottom: 6px; }
+#s-upgrade .upgrade-hint { color: var(--dim); font-size: 11px; margin-bottom: 16px; }
+
+/* ── STATS ── */
+#s-stats .section-title { font-size: 28px; color: var(--gold); font-family: Impact, sans-serif; margin-bottom: 20px; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; max-width: 700px; width: 100%; }
+.stat-item {
+  background: var(--panel); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px; padding: 16px; text-align: center;
+}
+.stat-item .sval { font-size: 28px; font-family: Impact, sans-serif; color: var(--gold); }
+.stat-item .slbl { font-size: 11px; color: var(--dim); margin-top: 4px; }
+
+/* ── TOURNAMENT ── */
+#s-tournament .section-title { font-size: 28px; color: var(--gold); font-family: Impact, sans-serif; }
+.tourn-rounds { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; justify-content: center; }
+.tourn-round {
+  background: var(--panel); border: 2px solid var(--dim);
+  border-radius: 8px; padding: 12px 20px; text-align: center;
+  min-width: 120px;
+}
+.tourn-round.active { border-color: var(--gold); color: var(--gold); }
+.tourn-round.done { border-color: var(--green); color: var(--green); }
+
+/* ── SPIN WHEEL ── */
+#s-spin .section-title { font-size: 28px; color: var(--gold); font-family: Impact, sans-serif; }
+#wheelCanvas { border-radius: 50%; display: block; margin: 16px auto; }
+
+/* ── DECK SELECT ── */
+#s-deckselect .section-title { font-size: 28px; color: var(--gold); font-family: Impact, sans-serif; margin-bottom: 16px; }
+
+/* ── NOTIFICATION ── */
+#notif {
+  position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+  background: rgba(30,30,50,.95); border: 2px solid var(--gold);
+  border-radius: 10px; padding: 12px 28px;
+  color: var(--gold); font-size: 16px; font-weight: bold;
+  z-index: 999; pointer-events: none;
+  transition: opacity .3s;
+}
+
+/* ── PARTICLES ── */
+#pCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 500; }
+
+/* ── DECK SELECT ── */
+.deckselect-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- STARS -->
+<div id="stars"></div>
+
+<!-- PARTICLE CANVAS -->
+<canvas id="pCanvas"></canvas>
+
+<!-- STATS BAR -->
+<div id="statsbar">
+  <span>💰 <span class="val" id="sb-coins">200</span></span>
+  <span>⭐ LVL <span class="val" id="sb-level">1</span></span>
+  <span>XP: <span class="val" id="sb-xp">0</span>/150</span>
+  <span>🏆 <span class="val" id="sb-wl">0W-0L</span></span>
+  <span>⚔️ Diff: <span class="val" id="sb-diff">1</span></span>
+  <span id="sb-combo" class="combo" style="display:none">🔥 x<span id="sb-comboN">0</span></span>
+</div>
+
+<!-- CODE POPUP -->
+<div class="code-popup" id="codePopup">
+  <div class="code-box">
+    <h3>🔐 ENTER SECRET CODE</h3>
+    <input type="text" id="codeInput" maxlength="10" placeholder="TYPE CODE..." autocomplete="off">
+    <div id="codeMsg" style="font-size:11px;color:#888;margin-bottom:12px;min-height:16px;"></div>
+    <div class="btn-row">
+      <button class="btn gold" onclick="submitCode()">SUBMIT</button>
+      <button class="btn" onclick="closeCode()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div id="notif" style="opacity:0">NOTIF</div>
+
+<!-- ══════════ TITLE SCREEN ══════════ -->
+<div id="s-title" class="screen active">
+  <div style="text-align:center;margin-top:40px;">
+    <span class="star-sprite">⭐</span>
+    <span class="title-main"> GOOFY CARDS </span>
+    <span class="star-sprite" style="animation-direction:reverse">⭐</span>
+  </div>
+  <div class="title-sub">ULTIMATE EDITION</div>
+  <div class="face-wrap"><div class="face"></div></div>
+  <div class="btn-row">
+    <button class="btn gold" style="font-size:18px;padding:16px 40px;" onclick="goTo('home')">▶ START GAME</button>
+  </div>
+  <div class="btn-row" style="margin-top:8px;">
+    <button class="btn" onclick="openCode()">🔐 SECRET CODES</button>
+  </div>
+  <div style="margin-top:30px;color:var(--dim);font-size:11px;text-align:center;line-height:2;">
+    120 CARDS · 9 RARITIES · BATTLES · TOURNAMENTS · UPGRADES<br>
+    <a href="index.html" style="color:#4fc3f7;font-size:10px;">← BACK TO PIXEL FORGE GAMES</a>
+  </div>
+</div>
+
+<!-- ══════════ HOME ══════════ -->
+<div id="s-home" class="screen">
+  <div class="home-title">🃏 GOOFY CARDS</div>
+  <div class="home-sub" id="home-sub">Collection: 0/120 · Deck: 0/5</div>
+  <div class="menu-grid">
+    <button class="btn" onclick="buyPack()" id="btn-pack">🎁 Pack (50💰)</button>
+    <button class="btn" onclick="goTo('deck')">⚔️ Build Deck</button>
+    <button class="btn" onclick="goTo('upgrade')">⬆️ Upgrade</button>
+    <button class="btn" onclick="goTo('shop')">🏪 Shop</button>
+    <button class="btn" id="btn-battle" onclick="goTo('deckselect')">⚡ Battle</button>
+    <button class="btn" onclick="openCode()">🔐 Codes</button>
+    <button class="btn" id="btn-tourn" onclick="startTournament()">🏆 Tournament</button>
+    <button class="btn" id="btn-spin" onclick="goTo('spin')">🎰 Spin Wheel</button>
+    <button class="btn" onclick="goTo('stats')">📊 Stats</button>
+  </div>
+</div>
+
+<!-- ══════════ PACK ══════════ -->
+<div id="s-pack" class="screen">
+  <div class="pack-title">🎁 PACK OPENED!</div>
+  <div class="pack-cards" id="packCards"></div>
+  <div class="btn-row" style="margin-top:24px;">
+    <button class="btn" onclick="goTo('home')">← Back</button>
+  </div>
+</div>
+
+<!-- ══════════ DECK ══════════ -->
+<div id="s-deck" class="screen">
+  <div class="section-title">🃏 BUILD DECK</div>
+  <div class="deck-info">Click cards to add/remove · Max 5 in deck</div>
+  <div class="deck-section">
+    <h3>YOUR DECK (<span id="deckCount">0</span>/5)</h3>
+    <div class="cards-scroll" id="deckCards"></div>
+    <h3>COLLECTION (<span id="collCount">0</span> cards)</h3>
+    <div class="cards-scroll" id="collCards"></div>
+  </div>
+  <div class="btn-row" style="margin-top:20px;">
+    <button class="btn" onclick="goTo('home')">← Back</button>
+  </div>
+</div>
+
+<!-- ══════════ DECK SELECT ══════════ -->
+<div id="s-deckselect" class="screen">
+  <div class="section-title">⚡ CHOOSE YOUR FIGHTER!</div>
+  <div class="deckselect-cards" id="dsCards"></div>
+  <div class="btn-row" style="margin-top:20px;">
+    <button class="btn" onclick="goTo('home')">← Back</button>
+  </div>
+</div>
+
+<!-- ══════════ BATTLE ══════════ -->
+<div id="s-battle" class="screen">
+  <div id="battleResult" class="battle-result" style="display:none"></div>
+  <div class="battle-arena" id="battleArena">
+    <div id="playerSide" style="text-align:center;">
+      <div style="font-size:11px;color:var(--blue);margin-bottom:6px;">YOU</div>
+      <div id="playerCard"></div>
+      <div class="hp-bar-wrap" style="max-width:155px;">
+        <div class="hp-bar"><div class="hp-fill" id="pHpBar" style="width:100%"></div></div>
+        <div style="font-size:10px;text-align:center;color:#ff8888;" id="pHpLabel">HP: 0/0</div>
+        <div class="shield-label" id="pShield" style="display:none">🛡️ 0</div>
+      </div>
+    </div>
+    <div class="vs-text">VS</div>
+    <div id="cpuSide" style="text-align:center;">
+      <div style="font-size:11px;color:var(--red);margin-bottom:6px;">ENEMY</div>
+      <div id="cpuCard"></div>
+      <div class="hp-bar-wrap" style="max-width:155px;">
+        <div class="hp-bar"><div class="hp-fill" id="cHpBar" style="width:100%"></div></div>
+        <div style="font-size:10px;text-align:center;color:#ff8888;" id="cHpLabel">HP: 0/0</div>
+        <div class="shield-label" id="cShield" style="display:none">🛡️ 0</div>
+      </div>
+    </div>
+  </div>
+  <div class="battle-log" id="battleLog"></div>
+  <div class="battle-btns" id="battleBtns">
+    <button class="btn" onclick="doAttack()">⚡ ATTACK</button>
+    <button class="btn" onclick="doDefend()">🛡️ DEFEND</button>
+    <button class="btn" id="abilBtn" onclick="doAbility()">✨ ABILITY</button>
+  </div>
+  <div class="cooldown-note" id="cdNote" style="display:none"></div>
+  <div class="btn-row" id="battleBackBtn" style="display:none;margin-top:12px;">
+    <button class="btn" onclick="battleBack()">← Back</button>
+  </div>
+</div>
+
+<!-- ══════════ SHOP ══════════ -->
+<div id="s-shop" class="screen">
+  <div class="section-title">🏪 SHOP</div>
+  <div class="shop-grid">
+    <div class="shop-item">
+      <h3>☀️ Daily Coins</h3>
+      <p>FREE +50 coins every session!</p>
+      <button class="btn green" onclick="dailyCoins()">CLAIM FREE</button>
+    </div>
+    <div class="shop-item">
+      <h3>📦 Mega Pack</h3>
+      <p>10 random cards at once!</p>
+      <button class="btn" onclick="buyMegaPack()">BUY — 100💰</button>
+    </div>
+    <div class="shop-item">
+      <h3>⭐ XP Boost</h3>
+      <p>+100 XP instantly!</p>
+      <button class="btn" onclick="buyXPBoost()">BUY — 60💰</button>
+    </div>
+    <div class="shop-item">
+      <h3>🌟 Legendary Pack</h3>
+      <p>3 guaranteed Legendary cards!</p>
+      <button class="btn gold" onclick="buyLegPack()">BUY — 200💰</button>
+    </div>
+  </div>
+  <div class="btn-row" style="margin-top:24px;">
+    <button class="btn" onclick="goTo('home')">← Back</button>
+  </div>
+</div>
+
+<!-- ══════════ UPGRADE ══════════ -->
+<div id="s-upgrade" class="screen">
+  <div class="section-title">⬆️ UPGRADE</div>
+  <div class="upgrade-hint">Click a card to upgrade it — 100💰 per upgrade</div>
+  <div class="cards-scroll" id="upgradeCards"></div>
+  <div class="btn-row" style="margin-top:20px;">
+    <button class="btn" onclick="goTo('home')">← Back</button>
+  </div>
+</div>
+
+<!-- ══════════ TOURNAMENT ══════════ -->
+<div id="s-tournament" class="screen">
+  <div class="section-title">🏆 TOURNAMENT</div>
+  <div class="tourn-rounds" id="tournRounds"></div>
+  <div id="tournContent" style="text-align:center;"></div>
+  <div class="btn-row" style="margin-top:16px;">
+    <button class="btn" onclick="goTo('home')">← Back</button>
+  </div>
+</div>
+
+<!-- ══════════ SPIN WHEEL ══════════ -->
+<div id="s-spin" class="screen">
+  <div class="section-title">🎰 SPIN WHEEL</div>
+  <div style="color:var(--dim);font-size:12px;margin:8px 0;" id="spinCountLabel">Spins: 0</div>
+  <canvas id="wheelCanvas" width="280" height="280"></canvas>
+  <div style="text-align:center;margin-top:8px;" id="spinResult"></div>
+  <div class="btn-row" style="margin-top:12px;">
+    <button class="btn gold" id="spinBtn" onclick="doSpin()">🎰 SPIN!</button>
+    <button class="btn" onclick="goTo('home')">← Back</button>
+  </div>
+</div>
+
+<!-- ══════════ STATS ══════════ -->
+<div id="s-stats" class="screen">
+  <div class="section-title">📊 STATS</div>
+  <div class="stat-grid" id="statsGrid"></div>
+  <div class="btn-row" style="margin-top:20px;">
+    <button class="btn" onclick="goTo('home')">← Back</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  GOOFY CARDS — Ultimate Browser Edition
+// ═══════════════════════════════════════════
+
+// ── CONSTANTS ──
+const RARITIES = ['Common','Rare','Epic','Legendary','Mythic','X1','X2','X3','XLKSE'];
+const RARITY_WEIGHTS = [35,25,18,12,6,3,0.8,0.15,0.05];
+const RARITY_COLORS = {
+  Common:'#aaaaaa', Rare:'#88aaff', Epic:'#cc66ff',
+  Legendary:'#ffd700', Mythic:'#ff33cc', X1:'#00ffff',
+  X2:'#ff6600', X3:'#9900ff', XLKSE:'#ffffff', SECRET:'#ff00ff'
+};
+const HP_BONUS = {Common:0,Rare:10,Epic:20,Legendary:35,Mythic:50,X1:80,X2:120,X3:180,XLKSE:300,SECRET:500};
+const ATK_BONUS = {Common:0,Rare:2,Epic:4,Legendary:7,Mythic:10,X1:15,X2:25,X3:40,XLKSE:80,SECRET:99};
+
+const CARD_NAMES = ['Wobble King','Sneaky Steve','Captain Chaos','Dizzy Dan','Professor Pickle',
+  'Sir Stumbles','Doctor Derp','Thunder Thighs','Noodle Arms','Glitch Master',
+  'Backwards Bob','Squeaky Sam','Jelly Legs','Rocket Randy','Slippery Sal',
+  'Confused Carl','Mighty Mouse','Banana Brad','Giggles McGee','Zoom Zoom',
+  'Slappy Jones','Wiggly Worm','Chompy Chuck','Dizzy Lizzy','Bouncy Bill',
+  'Grumpy Gus','Lightning Larry','Spaghetti Man','Funky Frank','Zoomer Zeke',
+  'Wibbly Wobbly','Clumsy Chris','Turbo Todd','Silly Sally','Bonkers Bob',
+  'Wacky Wayne','Loopy Lou','Crazy Craig','Nutty Nick','Bonzo Barry',
+  'Derpy Dave','Madcap Max','Goofy Gary','Tipsy Tim','Wonky Walter',
+  'Jumpy Jim','Loopy Lisa','Zany Zara','Quirky Quinn','Jittery Joe'];
+
+const ABILITIES = ['Confuses enemies','Laughs maniacally','Trips opponents','Steals snacks',
+  'Dances weirdly','Tells bad jokes','Summons chaos','Breaks physics',
+  'Time travels badly','Clones itself','Reverses gravity','Speaks backwards',
+  'Teleports randomly','Summons rubber ducks','Turns invisible','Freezes time',
+  'Eats the sun','Screams loudly','Plays kazoo','Does backflips',
+  'Throws pies','Hypnotizes foes','Shapeshifts poorly','Warps reality'];
+
+const CARD_EMOJIS = ['😜','🤖','🧙','👾','⚔️'];
+
+const SECRET_CODES = {
+  'FRT5':'x1_pack','THI9':'x2_pack','N673':'dopeiman_card',
+  'JK67L':'xlkse_pack','79443':'x3_pack'
+};
+
+// ── STATE ──
+let coins = 200, xp = 0, level = 1, wins = 0, losses = 0, total = 0;
+let difficulty = 1, winsUntilUp = 5, combo = 0;
+let spinWheels = 3, maxCombo = 0;
+let collection = [], deck = [], usedCodes = [];
+let battlePlayer = null, battleCpu = null;
+let pHp = 0, cHp = 0, pMaxHp = 0, cMaxHp = 0;
+let pShield = 0, cShield = 0, abilityCooldown = 0;
+let battleOver = false;
+let tournRound = 0, tournOpponents = [];
+let dailyClaimed = false;
+let spinning = false, wheelAngle = 0, wheelTarget = 0, wheelSpeed = 0;
+
+// ── SEEDED RNG ──
+function seededRand(seed) {
+  let x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+function seededChoice(arr, seed) {
+  return arr[Math.floor(seededRand(seed) * arr.length)];
+}
+function weightedRarity(seed) {
+  const total = RARITY_WEIGHTS.reduce((a,b)=>a+b,0);
+  let r = seededRand(seed) * total;
+  for(let i=0;i<RARITIES.length;i++){
+    r -= RARITY_WEIGHTS[i];
+    if(r <= 0) return RARITIES[i];
+  }
+  return RARITIES[0];
+}
+
+// ── CARD GENERATION ──
+function generateCard(id) {
+  const rarity = weightedRarity(id * 7.3);
+  const name = CARD_NAMES[(id-1) % CARD_NAMES.length] + ' #' + id;
+  const hp = Math.floor(40 + seededRand(id*3.1)*40) + HP_BONUS[rarity];
+  const atk = Math.floor(5 + seededRand(id*5.7)*11) + ATK_BONUS[rarity];
+  const ability = ABILITIES[Math.floor(seededRand(id*2.9)*ABILITIES.length)];
+  const cardType = Math.floor(seededRand(id*1.1)*5);
+  return { id, name, hp, atk, ability, rarity, cardType, level:1 };
+}
+
+const ALL_CARDS = Array.from({length:120},(_,i)=>generateCard(i+1));
+
+function generateDopeiman() {
+  return { id:9999, name:'🔥 DOPEIMAN 🔥', hp:999, atk:99, ability:'EXPLOITS REALITY', rarity:'SECRET', cardType:3, level:99 };
+}
+
+function scaleEnemy(card) {
+  const c = {...card};
+  c.hp = Math.floor(c.hp * (1 + (difficulty-1)*0.08));
+  c.atk = Math.floor(c.atk * (1 + (difficulty-1)*0.06));
+  return c;
+}
+
+// ── PARTICLE SYSTEM ──
+const pCanvas = document.getElementById('pCanvas');
+const pCtx = pCanvas.getContext('2d');
+let particles = [];
+function resizePC() { pCanvas.width=window.innerWidth; pCanvas.height=window.innerHeight; }
+resizePC(); window.addEventListener('resize', resizePC);
+
+function spawnParticles(x, y, color, n=12) {
+  for(let i=0;i<n;i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random()-.5)*6,
+      vy: -2-Math.random()*4,
+      color, life: 40,
+      size: 3+Math.random()*4
+    });
+  }
+}
+function animParticles() {
+  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+  particles = particles.filter(p=>p.life>0);
+  particles.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.15; p.life-=2; p.size=Math.max(1,p.size-.1);
+    pCtx.globalAlpha=p.life/40;
+    pCtx.fillStyle=p.color;
+    pCtx.beginPath(); pCtx.arc(p.x,p.y,p.size,0,Math.PI*2); pCtx.fill();
+  });
+  pCtx.globalAlpha=1;
+  requestAnimationFrame(animParticles);
+}
+animParticles();
+
+// ── STARS ──
+const starsDiv = document.getElementById('stars');
+for(let i=0;i<80;i++){
+  const s=document.createElement('div');
+  s.className='star';
+  const sz=Math.random()<.3?2:1;
+  s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;--dl:${-Math.random()*4}s;`;
+  starsDiv.appendChild(s);
+}
+
+// ── NOTIFICATIONS ──
+let notifTimer = null;
+function notify(msg, duration=90) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(()=>el.style.opacity='0', duration*16);
+}
+
+// ── SCREEN NAV ──
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+  window.scrollTo(0,0);
+  // Run screen init
+  if(id==='home') initHome();
+  if(id==='deck') initDeck();
+  if(id==='upgrade') initUpgrade();
+  if(id==='deckselect') initDeckSelect();
+  if(id==='stats') initStats();
+  if(id==='spin') initSpin();
+  updateStatsBar();
+}
+
+// ── HUD ──
+function updateStatsBar() {
+  document.getElementById('sb-coins').textContent = coins;
+  document.getElementById('sb-level').textContent = level;
+  document.getElementById('sb-xp').textContent = xp;
+  document.getElementById('sb-wl').textContent = `${wins}W-${losses}L`;
+  document.getElementById('sb-diff').textContent = difficulty;
+  const comboEl = document.getElementById('sb-combo');
+  if(combo>1){ comboEl.style.display=''; document.getElementById('sb-comboN').textContent=combo; }
+  else comboEl.style.display='none';
+}
+
+// ── CARD RENDERING ──
+function cardHTML(card, onClick='', extraClass='') {
+  const col = RARITY_COLORS[card.rarity] || '#aaa';
+  const lvBadge = card.level>1 ? `<div class="card-lv">${card.level}</div>` : '';
+  const onc = onClick ? `onclick="${onClick}"` : '';
+  const hpPct = card.hp;
+  return `<div class="card rar-${card.rarity} ${extraClass}" style="border-color:${col};" ${onc}>
+    <div class="card-art" style="font-size:52px;">${CARD_EMOJIS[card.cardType]}${lvBadge}</div>
+    <div class="card-name">${card.name}</div>
+    <div class="card-hp">❤️ HP: ${card.hp}</div>
+    <div class="card-atk">⚔️ ATK: ${card.atk}</div>
+    <div class="card-abil">${card.ability}</div>
+    <div class="card-rarity" style="background:${col}20;color:${col};">${card.rarity}</div>
+  </div>`;
+}
+
+// ── HOME ──
+function initHome() {
+  document.getElementById('home-sub').textContent = `Collection: ${collection.length}/120 · Deck: ${deck.length}/5`;
+  document.getElementById('btn-pack').classList.toggle('disabled', coins<50);
+  document.getElementById('btn-battle').classList.toggle('disabled', deck.length===0);
+  document.getElementById('btn-tourn').classList.toggle('disabled', deck.length===0);
+  document.getElementById('btn-spin').classList.toggle('disabled', spinWheels===0);
+}
+
+// ── PACKS ──
+function buyPack() {
+  if(coins<50){ notify('Not enough coins!'); return; }
+  coins-=50;
+  const cards = [];
+  for(let i=0;i<5;i++) cards.push(ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]);
+  collection.push(...cards);
+  showPack(cards);
+}
+
+function showPack(cards) {
+  goTo('pack');
+  const el = document.getElementById('packCards');
+  el.innerHTML = '';
+  cards.forEach((card,i)=>{
+    const div = document.createElement('div');
+    div.innerHTML = cardHTML(card, '', `card-anim`);
+    div.firstChild.style.animationDelay = (i*0.12)+'s';
+    el.appendChild(div.firstChild);
+    // Particles for high rarity
+    const idx = RARITIES.indexOf(card.rarity);
+    if(idx>=3) setTimeout(()=>{
+      const rect = div.getBoundingClientRect();
+      spawnParticles(rect.left+80, rect.top+120, RARITY_COLORS[card.rarity], 20);
+    }, i*120+200);
+  });
+  updateStatsBar();
+}
+
+// ── DECK BUILDER ──
+function initDeck() {
+  document.getElementById('deckCount').textContent = deck.length;
+  document.getElementById('collCount').textContent = collection.length;
+
+  const deckEl = document.getElementById('deckCards');
+  deckEl.innerHTML = deck.length===0 ? '<div style="color:var(--dim);font-size:12px;padding:10px;">No cards in deck yet</div>' : '';
+  deck.forEach(card=>{
+    const d = document.createElement('div');
+    d.innerHTML = cardHTML(card, '', '');
+    d.firstChild.addEventListener('click', ()=>{ removeFromDeck(card); });
+    deckEl.appendChild(d.firstChild);
+  });
+
+  const collEl = document.getElementById('collCards');
+  collEl.innerHTML = collection.length===0 ? '<div style="color:var(--dim);font-size:12px;padding:10px;">No cards yet — buy a pack!</div>' : '';
+  collection.forEach(card=>{
+    const d = document.createElement('div');
+    const inDeck = deck.includes(card);
+    d.innerHTML = cardHTML(card, '', inDeck?'selected':'');
+    d.firstChild.addEventListener('click', ()=>{ toggleDeck(card, d.firstChild); });
+    collEl.appendChild(d.firstChild);
+  });
+}
+
+function toggleDeck(card, el) {
+  if(deck.includes(card)) { removeFromDeck(card); }
+  else { addToDeck(card); }
+  initDeck();
+}
+function addToDeck(card) {
+  if(deck.length>=5){ notify('Deck full! (5 max)'); return; }
+  deck.push(card);
+  initDeck();
+}
+function removeFromDeck(card) {
+  deck = deck.filter(c=>c!==card);
+  initDeck();
+}
+
+// ── UPGRADE ──
+function initUpgrade() {
+  const el = document.getElementById('upgradeCards');
+  el.innerHTML = collection.length===0 ? '<div style="color:var(--dim);font-size:12px;padding:10px;">No cards yet!</div>' : '';
+  collection.forEach(card=>{
+    const d = document.createElement('div');
+    d.innerHTML = cardHTML(card, '', '');
+    d.firstChild.addEventListener('click', ()=>{
+      if(coins<100){ notify('Need 100💰 to upgrade!'); return; }
+      coins-=100;
+      card.hp+=10; card.atk+=2; card.level=(card.level||1)+1;
+      notify(`${card.name} → Lvl ${card.level}! (+10HP +2ATK)`);
+      spawnParticles(window.innerWidth/2, window.innerHeight/2, '#ffd700', 20);
+      initUpgrade();
+      updateStatsBar();
+    });
+    el.appendChild(d.firstChild);
+  });
+}
+
+// ── DECK SELECT ──
+function initDeckSelect() {
+  const el = document.getElementById('dsCards');
+  el.innerHTML = '';
+  deck.forEach(card=>{
+    const d = document.createElement('div');
+    d.innerHTML = cardHTML(card,'','');
+    d.firstChild.addEventListener('click', ()=>{ startBattle(card); });
+    el.appendChild(d.firstChild);
+  });
+}
+
+// ── BATTLE ──
+function startBattle(playerCard, cpuCardOverride=null) {
+  battlePlayer = playerCard;
+  battleCpu = cpuCardOverride || scaleEnemy(ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]);
+  pMaxHp = battlePlayer.hp; cMaxHp = battleCpu.hp;
+  pHp = pMaxHp; cHp = cMaxHp;
+  pShield = 0; cShield = 0; abilityCooldown = 0;
+  battleOver = false;
+  goTo('battle');
+  updateBattle();
+  addLog('⚔️ Battle begins!', 'sys');
+  document.getElementById('battleBtns').style.display='flex';
+  document.getElementById('battleBackBtn').style.display='none';
+  document.getElementById('battleResult').style.display='none';
+}
+
+function updateBattle() {
+  document.getElementById('playerCard').innerHTML = cardHTML(battlePlayer,'','');
+  document.getElementById('cpuCard').innerHTML = cardHTML(battleCpu,'','');
+
+  const pPct = Math.max(0,pHp/pMaxHp*100);
+  const cPct = Math.max(0,cHp/cMaxHp*100);
+  const pBar = document.getElementById('pHpBar');
+  const cBar = document.getElementById('cHpBar');
+  pBar.style.width=pPct+'%'; pBar.className='hp-fill'+(pPct<30?' low':'');
+  cBar.style.width=cPct+'%'; cBar.className='hp-fill'+(cPct<30?' low':'');
+  document.getElementById('pHpLabel').textContent=`HP: ${Math.max(0,pHp)}/${pMaxHp}`;
+  document.getElementById('cHpLabel').textContent=`HP: ${Math.max(0,cHp)}/${cMaxHp}`;
+
+  const pShEl=document.getElementById('pShield'), cShEl=document.getElementById('cShield');
+  pShEl.style.display=pShield>0?'':'none'; pShEl.textContent=`🛡️ ${pShield}`;
+  cShEl.style.display=cShield>0?'':'none'; cShEl.textContent=`🛡️ ${cShield}`;
+
+  const abilBtn=document.getElementById('abilBtn');
+  abilBtn.textContent=abilityCooldown>0?`✨ ABILITY (${abilityCooldown})`:'✨ ABILITY';
+  abilBtn.classList.toggle('disabled', abilityCooldown>0);
+
+  const cdNote=document.getElementById('cdNote');
+  cdNote.style.display=abilityCooldown>0?'':'none';
+  cdNote.textContent=`Ability cooldown: ${abilityCooldown} turns`;
+}
+
+function addLog(msg, type='') {
+  const log = document.getElementById('battleLog');
+  const span = document.createElement('div');
+  span.className='log-'+type;
+  span.textContent=msg;
+  log.appendChild(span);
+  log.scrollTop=log.scrollHeight;
+}
+
+function cpuTurn(halfDamage=false) {
+  if(battleOver) return;
+  let dmg = halfDamage ? Math.floor(battleCpu.atk/2) : battleCpu.atk;
+  if(pShield>0){ const blk=Math.min(pShield,dmg); pShield-=blk; dmg-=blk; }
+  pHp-=dmg;
+  addLog(`Enemy dealt ${dmg} dmg!${halfDamage?' (blocked half)':''}`, 'enemy');
+}
+
+function checkBattleEnd() {
+  if(battleOver) return;
+  if(cHp<=0||pHp<=0){
+    battleOver=true;
+    const won = cHp<=0;
+    document.getElementById('battleResult').style.display='';
+    document.getElementById('battleResult').textContent = won ? '🎉 VICTORY!' : '💀 DEFEAT';
+    document.getElementById('battleResult').className = 'battle-result '+(won?'win':'lose');
+    document.getElementById('battleBtns').style.display='none';
+    document.getElementById('battleBackBtn').style.display='flex';
+
+    if(won){
+      wins++; total++; combo++;
+      maxCombo=Math.max(maxCombo,combo);
+      coins+=30; addXP(80);
+      winsUntilUp--;
+      if(winsUntilUp<=0){ difficulty++; winsUntilUp=5; notify(`⬆️ Difficulty up! Now: ${difficulty}`); }
+      if(wins%5===0){ spinWheels++; notify('🎰 Spin Wheel +1!'); }
+      notify('🎉 Victory! +30💰 +80XP');
+      spawnParticles(window.innerWidth/2, window.innerHeight/2, '#ffd700', 30);
+      // Tournament advance
+      if(tournRound>0 && tournRound<=3){ tournRound++; }
+    } else {
+      losses++; total++; combo=0;
+      notify('💀 Defeated...');
+    }
+    updateStatsBar();
+  }
+}
+
+function doAttack() {
+  if(battleOver) return;
+  let dmg = battlePlayer.atk;
+  if(cShield>0){ const blk=Math.min(cShield,dmg); cShield-=blk; dmg-=blk; }
+  cHp-=dmg;
+  addLog(`You dealt ${dmg} dmg!`, 'player');
+  spawnParticles(window.innerWidth*.7, window.innerHeight*.4, '#ff6600', 8);
+  if(abilityCooldown>0) abilityCooldown--;
+  cpuTurn();
+  updateBattle(); checkBattleEnd();
+}
+
+function doDefend() {
+  if(battleOver) return;
+  pShield+=15;
+  addLog(`Gained +15 shield!`, 'player');
+  if(abilityCooldown>0) abilityCooldown--;
+  cpuTurn(true);
+  updateBattle(); checkBattleEnd();
+}
+
+function doAbility() {
+  if(battleOver||abilityCooldown>0) return;
+  abilityCooldown=3;
+  const heal=20; pHp=Math.min(pMaxHp,pHp+heal);
+  let dmg=battlePlayer.atk*2;
+  if(cShield>0){ const blk=Math.min(cShield,dmg); cShield-=blk; dmg-=blk; }
+  cHp-=dmg;
+  addLog(`✨ Healed ${heal}HP, dealt ${dmg} dmg!`, 'player');
+  spawnParticles(window.innerWidth/2, window.innerHeight*.4, '#cc66ff', 20);
+  cpuTurn();
+  updateBattle(); checkBattleEnd();
+}
+
+function battleBack() {
+  if(tournRound>1&&tournRound<=3) goTo('tournament');
+  else goTo('home');
+}
+
+function addXP(amount) {
+  xp+=amount;
+  while(xp>=150){ xp-=150; level++; coins+=50; notify(`⭐ Level Up! Now Level ${level}! +50💰`); }
+}
+
+// ── SHOP ──
+function dailyCoins() {
+  if(dailyClaimed){ notify('Already claimed today!'); return; }
+  coins+=50; dailyClaimed=true;
+  notify('+50💰 Daily coins claimed!');
+  updateStatsBar();
+}
+function buyMegaPack(){
+  if(coins<100){ notify('Need 100💰!'); return; }
+  coins-=100;
+  const cards=[]; for(let i=0;i<10;i++) cards.push(ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]);
+  collection.push(...cards); showPack(cards.slice(0,5));
+}
+function buyXPBoost(){
+  if(coins<60){ notify('Need 60💰!'); return; }
+  coins-=60; addXP(100); notify('+100 XP!'); updateStatsBar(); goTo('home');
+}
+function buyLegPack(){
+  if(coins<200){ notify('Need 200💰!'); return; }
+  coins-=200;
+  const cards=[];
+  for(let i=0;i<3;i++){
+    const c={...ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]};
+    c.rarity='Legendary'; c.hp+=35; c.atk+=7;
+    collection.push(c); cards.push(c);
+  }
+  showPack(cards);
+}
+
+// ── TOURNAMENT ──
+function startTournament(){
+  if(deck.length===0){ notify('Build a deck first!'); return; }
+  tournRound=1;
+  tournOpponents=[
+    scaleEnemy(ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]),
+    scaleEnemy(ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]),
+    scaleEnemy(ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]),
+  ];
+  goTo('tournament');
+  renderTournament();
+}
+
+function renderTournament(){
+  // Rounds display
+  const rEl=document.getElementById('tournRounds');
+  rEl.innerHTML=['Round 1','Round 2','Final'].map((r,i)=>{
+    const state = i+1<tournRound?'done':i+1===tournRound?'active':'';
+    return `<div class="tourn-round ${state}">${i+1<tournRound?'✅ ':i+1===tournRound?'▶ ':''}${r}</div>`;
+  }).join('');
+
+  const cont=document.getElementById('tournContent');
+  if(tournRound>3){
+    cont.innerHTML=`<div style="font-size:32px;font-family:Impact,sans-serif;color:var(--green);margin:20px 0;">🏆 CHAMPION!</div>
+      <div style="color:var(--white);margin-bottom:16px;">Rewards: 500💰 + 300 XP!</div>
+      <button class="btn gold" onclick="claimTournament()">🎁 COLLECT REWARD</button>`;
+  } else {
+    const opp=tournOpponents[tournRound-1];
+    cont.innerHTML=`<div style="color:var(--dim);font-size:12px;margin-bottom:12px;">Round ${tournRound} opponent:</div>
+      ${cardHTML(opp,'','')}
+      <div style="margin-top:16px;">
+        <button class="btn gold" onclick="startTournBattle()">⚔️ FIGHT!</button>
+      </div>`;
+  }
+}
+
+function startTournBattle(){
+  const opp=tournOpponents[tournRound-1];
+  // Pick strongest deck card
+  const player=deck.reduce((a,b)=>(a.atk+a.hp)>(b.atk+b.hp)?a:b);
+  startBattle(player, opp);
+}
+
+function claimTournament(){
+  coins+=500; addXP(300);
+  notify('🏆 Champion! +500💰 +300XP!');
+  spawnParticles(window.innerWidth/2,window.innerHeight/2,'#ffd700',50);
+  updateStatsBar(); goTo('home');
+}
+
+// ── SPIN WHEEL ──
+const WHEEL_SEGMENTS = [
+  {label:'100💰', color:'#ffd700', action:()=>{coins+=100;notify('🎉 Won 100💰!');}},
+  {label:'Rare Card', color:'#88aaff', action:()=>{const c={...ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]};c.rarity='Rare';c.hp+=10;c.atk+=2;collection.push(c);notify('🎉 Won a Rare Card!');}},
+  {label:'200 XP', color:'#cc66ff', action:()=>{addXP(200);notify('🎉 +200 XP!');}},
+  {label:'50💰', color:'#ff9900', action:()=>{coins+=50;notify('🎉 Won 50💰!');}},
+  {label:'Epic Card', color:'#cc66ff', action:()=>{const c={...ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]};c.rarity='Epic';c.hp+=20;c.atk+=4;collection.push(c);notify('🎉 Won an Epic Card!');}},
+  {label:'X1 Card!', color:'#00ffff', action:()=>{const c={...ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]};c.rarity='X1';c.hp+=80;c.atk+=15;collection.push(c);notify('🔥 Won an X1 Card!');}},
+  {label:'300💰', color:'#ff4444', action:()=>{coins+=300;notify('🔥 Won 300💰!');}},
+  {label:'Legendary!', color:'#ffd700', action:()=>{const c={...ALL_CARDS[Math.floor(Math.random()*ALL_CARDS.length)]};c.rarity='Legendary';c.hp+=35;c.atk+=7;collection.push(c);notify('⭐ Won a Legendary Card!');}},
+];
+
+let wheelAnim = 0;
+function initSpin(){
+  document.getElementById('spinCountLabel').textContent=`Spins: ${spinWheels}`;
+  document.getElementById('spinBtn').classList.toggle('disabled', spinWheels===0||spinning);
+  drawWheel(wheelAngle);
+}
+
+function drawWheel(angle){
+  const cvs=document.getElementById('wheelCanvas');
+  const ctx=cvs.getContext('2d');
+  const cx=140,cy=140,r=130;
+  ctx.clearRect(0,0,280,280);
+  const n=WHEEL_SEGMENTS.length;
+  WHEEL_SEGMENTS.forEach((seg,i)=>{
+    const start=angle+i/n*Math.PI*2;
+    const end=angle+(i+1)/n*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,end); ctx.closePath();
+    ctx.fillStyle=seg.color+'55'; ctx.fill();
+    ctx.strokeStyle=seg.color; ctx.lineWidth=2; ctx.stroke();
+    // Label
+    const mid=angle+(i+.5)/n*Math.PI*2;
+    ctx.save(); ctx.translate(cx+Math.cos(mid)*80,cy+Math.sin(mid)*80);
+    ctx.rotate(mid+Math.PI/2);
+    ctx.fillStyle='#fff'; ctx.font='bold 9px Courier New';
+    ctx.textAlign='center'; ctx.fillText(seg.label,0,0);
+    ctx.restore();
+  });
+  // Pointer
+  ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.moveTo(cx,cy-r-8); ctx.lineTo(cx-8,cy-r+8); ctx.lineTo(cx+8,cy-r+8); ctx.closePath(); ctx.fill();
+  // Center
+  ctx.beginPath(); ctx.arc(cx,cy,16,0,Math.PI*2);
+  ctx.fillStyle='#ffd700'; ctx.fill();
+  ctx.fillStyle='#111'; ctx.font='bold 12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('GO',cx,cy);
+}
+
+function doSpin(){
+  if(spinWheels<=0||spinning){ notify('No spins left!'); return; }
+  spinWheels--; spinning=true;
+  document.getElementById('spinBtn').classList.add('disabled');
+  document.getElementById('spinResult').textContent='';
+
+  const extraRots = (4+Math.floor(Math.random()*4))*Math.PI*2;
+  const targetSeg = Math.floor(Math.random()*WHEEL_SEGMENTS.length);
+  const segSize = Math.PI*2/WHEEL_SEGMENTS.length;
+  const finalAngle = extraRots + (Math.PI*2 - targetSeg*segSize - segSize/2);
+
+  let startAngle = wheelAngle;
+  let progress = 0;
+  const duration = 3000;
+  const startTime = Date.now();
+
+  function animSpin(){
+    const elapsed = Date.now()-startTime;
+    progress = Math.min(1, elapsed/duration);
+    // Ease out
+    const eased = 1-(1-progress)*(1-progress)*(1-progress);
+    wheelAngle = startAngle + finalAngle*eased;
+    drawWheel(wheelAngle);
+    if(progress<1){ requestAnimationFrame(animSpin); }
+    else {
+      spinning=false;
+      WHEEL_SEGMENTS[targetSeg].action();
+      updateStatsBar();
+      document.getElementById('spinResult').innerHTML=`<span style="color:var(--gold);font-size:14px;">🎉 ${WHEEL_SEGMENTS[targetSeg].label}!</span>`;
+      document.getElementById('spinCountLabel').textContent=`Spins: ${spinWheels}`;
+      document.getElementById('spinBtn').classList.toggle('disabled', spinWheels===0);
+      spawnParticles(window.innerWidth/2, window.innerHeight*.4, WHEEL_SEGMENTS[targetSeg].color, 25);
+    }
+  }
+  animSpin();
+}
+
+// ── STATS ──
+function initStats(){
+  const wr = total>0 ? (wins/total*100).toFixed(1)+'%' : 'N/A';
+  const data=[
+    {val:total,lbl:'Total Battles'},
+    {val:wins,lbl:'Wins',col:'var(--green)'},
+    {val:losses,lbl:'Losses',col:'var(--red)'},
+    {val:wr,lbl:'Win Rate',col:'var(--gold)'},
+    {val:collection.length+'/120',lbl:'Collection'},
+    {val:deck.length+'/5',lbl:'Deck'},
+    {val:difficulty,lbl:'Difficulty',col:'var(--purple)'},
+    {val:maxCombo,lbl:'Best Combo',col:'#ff9900'},
+    {val:level,lbl:'Level',col:'var(--blue)'},
+    {val:spinWheels,lbl:'Spins Left'},
+  ];
+  document.getElementById('statsGrid').innerHTML=data.map(d=>
+    `<div class="stat-item"><div class="sval" style="color:${d.col||'var(--gold)'}">${d.val}</div><div class="slbl">${d.lbl}</div></div>`
+  ).join('');
+}
+
+// ── SECRET CODES ──
+function openCode(){ document.getElementById('codePopup').classList.add('show'); document.getElementById('codeInput').focus(); }
+function closeCode(){ document.getElementById('codePopup').classList.remove('show'); document.getElementById('codeInput').value=''; document.getElementById('codeMsg').textContent=''; }
+
+document.getElementById('codeInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter') submitCode();
+  if(e.key==='Escape') closeCode();
+});
+
+function submitCode(){
+  const code = document.getElementById('codeInput').value.toUpperCase().trim();
+  const msg = document.getElementById('codeMsg');
+  if(!code){ msg.textContent='Enter a code!'; return; }
+  if(usedCodes.includes(code)){ msg.textContent='Already used!'; msg.style.color='var(--red)'; return; }
+  const result=SECRET_CODES[code];
+  if(!result){ msg.textContent='Invalid code!'; msg.style.color='var(--red)'; return; }
+
+  usedCodes.push(code);
+  closeCode();
+  let cards=[];
+  if(result==='x1_pack'){
+    for(let i=0;i<3;i++){const c={...ALL_CARDS[Math.floor(Math.random()*100)]};c.rarity='X1';c.hp+=80;c.atk+=15;collection.push(c);cards.push(c);}
+    notify('🔥 X1 PACK UNLOCKED!');
+  } else if(result==='x2_pack'){
+    for(let i=0;i<3;i++){const c={...ALL_CARDS[Math.floor(Math.random()*100)]};c.rarity='X2';c.hp+=120;c.atk+=25;collection.push(c);cards.push(c);}
+    notify('🔥 X2 PACK UNLOCKED!');
+  } else if(result==='x3_pack'){
+    for(let i=0;i<3;i++){const c={...ALL_CARDS[Math.floor(Math.random()*100)]};c.rarity='X3';c.hp+=180;c.atk+=40;collection.push(c);cards.push(c);}
+    notify('🔥 X3 PACK UNLOCKED!');
+  } else if(result==='xlkse_pack'){
+    for(let i=0;i<2;i++){const c={...ALL_CARDS[Math.floor(Math.random()*100)]};c.rarity='XLKSE';c.hp+=300;c.atk+=80;collection.push(c);cards.push(c);}
+    notify('💥 XLKSE PACK UNLOCKED!');
+  } else if(result==='dopeiman_card'){
+    const d=generateDopeiman(); collection.push(d); cards.push(d);
+    notify('🔥🔥 DOPEIMAN UNLOCKED!! 🔥🔥');
+  }
+  if(cards.length>0){
+    spawnParticles(window.innerWidth/2,window.innerHeight/2,'#ffd700',40);
+    showPack(cards);
+  }
+  updateStatsBar();
+}
+
+// ── UPDATE INDEX CARD ──
+// Fix the index card to link here
+function init(){
+  // Nothing — start fresh
+  updateStatsBar();
+}
+
+init();
+</script>
+</body>
+</html>

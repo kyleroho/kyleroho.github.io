@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>The Blue Guy 2 — Return of Blue</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0e0e20; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:monospace; overflow:hidden; }
+canvas { border:2px solid #4fc3f7; display:block; box-shadow:0 0 30px rgba(79,195,247,0.3); }
+#ui { color:#eee; font-size:13px; padding:6px 12px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; justify-content:center; }
+a { color:#4fc3f7; font-size:12px; }
+button { background:#1a2a3a; border:1px solid #4fc3f7; color:#4fc3f7; font-family:monospace; font-size:11px; cursor:pointer; padding:2px 8px; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <span id="lvlDisplay">Level 1</span>
+  <span id="coinDisplay">Coins: 0/0</span>
+  <span id="hpDisplay">HP: ❤❤❤</span>
+  <button onclick="toggleUpgrades()">⬆ UPGRADES</button>
+  <span style="color:#666">WASD: Move | Space: Jump | X: Dash</span>
+  <a href="index.html">← Back</a>
+</div>
+<div id="upgradesPanel" style="display:none;position:fixed;top:50px;left:50%;transform:translateX(-50%);background:#0d1a26;border:2px solid #4fc3f7;padding:16px;z-index:99;min-width:340px;font-family:monospace;color:#eee;box-shadow:0 0 30px rgba(0,0,0,0.8);">
+  <div style="font-size:13px;color:#4fc3f7;margin-bottom:10px;border-bottom:1px solid #4fc3f7;padding-bottom:6px;">⬆ UPGRADES <span style="float:right;cursor:pointer;color:#888" onclick="toggleUpgrades()">✕</span></div>
+  <div id="upgList2"></div>
+  <div style="margin-top:10px;font-size:10px;color:#888">Points: <span id="upPts" style="color:#ffd700">0</span></div>
+</div>
+<canvas id="c"></canvas>
+<script>
+const W=1024,H=768,c=document.getElementById('c'),ctx=c.getContext('2d');
+c.width=W;c.height=H;
+const GRAVITY=0.75;
+let SPEED=5,JUMP=-16,DJUMP=-13,dashCdBase=90;
+function rgb(a){return `rgb(${a[0]},${a[1]},${a[2]})`;}
+const BLUE=[79,195,247],RED=[220,80,80],YELLOW=[255,220,100],PURPLE=[180,100,220],GREEN=[100,220,100],GRAY=[120,120,120],CYAN=[0,220,255],ORANGE=[255,140,0];
+const keys={};
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space'){e.preventDefault();doJump();}if(e.code==='KeyX'){e.preventDefault();doDash();}});
+document.addEventListener('keyup',e=>{keys[e.code]=false;});
+let camX=0,camY=0,state='menu',menuGrad=0,selectedOpt=0,currentLevel=0,coinsCollected=0,particles=[],platforms=[],enemies=[],coins=[],spikes=[],exitRect=null,projectiles=[],totalCoins=0,upgradePoints=0,boss=null,gameCompleted=false,introTimer=0;
+let player={x:50,y:650,w:20,h:20,vx:0,vy:0,onGround:false,dj:true,hp:3,maxHp:3,dashCd:0,dashing:false,dashTimer:0,dashDir:1};
+const UPGRADES=[
+  {id:'speed',name:'Speed Up',desc:'+0.8 move speed',cost:5,owned:0,max:3,apply:()=>{SPEED+=0.8;}},
+  {id:'jump',name:'Jump Boost',desc:'Higher jumps',cost:6,owned:0,max:2,apply:()=>{JUMP-=1.5;DJUMP-=1;}},
+  {id:'hp',name:'Extra HP',desc:'+1 max HP',cost:8,owned:0,max:2,apply:()=>{player.maxHp++;player.hp=Math.min(player.hp+1,player.maxHp);}},
+  {id:'dash',name:'Faster Dash',desc:'Dash recharges faster',cost:7,owned:0,max:2,apply:()=>{dashCdBase=Math.max(45,dashCdBase-20);}},
+];
+function toggleUpgrades(){const p=document.getElementById('upgradesPanel');p.style.display=p.style.display==='none'?'block':'none';renderUpgrades();}
+function renderUpgrades(){
+  document.getElementById('upPts').textContent=upgradePoints;
+  document.getElementById('upgList2').innerHTML=UPGRADES.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:6px;border:1px solid #334;background:#0a1520"><div><div style="font-size:11px">${u.name} (${u.owned}/${u.max})</div><div style="font-size:9px;color:#888">${u.desc}</div></div><button onclick="buyUpgrade('${u.id}')" ${u.owned>=u.max||upgradePoints<u.cost?'disabled':''} style="opacity:${u.owned>=u.max?1:upgradePoints>=u.cost?1:0.5}">${u.owned>=u.max?'MAX':'BUY '+u.cost+'🪙'}</button></div>`).join('');
+}
+function buyUpgrade(id){const u=UPGRADES.find(x=>x.id===id);if(!u||u.owned>=u.max||upgradePoints<u.cost)return;upgradePoints-=u.cost;u.owned++;u.apply();renderUpgrades();}
+function mkR(x,y,w,h){return{x,y,w,h};}
+function createLevels(){return[
+  {plats:[mkR(0,700,200,68),mkR(300,600,150,20),mkR(500,500,150,20),mkR(750,400,200,20),mkR(1000,300,100,20),mkR(1200,200,200,568)],enemies:[{sx:320,x:320,y:580,pd:100,dir:1,w:20,h:20,hp:1}],boss:null,coins:[{x:350,y:570},{x:560,y:470},{x:800,y:370},{x:1050,y:270}],spikes:[{x:250,y:680},{x:270,y:680}],spawn:[50,650],exit:[1250,150]},
+  {plats:[mkR(0,700,100,68),mkR(150,640,100,20),mkR(300,580,100,20),mkR(450,520,100,20),mkR(600,460,100,20),mkR(750,400,100,20),mkR(900,340,100,20),mkR(1100,280,100,20),mkR(1300,220,200,548)],enemies:[{sx:170,x:170,y:620,pd:60,dir:1,w:20,h:20,hp:1},{sx:620,x:620,y:440,pd:60,dir:1,w:20,h:20,hp:1}],boss:null,coins:[{x:180,y:610},{x:330,y:560},{x:480,y:500},{x:640,y:440},{x:780,y:380},{x:1130,y:260}],spikes:[{x:250,y:680},{x:270,y:680},{x:510,y:680}],spawn:[30,650],exit:[1350,170]},
+  {plats:[mkR(0,700,120,68),mkR(200,620,80,20),mkR(380,540,80,20),mkR(560,460,80,20),mkR(740,380,80,20),mkR(900,300,80,20),mkR(1060,220,80,20),mkR(1200,140,200,628)],enemies:[{sx:210,x:210,y:600,pd:50,dir:1,w:20,h:20,hp:1},{sx:580,x:580,y:440,pd:50,dir:1,w:20,h:20,hp:1},{sx:920,x:920,y:280,pd:50,dir:1,w:20,h:20,hp:1}],boss:null,coins:[{x:220,y:590},{x:400,y:520},{x:580,y:440},{x:760,y:360},{x:920,y:280},{x:1080,y:200}],spikes:[{x:140,y:680},{x:160,y:680},{x:310,y:680},{x:330,y:680},{x:490,y:680},{x:510,y:680}],spawn:[40,650],exit:[1250,90]},
+  {plats:[mkR(0,700,150,68),mkR(200,630,100,20),mkR(380,560,100,20),mkR(560,490,100,20),mkR(760,420,100,20),mkR(960,350,100,20),mkR(1160,280,100,20),mkR(1360,210,150,558)],enemies:[{sx:220,x:220,y:610,pd:80,dir:1,w:20,h:20,hp:2},{sx:400,x:400,y:540,pd:80,dir:1,w:20,h:20,hp:1},{sx:580,x:580,y:470,pd:80,dir:1,w:20,h:20,hp:1},{sx:780,x:780,y:400,pd:80,dir:1,w:20,h:20,hp:2},{sx:980,x:980,y:330,pd:80,dir:1,w:20,h:20,hp:1}],boss:null,coins:[{x:240,y:600},{x:420,y:530},{x:600,y:460},{x:800,y:390},{x:1000,y:320},{x:1200,y:250}],spikes:[{x:150,y:680},{x:170,y:680},{x:350,y:680},{x:370,y:680}],spawn:[40,650],exit:[1380,160]},
+  {plats:[mkR(0,700,200,68),mkR(300,600,150,20),mkR(500,500,150,20),mkR(700,400,150,20),mkR(900,300,150,20),mkR(1100,200,150,20),mkR(1400,100,200,668)],enemies:[],boss:{x:1450,y:40,w:60,h:60,hp:6,maxHp:6,dir:1,sx:1450,pd:200,sTimer:0,rage:false},coins:[{x:340,y:570},{x:540,y:470},{x:740,y:370},{x:940,y:270},{x:1140,y:170}],spikes:[{x:250,y:680},{x:270,y:680},{x:450,y:680},{x:470,y:680}],spawn:[50,650],exit:[1480,50]},
+  {plats:[mkR(0,700,200,68),mkR(250,630,100,20),mkR(430,560,100,20),mkR(610,490,100,20),mkR(810,420,100,20),mkR(1010,350,100,20),mkR(1210,280,100,20),mkR(1400,200,200,568)],enemies:[{sx:270,x:270,y:610,pd:70,dir:1,w:20,h:20,hp:2},{sx:640,x:640,y:470,pd:70,dir:1,w:20,h:20,hp:2},{sx:1030,x:1030,y:330,pd:70,dir:1,w:20,h:20,hp:2}],boss:null,coins:[{x:280,y:600},{x:460,y:530},{x:640,y:460},{x:840,y:390},{x:1040,y:320},{x:1240,y:250}],spikes:[{x:155,y:680},{x:175,y:680},{x:355,y:680},{x:375,y:680},{x:515,y:680},{x:535,y:680}],spawn:[40,650],exit:[1450,150]},
+  {plats:[mkR(0,700,80,68),mkR(100,640,80,20),mkR(0,580,80,20),mkR(100,520,80,20),mkR(0,460,80,20),mkR(100,400,80,20),mkR(200,340,80,20),mkR(350,280,80,20),mkR(500,220,80,20),mkR(700,160,80,20),mkR(900,100,80,20),mkR(1100,40,200,728)],enemies:[{sx:110,x:110,y:620,pd:60,dir:1,w:18,h:18,hp:1},{sx:110,x:110,y:500,pd:60,dir:1,w:18,h:18,hp:1},{sx:360,x:360,y:260,pd:60,dir:1,w:18,h:18,hp:2}],boss:null,coins:[{x:120,y:610},{x:20,y:550},{x:120,y:490},{x:220,y:310},{x:720,y:130},{x:920,y:70}],spikes:[{x:82,y:620},{x:82,y:560},{x:82,y:500}],spawn:[20,650],exit:[1150,-10]},
+  {plats:[mkR(0,700,150,68),mkR(200,660,60,20),mkR(300,620,60,20),mkR(400,580,60,20),mkR(500,540,60,20),mkR(600,500,60,20),mkR(700,460,60,20),mkR(800,420,60,20),mkR(900,380,60,20),mkR(1000,340,60,20),mkR(1100,300,60,20),mkR(1200,260,60,20),mkR(1350,200,200,568)],enemies:[{sx:210,x:210,y:640,pd:50,dir:1,w:18,h:18,hp:1},{sx:510,x:510,y:520,pd:50,dir:1,w:18,h:18,hp:1},{sx:810,x:810,y:400,pd:50,dir:1,w:18,h:18,hp:1},{sx:1110,x:1110,y:280,pd:50,dir:1,w:18,h:18,hp:2}],boss:null,coins:[{x:220,y:630},{x:320,y:590},{x:620,y:470},{x:920,y:350},{x:1020,y:310},{x:1220,y:230}],spikes:[{x:150,y:680},{x:170,y:680},{x:270,y:600},{x:370,y:560}],spawn:[40,650],exit:[1380,150]},
+  {plats:[mkR(0,700,200,68),mkR(300,600,120,20),mkR(480,510,120,20),mkR(660,420,120,20),mkR(840,330,120,20),mkR(1020,240,120,20),mkR(1200,150,200,618)],enemies:[{sx:320,x:320,y:580,pd:90,dir:1,w:22,h:22,hp:2},{sx:500,x:500,y:490,pd:90,dir:1,w:22,h:22,hp:2},{sx:680,x:680,y:400,pd:90,dir:1,w:22,h:22,hp:2},{sx:860,x:860,y:310,pd:90,dir:1,w:22,h:22,hp:2}],boss:null,coins:[{x:360,y:570},{x:540,y:480},{x:720,y:390},{x:900,y:300},{x:1080,y:210}],spikes:[{x:250,y:680},{x:270,y:680},{x:430,y:680},{x:450,y:680},{x:610,y:680}],spawn:[50,650],exit:[1250,100]},
+  {plats:[mkR(0,700,200,68),mkR(300,600,150,20),mkR(550,500,150,20),mkR(800,400,150,20),mkR(1050,300,150,20),mkR(1350,200,250,568)],enemies:[{sx:320,x:320,y:580,pd:80,dir:1,w:20,h:20,hp:1},{sx:570,x:570,y:480,pd:80,dir:1,w:20,h:20,hp:1}],boss:{x:1400,y:130,w:70,h:70,hp:10,maxHp:10,dir:1,sx:1400,pd:250,sTimer:0,rage:false},coins:[{x:350,y:570},{x:600,y:470},{x:850,y:370},{x:1100,y:270}],spikes:[{x:250,y:680},{x:270,y:680},{x:290,y:680},{x:500,y:680},{x:520,y:680}],spawn:[50,650],exit:[1450,130]},
+];}
+const levels=createLevels();
+function loadLevel(idx){
+  if(idx>=levels.length){gameCompleted=true;state='intro';introTimer=0;return;}
+  currentLevel=idx;const lv=levels[idx];
+  platforms=[...lv.plats];enemies=lv.enemies.map(e=>({...e}));boss=lv.boss?{...lv.boss}:null;
+  coins=lv.coins.map(c=>({...c,w:16,h:16,collected:false}));spikes=lv.spikes.map(s=>({...s,w:20,h:20}));
+  exitRect={x:lv.exit[0],y:lv.exit[1],w:40,h:40};projectiles=[];coinsCollected=0;
+  player.x=lv.spawn[0];player.y=lv.spawn[1];player.vx=0;player.vy=0;player.onGround=false;player.dj=true;player.dashing=false;player.dashTimer=0;player.dashCd=0;
+  if(idx===0){player.hp=player.maxHp;}camX=0;camY=0;
+  document.getElementById('lvlDisplay').textContent=`Level ${idx+1}/10`;
+  document.getElementById('coinDisplay').textContent=`Coins: 0/${coins.length}`;
+  updHp();
+}
+function updHp(){document.getElementById('hpDisplay').textContent='HP: '+'❤'.repeat(player.hp)+'🖤'.repeat(Math.max(0,player.maxHp-player.hp));}
+function respawn(){player.hp--;updHp();if(player.hp<=0){player.hp=player.maxHp;updHp();loadLevel(currentLevel);return;}const lv=levels[currentLevel];player.x=lv.spawn[0];player.y=lv.spawn[1];player.vx=0;player.vy=0;player.onGround=false;player.dj=true;player.dashing=false;for(let i=0;i<10;i++)particles.push({x:player.x+10,y:player.y+10,vx:(Math.random()-0.5)*5,vy:(Math.random()-2)*4,life:50,color:RED});}
+function doJump(){if(state!=='playing')return;if(player.onGround){player.vy=JUMP;player.onGround=false;}else if(player.dj){player.vy=DJUMP;player.dj=false;}}
+function doDash(){if(state!=='playing'||player.dashCd>0||player.dashing)return;player.dashing=true;player.dashTimer=12;player.dashDir=(keys['ArrowLeft']||keys['KeyA'])?-1:1;player.dashCd=dashCdBase;for(let i=0;i<8;i++)particles.push({x:player.x+10,y:player.y+10,vx:-player.dashDir*3+(Math.random()-0.5)*2,vy:(Math.random()-0.5)*2,life:20,color:CYAN});}
+function collide(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;}
+function resolvePlayer(){
+  player.x+=player.vx;
+  for(const p of platforms)if(collide(player.x,player.y,player.w,player.h,p.x,p.y,p.w,p.h)){if(player.vx>0)player.x=p.x-player.w;else if(player.vx<0)player.x=p.x+p.w;player.vx=0;}
+  player.y+=player.vy;player.onGround=false;
+  for(const p of platforms)if(collide(player.x,player.y,player.w,player.h,p.x,p.y,p.w,p.h)){if(player.vy>0){player.y=p.y-player.h;player.vy=0;player.onGround=true;player.dj=true;}else if(player.vy<0){player.y=p.y+p.h;player.vy=0;}}
+}
+function updatePlayer(){
+  if(player.dashCd>0)player.dashCd--;
+  if(player.dashing){player.vx=player.dashDir*12;player.dashTimer--;if(player.dashTimer<=0)player.dashing=false;}
+  else{if(keys['ArrowLeft']||keys['KeyA'])player.vx=Math.max(player.vx-1,-SPEED);else if(keys['ArrowRight']||keys['KeyD'])player.vx=Math.min(player.vx+1,SPEED);else{player.vx*=0.8;if(Math.abs(player.vx)<0.5)player.vx=0;}}
+  player.vy+=GRAVITY;resolvePlayer();
+}
+function updateEnemies(){for(const e of enemies){e.x+=2*e.dir;if(Math.abs(e.x-e.sx)>=e.pd)e.dir*=-1;for(const p of platforms)if(collide(e.x,e.y,e.w,e.h,p.x,p.y,p.w,p.h)){if(e.dir>0)e.x=p.x-e.w;else e.x=p.x+p.w;e.dir*=-1;}}}
+function updateBoss(){
+  if(!boss)return;
+  const spd=boss.rage?3:2;boss.x+=spd*boss.dir;if(Math.abs(boss.x-boss.sx)>=boss.pd)boss.dir*=-1;
+  if(boss.hp<=boss.maxHp/2&&!boss.rage){boss.rage=true;for(let i=0;i<15;i++)particles.push({x:boss.x+35,y:boss.y+35,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,life:60,color:ORANGE});}
+  boss.sTimer++;const fr=boss.rage?70:100;
+  if(boss.sTimer>=fr){const dx=player.x-boss.x,dy=player.y-boss.y,d=Math.sqrt(dx*dx+dy*dy)||1,spd2=boss.rage?6:5;
+    projectiles.push({x:boss.x+boss.w/2,y:boss.y,vx:dx/d*spd2,vy:dy/d*spd2,w:10,h:10});
+    if(boss.rage){projectiles.push({x:boss.x+boss.w/2,y:boss.y,vx:(dx/d+0.4)*spd2,vy:dy/d*spd2,w:10,h:10});projectiles.push({x:boss.x+boss.w/2,y:boss.y,vx:(dx/d-0.4)*spd2,vy:dy/d*spd2,w:10,h:10});}
+    boss.sTimer=0;}
+}
+function updateProjectiles(){for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.x+=p.vx;p.y+=p.vy;if(p.x<-100||p.x>3000||p.y<-100||p.y>2000){projectiles.splice(i,1);continue;}if(collide(p.x,p.y,p.w,p.h,player.x,player.y,player.w,player.h)){projectiles.splice(i,1);respawn();}}}
+function checkCollisions(){
+  for(const co of coins)if(!co.collected&&collide(player.x,player.y,player.w,player.h,co.x,co.y,co.w,co.h)){co.collected=true;coinsCollected++;totalCoins++;upgradePoints++;document.getElementById('coinDisplay').textContent=`Coins: ${coinsCollected}/${coins.length}`;for(let i=0;i<8;i++)particles.push({x:co.x+8,y:co.y+8,vx:(Math.random()-0.5)*4,vy:(Math.random()-3)*3,life:40,color:YELLOW});}
+  for(const s of spikes)if(collide(player.x,player.y,player.w,player.h,s.x,s.y,s.w,s.h))respawn();
+  for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];if(collide(player.x,player.y,player.w,player.h,e.x,e.y,e.w,e.h)){if(player.vy>0&&player.y+player.h<=e.y+10){e.hp--;player.vy=JUMP;if(e.hp<=0)enemies.splice(i,1);}else respawn();}}
+  if(boss&&collide(player.x,player.y,player.w,player.h,boss.x,boss.y,boss.w,boss.h)){if(player.vy>0&&player.y+player.h<=boss.y+15){boss.hp--;player.vy=JUMP;if(boss.hp<=0)boss=null;}else respawn();}
+  if(exitRect&&collide(player.x,player.y,player.w,player.h,exitRect.x,exitRect.y,exitRect.w,exitRect.h)){loadLevel(currentLevel+1);state='playing';}
+  if(player.y>1500)respawn();
+}
+function updateCamera(){const tx=player.x-W/2,ty=player.y-H/2;camX+=(tx-camX)*0.1;camY+=(ty-camY)*0.1;if(camY<-200)camY=-200;}
+function wx(x){return x-camX;}function wy(y){return y-camY;}
+function drawBg(){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0e0e20');g.addColorStop(1,'#1a1a30');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.fillStyle='rgba(255,255,255,0.3)';for(let i=0;i<60;i++){const sx=((i*137+camX*0.02)%W+W)%W,sy=((i*89+camY*0.02)%H+H)%H;ctx.fillRect(sx,sy,i%5===0?2:1,i%5===0?2:1);}}
+function drawPlatforms(){for(const p of platforms){ctx.fillStyle='#2a3a5a';ctx.fillRect(wx(p.x),wy(p.y),p.w,p.h);ctx.strokeStyle='#4fc3f7';ctx.lineWidth=2;ctx.strokeRect(wx(p.x),wy(p.y),p.w,p.h);ctx.fillStyle='rgba(79,195,247,0.15)';ctx.fillRect(wx(p.x),wy(p.y),p.w,4);}}
+function drawPlayer(){const b=player.onGround?Math.sin(Date.now()*0.01)*2:0,px=wx(player.x),py=wy(player.y+b);ctx.shadowColor=player.dashing?'#00ffff':'#4fc3f7';ctx.shadowBlur=player.dashing?20:10;ctx.fillStyle=player.dashing?'rgba(0,220,255,0.9)':rgb(BLUE);ctx.fillRect(px,py,player.w,player.h);ctx.shadowBlur=0;ctx.fillStyle='white';ctx.beginPath();ctx.arc(px+6,py+6,2.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(px+14,py+6,2.5,0,Math.PI*2);ctx.fill();if(player.dashCd>0){ctx.fillStyle='rgba(0,220,255,0.4)';ctx.fillRect(px,py+player.h+2,player.w*(1-player.dashCd/dashCdBase),3);}}
+function drawEnemies(){const t=Date.now();for(const e of enemies){const w=Math.sin(t*0.02)*1,col=e.hp>1?ORANGE:RED;ctx.fillStyle=rgb(col);ctx.fillRect(wx(e.x),wy(e.y+w),e.w,e.h);ctx.fillStyle='white';ctx.beginPath();ctx.arc(wx(e.x+5),wy(e.y+5+w),2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wx(e.x+13),wy(e.y+5+w),2,0,Math.PI*2);ctx.fill();if(e.hp>1){ctx.fillStyle='#400';ctx.fillRect(wx(e.x),wy(e.y-8+w),e.w,4);ctx.fillStyle='#0f0';ctx.fillRect(wx(e.x),wy(e.y-8+w),e.w*(e.hp>2?0.33:0.66),4);}}}
+function drawBoss(){if(!boss)return;const t=Date.now(),w=Math.sin(t*0.015)*3,col=boss.rage?ORANGE:PURPLE;ctx.shadowColor=rgb(col);ctx.shadowBlur=boss.rage?25:12;ctx.fillStyle=rgb(col);ctx.fillRect(wx(boss.x),wy(boss.y+w),boss.w,boss.h);ctx.shadowBlur=0;ctx.fillStyle='white';ctx.beginPath();ctx.arc(wx(boss.x+18),wy(boss.y+20+w),7,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wx(boss.x+42),wy(boss.y+20+w),7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wx(boss.x+20),wy(boss.y+21+w),3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wx(boss.x+44),wy(boss.y+21+w),3,0,Math.PI*2);ctx.fill();ctx.fillStyle='#400';ctx.fillRect(wx(boss.x),wy(boss.y-12+w),boss.w,6);ctx.fillStyle=boss.rage?'#f80':'#a04eff';ctx.fillRect(wx(boss.x),wy(boss.y-12+w),boss.w*(boss.hp/boss.maxHp),6);if(boss.rage){ctx.fillStyle='rgba(255,140,0,0.8)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('RAGE',wx(boss.x+boss.w/2),wy(boss.y-18+w));}}
+function drawCoins(){const t=Date.now();for(const co of coins){if(co.collected)continue;const sc=Math.abs(Math.sin(t*0.01));ctx.fillStyle=rgb(YELLOW);ctx.shadowColor='#ffd700';ctx.shadowBlur=8;ctx.beginPath();ctx.ellipse(wx(co.x+co.w/2),wy(co.y+co.h/2),Math.max(2,co.w/2*sc),co.h/2,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}}
+function drawSpikes(){for(const s of spikes){ctx.fillStyle=rgb(GRAY);ctx.beginPath();ctx.moveTo(wx(s.x),wy(s.y+s.h));ctx.lineTo(wx(s.x+s.w/2),wy(s.y));ctx.lineTo(wx(s.x+s.w),wy(s.y+s.h));ctx.fill();ctx.strokeStyle='#ccc';ctx.lineWidth=1;ctx.stroke();}}
+function drawProjectiles(){for(const p of projectiles){ctx.fillStyle=boss&&boss.rage?rgb(ORANGE):rgb(RED);ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=8;ctx.beginPath();ctx.arc(wx(p.x+5),wy(p.y+5),5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}}
+function drawExit(){if(!exitRect)return;ctx.fillStyle=rgb(GREEN);ctx.shadowColor='#64ff64';ctx.shadowBlur=15;ctx.fillRect(wx(exitRect.x),wy(exitRect.y),exitRect.w,exitRect.h);ctx.shadowBlur=0;ctx.fillStyle='white';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('EXIT',wx(exitRect.x+20),wy(exitRect.y+24));}
+function drawParticles(){for(let i=particles.length-1;i>=0;i--){const p=particles[i];ctx.fillStyle=`rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.life/50})`;ctx.beginPath();ctx.arc(wx(p.x),wy(p.y),3,0,Math.PI*2);ctx.fill();p.x+=p.vx;p.y+=p.vy;p.vy+=0.2;p.life--;if(p.life<=0)particles.splice(i,1);}}
+function drawMenu(){menuGrad=(menuGrad||0)+0.01;for(let y=0;y<H;y++){const t=Math.sin(menuGrad+y*0.006)*0.5+0.5;ctx.fillStyle=`rgb(${20+t*20|0},${20+t*30|0},${40+t*60|0})`;ctx.fillRect(0,y,W,1);}ctx.font='bold 64px monospace';ctx.fillStyle='white';ctx.textAlign='center';ctx.fillText('The Blue Guy 2',W/2+2,192);ctx.fillStyle=`rgba(79,195,247,${0.8+Math.sin(Date.now()*0.005)*0.2})`;ctx.fillText('The Blue Guy 2',W/2,190);ctx.font='22px monospace';ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillText('Return of Blue',W/2,238);const opts=['Start Game','Exit'];ctx.font='32px monospace';opts.forEach((o,i)=>{const sel=i===selectedOpt;ctx.fillStyle=sel?rgb(YELLOW):'white';ctx.fillText(o,W/2,340+i*60);if(sel)ctx.fillText('>',W/2-220,340+i*60);});ctx.font='14px monospace';ctx.fillStyle='rgba(255,255,255,0.4)';ctx.fillText('NEW: Dash (X key) · Enemy HP bars · Boss RAGE mode · 10 levels',W/2,570);ctx.fillText('WASD/Arrows: Move  ·  Space: Jump  ·  X: Dash  ·  ESC: Menu',W/2,598);}
+function drawIntro(){ctx.fillStyle='#0e0e20';ctx.fillRect(0,0,W,H);const prog=introTimer/180;ctx.save();ctx.translate(W/2,H/2);const scale=0.5+prog*0.5;ctx.scale(scale,scale);ctx.rotate((introTimer*2)*Math.PI/180);ctx.font='bold 64px monospace';ctx.textAlign='center';if(gameCompleted){ctx.fillStyle=rgb(YELLOW);ctx.fillText('You Win!',0,0);ctx.font='22px monospace';ctx.fillStyle='white';ctx.fillText('Blue Guy lives on!',0,55);}else{ctx.fillStyle='white';ctx.fillText('The Blue Guy 2',0,0);}ctx.restore();if(introTimer%3===0)for(let i=0;i<2;i++)particles.push({x:W/2+camX,y:H/2+camY,vx:(Math.random()-0.5)*6,vy:(Math.random()-3)*3,life:60,color:BLUE});drawParticles();}
+document.addEventListener('keydown',e=>{if(state==='menu'){if(e.code==='ArrowUp')selectedOpt=(selectedOpt-1+2)%2;if(e.code==='ArrowDown')selectedOpt=(selectedOpt+1)%2;if(e.code==='Enter'){if(selectedOpt===0){loadLevel(0);state='playing';particles=[];}else document.title='Bye!';}}if(e.code==='Escape'){if(state==='playing'){state='intro';introTimer=0;gameCompleted=false;particles=[];}else state='menu';}});
+function gameLoop(){requestAnimationFrame(gameLoop);if(state==='intro'){introTimer++;drawIntro();if(introTimer>180&&!gameCompleted){state='menu';particles=[];}return;}if(state==='menu'){drawMenu();return;}if(state==='playing'){updatePlayer();updateEnemies();updateBoss();updateProjectiles();checkCollisions();updateCamera();drawBg();drawPlatforms();drawExit();drawCoins();drawSpikes();drawEnemies();drawBoss();drawProjectiles();drawParticles();drawPlayer();if(gameCompleted){ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,W,H);ctx.font='44px monospace';ctx.fillStyle='white';ctx.textAlign='center';ctx.fillText('Game Complete!',W/2,H/2);ctx.font='22px monospace';ctx.fillText('Press ESC for menu',W/2,H/2+50);}}}
+state='intro';introTimer=0;gameCompleted=false;loadLevel(0);gameLoop();
+</script>
+</body>
+</html>
