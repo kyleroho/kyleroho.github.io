@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <title>Pixel Drift — Pixel Forge Games</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
-body { background:#0a0500; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Press Start 2P',monospace; color:#ff9500; }
-canvas { border:2px solid #ff9500; box-shadow:0 0 30px rgba(255,149,0,0.4); image-rendering:pixelated; }
-#ui { margin-bottom:16px; font-size:10px; display:flex; gap:40px; color:#ffd700; }
-#instructions { margin-top:14px; font-size:7px; color:#664400; text-align:center; line-height:2; }
+body { background:#0a0500; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Press Start 2P', "Courier New", Courier, monospace,monospace; color:#ff9500; }
+canvas { border:3px solid #ff9500; box-shadow:0 0 40px rgba(255,149,0,0.5); image-rendering:pixelated; }
+#ui { margin-bottom:16px; font-size:12px; display:flex; gap:40px; color:#ffd700; }
+#instructions { margin-top:14px; font-size:8px; color:#664400; text-align:center; line-height:2; }
 a { color:#ff9500; }
 </style>
 </head>
 <body>
 <div id="ui"><span>SCORE: <span id="score">0</span></span><span>LIVES: <span id="lives">3</span></span><span>LEVEL: <span id="level">1</span></span></div>
-<canvas id="c" width="480" height="360"></canvas>
+<canvas id="c" width="800" height="600"></canvas>
 <div id="instructions">ARROW KEYS / WASD — MOVE &nbsp;·&nbsp; SPACE — SHOOT<br>AVOID ASTEROIDS · SHOOT TO DESTROY<br><a href="index.html">← BACK TO PIXEL FORGE GAMES</a></div>
 
 <script>
@@ -23,7 +23,7 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 
-const W = 480, H = 360;
+const W = 800, H = 600;
 let score = 0, lives = 3, lvl = 1, dead = false, started = false;
 let invincible = 0;
 
@@ -149,15 +149,15 @@ function draw() {
   [[30,20],[90,80],[160,40],[240,110],[320,30],[400,90],[450,150],[80,160],[200,200],[360,180]].forEach(([x,y])=>ctx.fillRect(x,y,2,2));
 
   if(!started) {
-    ctx.fillStyle='#ff9500';ctx.font='10px "Press Start 2P"';
+    ctx.fillStyle='#ff9500';ctx.font='10px "Press Start 2P", "Courier New", Courier, monospace';
     ctx.fillText('PIXEL DRIFT',W/2-70,H/2-30);
-    ctx.fillStyle='#ffd700';ctx.font='7px "Press Start 2P"';
+    ctx.fillStyle='#ffd700';ctx.font='7px "Press Start 2P", "Courier New", Courier, monospace';
     ctx.fillText('PRESS ARROW KEY OR SPACE',W/2-98,H/2+10);
     ctx.fillText('TO START',W/2-36,H/2+30);
   } else if(dead) {
-    ctx.fillStyle='#ff3300';ctx.font='12px "Press Start 2P"';
+    ctx.fillStyle='#ff3300';ctx.font='12px "Press Start 2P", "Courier New", Courier, monospace';
     ctx.fillText('GAME OVER',W/2-65,H/2-20);
-    ctx.fillStyle='#ffd700';ctx.font='7px "Press Start 2P"';
+    ctx.fillStyle='#ffd700';ctx.font='7px "Press Start 2P", "Courier New", Courier, monospace';
     ctx.fillText(`FINAL SCORE: ${score}`,W/2-65,H/2+10);
     ctx.fillText('REFRESH TO PLAY AGAIN',W/2-88,H/2+35);
   } else {
