@@ -165,6 +165,12 @@ function loadLevel(idx){
 }
 
 function respawn(){
+  if(shieldAvailable && !shieldUsed){
+    shieldUsed=true; shieldAvailable=false;
+    for(let i=0;i<12;i++) particles.push({x:player.x+10,y:player.y+10,vx:(Math.random()-0.5)*5,vy:(Math.random()-2)*4,life:50,color:[79,195,247]});
+    return;
+  }
+  shieldUsed=false;
   const lv=levels[currentLevel];
   player.x=lv.spawn[0]; player.y=lv.spawn[1];
   player.vx=0; player.vy=0; player.onGround=false; player.dj=true;
@@ -172,8 +178,10 @@ function respawn(){
 
 function jump(){
   if(state!=='playing') return;
-  if(player.onGround){player.vy=JUMP; player.onGround=false;}
-  else if(player.dj){player.vy=DJUMP; player.dj=false;}
+  const jmod=typeof JUMP_MOD!=='undefined'?JUMP_MOD:JUMP;
+  const djmod=typeof DJUMP_MOD!=='undefined'?DJUMP_MOD:DJUMP;
+  if(player.onGround){player.vy=jmod; player.onGround=false;}
+  else if(player.dj){player.vy=djmod; player.dj=false;}
 }
 
 function collideRect(ax,ay,aw,ah,bx,by,bw,bh){
@@ -202,8 +210,9 @@ function resolvePlayer(){
 }
 
 function updatePlayer(){
-  if(keys['ArrowLeft']||keys['KeyA']) player.vx=Math.max(player.vx-1,-SPEED);
-  else if(keys['ArrowRight']||keys['KeyD']) player.vx=Math.min(player.vx+1,SPEED);
+  const spd=typeof SPEED_MOD!=='undefined'?SPEED_MOD:SPEED;
+  if(keys['ArrowLeft']||keys['KeyA']) player.vx=Math.max(player.vx-1,-spd);
+  else if(keys['ArrowRight']||keys['KeyD']) player.vx=Math.min(player.vx+1,spd);
   else {player.vx*=0.8; if(Math.abs(player.vx)<0.5) player.vx=0;}
   player.vy+=GRAVITY;
   resolvePlayer();
@@ -258,6 +267,7 @@ function checkCollisions(){
   for(const co of coins){
     if(!co.collected&&collideRect(player.x,player.y,player.w,player.h,co.x,co.y,co.w,co.h)){
       co.collected=true; coinsCollected++;
+      upgradePoints+=coinMult; totalCoinsEver+=coinMult;
       document.getElementById('coinDisplay').textContent=`Coins: ${coinsCollected}/${coins.length}`;
       for(let i=0;i<8;i++) particles.push({x:co.x+8,y:co.y+8,vx:(Math.random()-0.5)*4,vy:(Math.random()-3)*3,life:40,color:YELLOW});
     }
@@ -572,53 +582,7 @@ function buyUpgrade(id){
 }
 
 // Hook into coin collection to track total
-const _origCheckCollisions = checkCollisions;
-// Patch coin collection to also add upgrade points
-const _origLoadLevel = loadLevel;
-
-// Override respawn to handle shield
-const _origRespawn = respawn;
-function respawn(){
-  if(shieldAvailable && !shieldUsed){
-    shieldUsed=true;
-    shieldAvailable=false;
-    // flash effect
-    for(let i=0;i<12;i++) particles.push({x:player.x+10,y:player.y+10,vx:(Math.random()-0.5)*5,vy:(Math.random()-2)*4,life:50,color:[79,195,247]});
-    return;
-  }
-  shieldUsed=false;
-  _origRespawn();
-}
-
-// Patch: award upgrade points when coins are collected
-const _baseCoinCheck = checkCollisions;
-let _lastCoins=0;
-function checkCollisions(){
-  const before=coinsCollected;
-  _baseCoinCheck();
-  if(coinsCollected>before){
-    const earned=(coinsCollected-before)*coinMult;
-    upgradePoints+=earned;
-    totalCoinsEver+=earned;
-  }
-}
-
-// Apply current mods to movement
-const _origUpdatePlayer = updatePlayer;
-function updatePlayer(){
-  if(keys['ArrowLeft']||keys['KeyA']) player.vx=Math.max(player.vx-1,-SPEED_MOD);
-  else if(keys['ArrowRight']||keys['KeyD']) player.vx=Math.min(player.vx+1,SPEED_MOD);
-  else {player.vx*=0.8; if(Math.abs(player.vx)<0.5) player.vx=0;}
-  player.vy+=GRAVITY;
-  resolvePlayer();
-}
-
-function jump(){
-  if(state!=='playing') return;
-  if(player.onGround){player.vy=JUMP_MOD; player.onGround=false;}
-  else if(player.dj){player.vy=DJUMP_MOD; player.dj=false;}
-}
-// Remove old jump listener since we redefined it above (jump is called by keydown listener directly)
+// (patches merged into originals above)
 
 // Start
 state='intro'; introTimer=0; gameCompleted=false;
