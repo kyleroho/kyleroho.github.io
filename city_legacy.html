@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>City Legacy</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════
+   ROOT & RESET
+══════════════════════════════════════════════════ */
+:root {
+  --sky0: #0d1b2e;
+  --sky1: #162540;
+  --sky2: #1c3050;
+  --ground: #0e1a0b;
+  --ground2: #182a12;
+  --panel-bg: #111720;
+  --panel2: #161d2c;
+  --border: rgba(255,255,255,0.07);
+  --border-hi: rgba(255,255,255,0.14);
+  --gold: #f5c842;
+  --gold-d: #c8a22a;
+  --gold-glow: rgba(245,200,66,0.3);
+  --green: #52d68a;
+  --green-d: #2ea864;
+  --red: #f06060;
+  --blue: #5ab4ff;
+  --purple: #b07aff;
+  --teal: #40d8c0;
+  --orange: #ff9040;
+  --text: #cdd6e0;
+  --text2: #7090a8;
+  --text3: #405060;
+  --font-ui: 'Chakra Petch', monospace;
+  --font-body: 'Inter', sans-serif;
+  --radius: 5px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--sky0);}
+body{font-family:var(--font-body);color:var(--text);font-size:13px;display:flex;flex-direction:column;height:100vh;}
+
+/* ══════════════════════════════════════════════════
+   TOP BAR
+══════════════════════════════════════════════════ */
+#topbar{
+  height:56px;flex-shrink:0;
+  background:linear-gradient(180deg,#0d1520 0%,#111a28 100%);
+  border-bottom:1px solid var(--border-hi);
+  display:flex;align-items:center;padding:0 16px;gap:0;
+  position:relative;z-index:20;
+}
+#topbar::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,var(--gold-d) 40%,var(--gold) 50%,var(--gold-d) 60%,transparent 100%);
+  opacity:0.6;
+}
+.logo{
+  font-family:var(--font-ui);font-size:17px;font-weight:700;
+  color:var(--gold);letter-spacing:3px;
+  text-shadow:0 0 24px var(--gold-glow);
+  margin-right:20px;white-space:nowrap;
+  display:flex;align-items:center;gap:8px;
+}
+.logo-sub{font-size:9px;font-weight:400;letter-spacing:4px;color:var(--gold-d);opacity:0.7;}
+.stat-sep{width:1px;height:36px;background:var(--border);margin:0 4px;}
+.stat{display:flex;align-items:center;gap:8px;padding:0 14px;}
+.stat-ico{font-size:16px;opacity:0.8;}
+.stat-inner{display:flex;flex-direction:column;gap:1px;}
+.stat-lbl{font-size:8px;font-family:var(--font-ui);letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;}
+.stat-num{font-family:var(--font-ui);font-size:14px;font-weight:700;line-height:1;color:var(--gold);}
+.stat-num.g{color:var(--green);}
+.stat-num.b{color:var(--blue);}
+.stat-num.t{color:var(--teal);}
+.stat-num.p{color:var(--purple);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.era-pill{
+  font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:2px;
+  padding:5px 12px;border-radius:2px;
+  border:1px solid var(--gold-d);color:var(--gold);
+  background:rgba(245,200,66,0.06);
+}
+.dynasty-pill{
+  font-family:var(--font-ui);font-size:10px;color:var(--purple);
+  padding:5px 12px;border-left:1px solid var(--border);
+  display:flex;align-items:center;gap:6px;
+}
+.dynasty-pill span{font-size:9px;color:var(--text3);}
+
+/* ══════════════════════════════════════════════════
+   MAIN LAYOUT
+══════════════════════════════════════════════════ */
+#main{display:flex;flex:1;overflow:hidden;}
+
+/* ══════════════════════════════════════════════════
+   LEFT TOOLBAR
+══════════════════════════════════════════════════ */
+#sidebar{
+  width:72px;flex-shrink:0;
+  background:var(--panel-bg);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 0;gap:2px;z-index:10;
+}
+.tbtn{
+  width:54px;height:54px;border-radius:var(--radius);
+  border:1px solid transparent;background:transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  cursor:pointer;transition:all 0.15s;color:var(--text3);
+}
+.tbtn-ico{font-size:22px;line-height:1;transition:transform 0.15s;}
+.tbtn-lbl{font-family:var(--font-ui);font-size:8px;letter-spacing:0.5px;font-weight:600;}
+.tbtn:hover{border-color:var(--border-hi);color:var(--text);background:rgba(255,255,255,0.04);}
+.tbtn:hover .tbtn-ico{transform:scale(1.1);}
+.tbtn.active{border-color:var(--gold-d);color:var(--gold);background:rgba(245,200,66,0.07);}
+.tb-sep{width:40px;height:1px;background:var(--border);margin:4px 0;}
+
+/* ══════════════════════════════════════════════════
+   CITY VIEWPORT
+══════════════════════════════════════════════════ */
+#viewport{flex:1;position:relative;overflow:hidden;cursor:default;}
+
+/* Sky gradient - day/night feel */
+#sky-bg{
+  position:absolute;inset:0;z-index:0;
+  background:linear-gradient(180deg,
+    #080f1e 0%,
+    #0e1c38 25%,
+    #142240 55%,
+    #0e1a30 80%,
+    #0a1218 100%);
+}
+/* Stars */
+#star-layer{position:absolute;inset:0;z-index:1;pointer-events:none;}
+.star{
+  position:absolute;border-radius:50%;background:#fff;
+  animation:starTwinkle var(--td,3s) var(--td2,0s) infinite alternate;
+}
+@keyframes starTwinkle{from{opacity:var(--oa,0.1);}to{opacity:var(--ob,0.8);}}
+
+/* Distant city glow on horizon */
+#horizon-glow{
+  position:absolute;bottom:80px;left:0;right:0;height:120px;z-index:2;
+  background:linear-gradient(0deg,
+    rgba(255,160,60,0.08) 0%,
+    rgba(255,120,40,0.04) 40%,
+    transparent 100%);
+  pointer-events:none;
+}
+
+/* Moon */
+#moon{
+  position:absolute;top:22px;right:90px;z-index:2;
+  width:36px;height:36px;border-radius:50%;
+  background:radial-gradient(circle at 38% 38%,#fdf8d0,#e8c860 70%,#c8a030 100%);
+  box-shadow:0 0 0 1px rgba(232,200,96,0.15),
+             0 0 30px rgba(232,200,96,0.25),
+             0 0 70px rgba(232,200,96,0.08);
+  animation:moonGlow 6s ease-in-out infinite alternate;
+}
+@keyframes moonGlow{
+  from{box-shadow:0 0 0 1px rgba(232,200,96,0.1),0 0 22px rgba(232,200,96,0.2);}
+  to{box-shadow:0 0 0 1px rgba(232,200,96,0.2),0 0 45px rgba(232,200,96,0.4),0 0 80px rgba(232,200,96,0.1);}
+}
+
+/* Clouds */
+.cloud{
+  position:absolute;z-index:2;pointer-events:none;
+  border-radius:60px;
+  background:linear-gradient(180deg,rgba(200,220,255,0.05) 0%,rgba(200,220,255,0.02) 100%);
+  animation:cloudFloat linear infinite;
+}
+@keyframes cloudFloat{from{transform:translateX(-350px);}to{transform:translateX(calc(100vw + 350px));}}
+
+/* ── SKYLINE ── */
+#skyline{
+  position:absolute;bottom:44px;left:0;right:0;z-index:5;
+  display:flex;align-items:flex-end;
+  padding:0 20px;gap:0;
+  height:75%;overflow:hidden;
+}
+
+/* Zone groups */
+.zone{
+  display:flex;align-items:flex-end;gap:2px;
+  flex:1;min-width:0;position:relative;padding:0 4px;
+}
+.zone-label{
+  position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
+  font-family:var(--font-ui);font-size:7px;letter-spacing:2px;
+  color:var(--text3);white-space:nowrap;text-transform:uppercase;
+}
+.zone-divider{
+  flex-shrink:0;width:12px;align-self:stretch;
+  background:linear-gradient(180deg,transparent 0%,#060a10 100%);
+  position:relative;
+}
+.zone-divider::before{
+  content:'';position:absolute;top:0;bottom:0;left:50%;
+  width:1px;background:rgba(80,130,180,0.08);
+}
+
+/* Highlight active zone */
+.zone.active-zone::after{
+  content:'';position:absolute;inset:0;bottom:0;
+  background:linear-gradient(0deg,rgba(245,200,66,0.04) 0%,transparent 60%);
+  pointer-events:none;
+  border-bottom:1px solid rgba(245,200,66,0.2);
+}
+
+/* Ground strip */
+#ground-strip{
+  position:absolute;bottom:0;left:0;right:0;height:44px;z-index:6;
+  background:linear-gradient(0deg,#060c05 0%,#0d1a0a 50%,#132010 100%);
+  border-top:2px solid #1e3018;
+}
+/* Road lines */
+#ground-strip::before{
+  content:'';position:absolute;top:14px;left:0;right:0;height:3px;
+  background:repeating-linear-gradient(90deg,
+    transparent 0,transparent 18px,
+    rgba(255,255,255,0.06) 18px,rgba(255,255,255,0.06) 26px);
+}
+#ground-strip::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:rgba(255,160,50,0.15);
+  box-shadow:0 0 12px rgba(255,160,50,0.2);
+}
+
+/* ── BUILDING SPRITES ── */
+.bsprite{
+  flex-shrink:0;display:flex;flex-direction:column-reverse;
+  align-items:center;position:relative;
+  cursor:pointer;
+  animation:buildRise 0.5s cubic-bezier(0.22,1.4,0.36,1) both;
+}
+@keyframes buildRise{
+  from{transform:scaleY(0) translateY(10px);opacity:0;transform-origin:bottom;}
+  to{transform:scaleY(1) translateY(0);opacity:1;transform-origin:bottom;}
+}
+.bsprite:hover .bwall{filter:brightness(1.5);transition:filter 0.1s;}
+.bsprite:hover::after{
+  content:attr(data-name);
+  position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);
+  font-family:var(--font-ui);font-size:9px;color:var(--gold);
+  background:rgba(10,14,22,0.92);border:1px solid var(--gold-d);
+  padding:3px 8px;border-radius:3px;white-space:nowrap;
+  pointer-events:none;z-index:100;
+}
+
+.bwall{
+  border-radius:2px 2px 0 0;position:relative;overflow:hidden;
+  transition:filter 0.2s;
+}
+
+/* Window grid */
+.bwins{
+  position:absolute;
+  top:5px;left:3px;right:3px;bottom:0;
+  display:grid;gap:2px;
+}
+.bwin{border-radius:1px;}
+.bwin.on {background:rgba(255,225,130,0.75);animation:winFlick var(--wd,4s) var(--wt,0s) infinite alternate;}
+.bwin.on2{background:rgba(150,200,255,0.65);animation:winFlick var(--wd,5s) var(--wt,1s) infinite alternate;}
+.bwin.off{background:rgba(0,0,0,0.3);}
+@keyframes winFlick{0%,75%{opacity:1;}80%{opacity:0.2;}85%{opacity:1;}100%{opacity:1;}}
+
+/* Rooftop */
+.broof{position:absolute;top:-8px;left:10%;right:10%;height:8px;border-radius:2px 2px 0 0;}
+.bant{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:2px;background:#aaa;}
+.bant-tip{position:absolute;top:-3px;left:-2px;width:6px;height:6px;border-radius:50%;background:#ff3838;box-shadow:0 0 6px #ff2020;animation:antBlink 1.4s infinite alternate;}
+@keyframes antBlink{from{opacity:0.3;}to{opacity:1;}}
+
+/* Smoke effect on factories */
+.smoke-puff{
+  position:absolute;bottom:100%;left:50%;
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(150,150,150,0.4);
+  animation:smokePuff 3s ease-out infinite;
+  transform-origin:center;
+}
+@keyframes smokePuff{
+  0%{transform:translateX(-50%) translateY(0) scale(0.5);opacity:0.5;}
+  100%{transform:translateX(calc(-50% + 20px)) translateY(-60px) scale(3);opacity:0;}
+}
+
+/* ── FEEDBACK FEED ── */
+#feed{
+  position:absolute;bottom:52px;left:80px;width:320px;z-index:15;pointer-events:none;
+  display:flex;flex-direction:column;gap:3px;
+}
+.feed-item{
+  display:flex;align-items:center;gap:8px;
+  padding:5px 10px 5px 8px;border-radius:3px;
+  background:rgba(8,12,22,0.88);
+  backdrop-filter:blur(8px);
+  font-size:11px;color:var(--text);
+  border-left:3px solid var(--gold);
+  animation:feedIn 5.5s forwards;
+}
+.feed-item.good{border-color:var(--green);}
+.feed-item.bad{border-color:var(--red);}
+.feed-item.info{border-color:var(--blue);}
+.feed-item.special{border-color:var(--purple);}
+.feed-item::before{font-size:13px;}
+@keyframes feedIn{
+  0%{opacity:0;transform:translateY(6px);}
+  8%{opacity:1;transform:translateY(0);}
+  75%{opacity:1;}
+  100%{opacity:0;}
+}
+
+/* Float numbers */
+.floater{
+  position:absolute;z-index:30;pointer-events:none;
+  font-family:var(--font-ui);font-size:13px;font-weight:700;
+  color:var(--gold);text-shadow:0 0 10px var(--gold-glow);
+  animation:floatUp 1.6s ease-out forwards;
+}
+@keyframes floatUp{
+  0%{opacity:1;transform:translateY(0) scale(1);}
+  60%{opacity:1;}
+  100%{opacity:0;transform:translateY(-70px) scale(0.8);}
+}
+
+/* Grid overlay in build mode */
+#grid-ov{
+  position:absolute;inset:0;z-index:4;pointer-events:none;
+  opacity:0;transition:opacity 0.3s;
+  background-image:
+    linear-gradient(rgba(100,200,100,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(100,200,100,0.04) 1px,transparent 1px);
+  background-size:50px 50px;
+}
+#grid-ov.on{opacity:1;}
+
+/* ══════════════════════════════════════════════════
+   RIGHT PANEL
+══════════════════════════════════════════════════ */
+#rpanel{
+  width:272px;flex-shrink:0;
+  background:var(--panel-bg);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;z-index:10;
+}
+.rtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.rtab{
+  flex:1;padding:10px 2px;
+  font-family:var(--font-ui);font-size:8px;font-weight:700;letter-spacing:1px;
+  text-align:center;cursor:pointer;
+  color:var(--text3);border-bottom:2px solid transparent;
+  transition:all 0.15s;background:none;
+  border-top:none;border-left:none;border-right:none;
+}
+.rtab:hover{color:var(--text);}
+.rtab.on{color:var(--gold);border-bottom-color:var(--gold);}
+
+.rpanel-body{flex:1;overflow-y:auto;padding:10px 8px;}
+.rpanel-body::-webkit-scrollbar{width:4px;}
+.rpanel-body::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:2px;}
+
+.pane{display:none;}
+.pane.on{display:block;}
+
+/* Section labels */
+.sec-lbl{
+  font-family:var(--font-ui);font-size:8px;letter-spacing:2px;
+  color:var(--text3);text-transform:uppercase;
+  padding:10px 0 5px;border-bottom:1px solid var(--border);
+  margin-bottom:6px;
+}
+
+/* ── BUILD CARDS ── */
+.bcard{
+  width:100%;display:flex;align-items:center;gap:8px;
+  padding:7px 8px;border-radius:var(--radius);
+  border:1px solid var(--border);background:transparent;
+  cursor:pointer;text-align:left;color:var(--text);
+  transition:border-color 0.1s,background 0.1s;
+  margin-bottom:3px;
+  position:relative;overflow:hidden;
+}
+.bcard::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:var(--gold);transform:scaleY(0);transition:transform 0.15s;
+}
+.bcard:hover:not(.locked){border-color:var(--border-hi);background:rgba(255,255,255,0.03);}
+.bcard:hover:not(.locked)::before{transform:scaleY(1);}
+.bcard.locked{opacity:0.2;cursor:not-allowed;}
+.bcard.broke{opacity:0.5;}
+.bcard-ico{font-size:20px;flex-shrink:0;line-height:1;}
+.bcard-body{flex:1;min-width:0;}
+.bcard-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bcard-sub{font-size:10px;color:var(--text2);margin-top:1px;}
+.bcard-cost{font-family:var(--font-ui);font-size:10px;color:var(--gold-d);margin-top:2px;}
+.bcard.locked .bcard-cost{color:var(--text3);}
+.bcard-cnt{
+  font-family:var(--font-ui);font-size:12px;font-weight:700;
+  color:var(--green);min-width:20px;text-align:right;
+}
+
+/* Buy button on card hover */
+.bcard-buy{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  background:var(--gold-d);color:#000;border:none;border-radius:3px;
+  font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1px;
+  padding:3px 8px;cursor:pointer;opacity:0;transition:opacity 0.15s;
+}
+.bcard:hover:not(.locked):not(.broke) .bcard-buy{opacity:1;}
+.bcard:hover:not(.locked):not(.broke) .bcard-cnt{opacity:0;}
+
+/* ── UPGRADE CARDS ── */
+.ucard{
+  width:100%;padding:8px 10px;border-radius:var(--radius);
+  border:1px solid var(--border);background:transparent;
+  cursor:pointer;text-align:left;color:var(--text);
+  transition:all 0.12s;margin-bottom:4px;
+}
+.ucard:hover:not(:disabled):not(.done){border-color:rgba(176,122,255,0.4);background:rgba(176,122,255,0.05);}
+.ucard:disabled{opacity:0.28;cursor:not-allowed;}
+.ucard.done{opacity:0.35;cursor:default;border-color:rgba(82,214,138,0.15);}
+.ucard-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.ucard-name{font-size:12px;font-weight:600;color:var(--purple);}
+.ucard.done .ucard-name{color:var(--green);}
+.ucard-cost{font-family:var(--font-ui);font-size:10px;color:var(--gold-d);}
+.ucard.done .ucard-cost{color:var(--green);font-size:9px;}
+.ucard-desc{font-size:10px;color:var(--text2);}
+
+/* ── CITY STATS ── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px;}
+.stat-box{
+  background:var(--panel2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:8px 10px;
+}
+.sb-lbl{font-size:8px;font-family:var(--font-ui);letter-spacing:1px;color:var(--text3);text-transform:uppercase;}
+.sb-val{font-family:var(--font-ui);font-size:13px;font-weight:700;margin-top:3px;}
+.sb-gold{color:var(--gold);}
+.sb-green{color:var(--green);}
+.sb-blue{color:var(--blue);}
+.sb-red{color:var(--red);}
+.sb-purple{color:var(--purple);}
+
+/* ── ACHIEVEMENTS ── */
+.ach{
+  display:flex;align-items:center;gap:8px;
+  padding:5px 7px;border-radius:3px;
+  border:1px solid var(--border);margin-bottom:3px;
+}
+.ach.done{border-color:rgba(82,214,138,0.2);background:rgba(82,214,138,0.03);}
+.ach.locked{opacity:0.22;}
+.ach-ico{font-size:16px;}
+.ach-name{font-size:11px;font-weight:600;}
+.ach-desc{font-size:10px;color:var(--text2);}
+
+/* ── LEGACY TAB ── */
+.lrow{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;
+}
+.lrow-lbl{color:var(--text2);}
+.lrow-val{font-family:var(--font-ui);font-size:11px;color:var(--gold);}
+.prog-wrap{height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;margin:8px 0 4px;}
+.prog-fill{
+  height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--gold-d),var(--gold));
+  transition:width 0.6s ease;
+  box-shadow:0 0 8px var(--gold-glow);
+}
+.perk-wrap{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.perk-tag{
+  font-size:10px;font-family:var(--font-ui);
+  padding:3px 8px;border-radius:2px;
+  border:1px solid rgba(176,122,255,0.35);
+  color:var(--purple);background:rgba(176,122,255,0.06);
+}
+#prestige-btn{
+  width:100%;margin-top:12px;padding:13px;
+  border-radius:var(--radius);
+  background:linear-gradient(135deg,#1e0a0a,#3a1414,#1e0a0a);
+  border:1px solid var(--red);
+  color:#ffbbbb;font-family:var(--font-ui);font-size:11px;font-weight:700;
+  letter-spacing:2px;cursor:pointer;transition:all 0.2s;
+  box-shadow:0 0 12px rgba(240,96,96,0.12);
+}
+#prestige-btn:hover:not(:disabled){
+  background:linear-gradient(135deg,#2e1010,#601818,#2e1010);
+  box-shadow:0 0 25px rgba(240,96,96,0.3);
+  border-color:#ff8080;
+}
+#prestige-btn:disabled{opacity:0.22;cursor:not-allowed;}
+.p-pulse{animation:pPulse 1.8s ease-in-out infinite alternate;}
+@keyframes pPulse{
+  from{box-shadow:0 0 8px rgba(240,96,96,0.15);}
+  to{box-shadow:0 0 30px rgba(240,96,96,0.45);border-color:#ff6060;}
+}
+
+/* ══════════════════════════════════════════════════
+   BOTTOM STATUS BAR
+══════════════════════════════════════════════════ */
+#statusbar{
+  height:30px;flex-shrink:0;
+  background:linear-gradient(0deg,#0a0e18,#111720);
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:24px;
+  font-size:10px;font-family:var(--font-ui);
+}
+.sb-item{display:flex;align-items:center;gap:5px;color:var(--text3);}
+.sb-item .v{font-size:11px;font-weight:600;}
+.sb-item .v.g{color:var(--green);}
+.sb-item .v.r{color:var(--red);}
+.sb-item .v.gold{color:var(--gold);}
+
+/* ══════════════════════════════════════════════════
+   MODALS
+══════════════════════════════════════════════════ */
+.overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(5,8,16,0.85);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;
+}
+.overlay.open{display:flex;}
+.modal{
+  background:linear-gradient(160deg,#0f1520,#141c2c);
+  border:1px solid var(--border-hi);border-radius:8px;
+  padding:32px 36px;max-width:460px;width:92%;
+  box-shadow:0 30px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.03);
+  animation:mPop 0.32s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes mPop{from{transform:scale(0.72) translateY(20px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+.modal h2{
+  font-family:var(--font-ui);font-size:18px;font-weight:700;
+  color:var(--gold);letter-spacing:2px;margin-bottom:10px;
+  text-shadow:0 0 20px var(--gold-glow);
+}
+.modal p{color:var(--text2);line-height:1.65;margin-bottom:12px;font-size:13px;}
+.modal .reward{
+  font-family:var(--font-ui);font-size:14px;color:var(--purple);
+  margin-bottom:20px;padding:10px 14px;
+  background:rgba(176,122,255,0.07);border-radius:var(--radius);
+  border:1px solid rgba(176,122,255,0.2);
+}
+.modal-btns{display:flex;gap:10px;margin-top:6px;}
+.mbtn{
+  flex:1;padding:11px;border-radius:var(--radius);
+  font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:1.5px;
+  cursor:pointer;transition:all 0.15s;
+}
+.mbtn.danger{background:rgba(240,96,96,0.1);border:1px solid var(--red);color:#ffaaaa;}
+.mbtn.danger:hover{background:rgba(240,96,96,0.25);}
+.mbtn.muted{background:transparent;border:1px solid var(--border-hi);color:var(--text2);}
+.mbtn.muted:hover{border-color:var(--text);color:var(--text);}
+
+/* Event choices */
+.ev-choices{display:flex;flex-direction:column;gap:7px;margin-top:14px;}
+.ev-choice{
+  padding:10px 14px;border-radius:var(--radius);
+  border:1px solid var(--border-hi);background:var(--panel2);
+  color:var(--text);cursor:pointer;font-size:12px;text-align:left;
+  transition:all 0.15s;
+}
+.ev-choice:hover{border-color:var(--gold-d);color:var(--gold);background:rgba(245,200,66,0.05);}
+
+/* Achievement popup */
+.ach-popup{
+  position:fixed;top:64px;left:50%;transform:translateX(-50%);
+  z-index:150;pointer-events:none;
+  background:linear-gradient(135deg,#0c1408,#141e0c);
+  border:1px solid var(--green-d);border-radius:var(--radius);
+  padding:10px 20px;color:var(--green);
+  animation:achPop 4.5s forwards;
+  box-shadow:0 0 24px rgba(82,214,138,0.2);
+}
+.ach-popup b{font-family:var(--font-ui);font-size:8px;letter-spacing:2px;display:block;margin-bottom:2px;color:var(--green-d);}
+.ach-popup span{font-size:13px;font-weight:600;}
+@keyframes achPop{
+  0%{opacity:0;transform:translateX(-50%) translateY(-14px);}
+  12%{opacity:1;transform:translateX(-50%) translateY(0);}
+  80%{opacity:1;}
+  100%{opacity:0;}
+}
+
+/* Disaster shake */
+@keyframes shakeAnim{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-8px);}
+  40%{transform:translateX(8px);}
+  60%{transform:translateX(-5px);}
+  80%{transform:translateX(5px);}
+}
+.shaking{animation:shakeAnim 0.55s ease;}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP BAR ═══ -->
+<div id="topbar">
+  <div class="logo">
+    <span>CITY LEGACY</span>
+    <span class="logo-sub">MAYOR'S EDITION</span>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat">
+    <div class="stat-ico">💰</div>
+    <div class="stat-inner">
+      <div class="stat-lbl">Treasury</div>
+      <div class="stat-num" id="s-gold">§200</div>
+    </div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat">
+    <div class="stat-ico">📈</div>
+    <div class="stat-inner">
+      <div class="stat-lbl">Net Income</div>
+      <div class="stat-num g" id="s-inc">+0/s</div>
+    </div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat">
+    <div class="stat-ico">👥</div>
+    <div class="stat-inner">
+      <div class="stat-lbl">Population</div>
+      <div class="stat-num b" id="s-pop">0</div>
+    </div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat">
+    <div class="stat-ico">😊</div>
+    <div class="stat-inner">
+      <div class="stat-lbl">Happiness</div>
+      <div class="stat-num t" id="s-happy">50%</div>
+    </div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat">
+    <div class="stat-ico">🔬</div>
+    <div class="stat-inner">
+      <div class="stat-lbl">Tech</div>
+      <div class="stat-num p" id="s-tech">0</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="era-pill" id="era-pill">STONE AGE</div>
+    <div class="dynasty-pill">
+      <span>DYNASTY</span>
+      <strong id="dynasty-name">The Founders · Gen I</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+
+  <!-- LEFT SIDEBAR -->
+  <div id="sidebar">
+    <button class="tbtn active" id="tb-build" onclick="setTool('build')">
+      <div class="tbtn-ico">🏗️</div><div class="tbtn-lbl">BUILD</div>
+    </button>
+    <button class="tbtn" id="tb-demolish" onclick="setTool('demolish')">
+      <div class="tbtn-ico">🗑️</div><div class="tbtn-lbl">DEMO</div>
+    </button>
+    <div class="tb-sep"></div>
+    <button class="tbtn" onclick="jumpZone('residential')">
+      <div class="tbtn-ico">🏠</div><div class="tbtn-lbl">RESI</div>
+    </button>
+    <button class="tbtn" onclick="jumpZone('commercial')">
+      <div class="tbtn-ico">🏪</div><div class="tbtn-lbl">COMM</div>
+    </button>
+    <button class="tbtn" onclick="jumpZone('civic')">
+      <div class="tbtn-ico">🏛️</div><div class="tbtn-lbl">CIVIC</div>
+    </button>
+    <button class="tbtn" onclick="jumpZone('industry')">
+      <div class="tbtn-ico">🏭</div><div class="tbtn-lbl">INDU</div>
+    </button>
+    <div class="tb-sep"></div>
+    <button class="tbtn" onclick="switchTab('legacy')">
+      <div class="tbtn-ico">⚔️</div><div class="tbtn-lbl">LEGACY</div>
+    </button>
+    <button class="tbtn" onclick="switchTab('city')">
+      <div class="tbtn-ico">📊</div><div class="tbtn-lbl">STATS</div>
+    </button>
+  </div>
+
+  <!-- CITY VIEWPORT -->
+  <div id="viewport">
+    <div id="sky-bg"></div>
+    <div id="star-layer"></div>
+    <div id="horizon-glow"></div>
+    <div id="moon"></div>
+    <div id="skyline"></div>
+    <div id="ground-strip"></div>
+    <div id="grid-ov"></div>
+    <div id="feed"></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rpanel">
+    <div class="rtabs">
+      <button class="rtab on" onclick="switchTab('build')">BUILD</button>
+      <button class="rtab" onclick="switchTab('upgrades')">UPGR</button>
+      <button class="rtab" onclick="switchTab('city')">CITY</button>
+      <button class="rtab" onclick="switchTab('legacy')">LEGACY</button>
+    </div>
+    <div class="rpanel-body" id="rpanel-body">
+
+      <!-- BUILD PANE -->
+      <div class="pane on" id="pane-build">
+        <div id="zone-residential"><div class="sec-lbl">🏘 Residential</div></div>
+        <div id="zone-commercial"><div class="sec-lbl">🛍 Commercial</div></div>
+        <div id="zone-civic"><div class="sec-lbl">🏛 Civic</div></div>
+        <div id="zone-industry"><div class="sec-lbl">⚙ Industrial</div></div>
+        <div id="zone-landmark"><div class="sec-lbl">🌟 Landmarks</div></div>
+      </div>
+
+      <!-- UPGRADES PANE -->
+      <div class="pane" id="pane-upgrades">
+        <div class="sec-lbl">Available Upgrades</div>
+        <div id="upg-list"></div>
+      </div>
+
+      <!-- CITY PANE -->
+      <div class="pane" id="pane-city">
+        <div class="sec-lbl">City Statistics</div>
+        <div class="stat-grid" id="city-stat-grid"></div>
+        <div class="sec-lbl">Achievements</div>
+        <div id="ach-list"></div>
+      </div>
+
+      <!-- LEGACY PANE -->
+      <div class="pane" id="pane-legacy">
+        <div class="sec-lbl">Dynasty Record</div>
+        <div class="lrow"><span class="lrow-lbl">Dynasties Founded</span><span class="lrow-val" id="l-dyn">0</span></div>
+        <div class="lrow"><span class="lrow-lbl">Dynasty Points</span><span class="lrow-val" id="l-dp">0 DP</span></div>
+        <div class="lrow"><span class="lrow-lbl">Income Multiplier</span><span class="lrow-val" id="l-mult">×1.00</span></div>
+        <div class="lrow"><span class="lrow-lbl">Generation</span><span class="lrow-val" id="l-gen">I</span></div>
+        <div class="lrow"><span class="lrow-lbl">City Age</span><span class="lrow-val" id="l-age">0 yrs</span></div>
+        <div class="lrow"><span class="lrow-lbl">All-time Gold</span><span class="lrow-val" id="l-total">§0</span></div>
+        <div class="sec-lbl" style="margin-top:14px">Legacy Progress</div>
+        <div class="prog-wrap"><div class="prog-fill" id="l-prog" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:12px;">
+          <span>Next prestige at <span id="l-thresh" style="color:var(--gold)">§500K</span></span>
+          <span id="l-pct">0.0%</span>
+        </div>
+        <div class="sec-lbl">Dynasty Perks</div>
+        <div class="perk-wrap" id="perk-wrap">
+          <div style="font-size:10px;color:var(--text3);font-style:italic;padding:4px 0;">Found your first dynasty to earn perks.</div>
+        </div>
+        <button id="prestige-btn" disabled onclick="openPrestige()">⚔ FOUND NEW DYNASTY</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM STATUS -->
+<div id="statusbar">
+  <div class="sb-item">Tax: <span class="v g" id="sb-tax">+0/s</span></div>
+  <div class="sb-item">Upkeep: <span class="v r" id="sb-upk">-0/s</span></div>
+  <div class="sb-item">Net: <span class="v gold" id="sb-net">+0/s</span></div>
+  <div style="flex:1"></div>
+  <div class="sb-item">Total Earned: <span class="v gold" id="sb-earned">§0</span></div>
+  <div class="sb-item" style="color:var(--text3);font-size:8px;letter-spacing:1px;">CITY LEGACY v3</div>
+</div>
+
+<!-- PRESTIGE MODAL -->
+<div class="overlay" id="modal-prestige">
+  <div class="modal">
+    <h2>⚔ NEW DYNASTY RISES</h2>
+    <p>Your civilization has flourished across generations. Pass the torch to your heirs — they will inherit your accumulated wisdom, but must rebuild from humble beginnings. Each generation rises mightier than the last.</p>
+    <div class="reward" id="prestige-reward-text">You will earn +0 Dynasty Points</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:20px;">
+      Perk unlocked: <strong id="prestige-perk-name" style="color:var(--purple)">—</strong>
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn danger" onclick="doPrestige()">Found Dynasty</button>
+      <button class="mbtn muted" onclick="closeOverlay('modal-prestige')">Not Yet</button>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT MODAL -->
+<div class="overlay" id="modal-event">
+  <div class="modal">
+    <h2 id="ev-title">City Event</h2>
+    <p id="ev-desc"></p>
+    <div class="ev-choices" id="ev-choices"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  CITY LEGACY v3 — Full Game Engine
+//  SimCity-style passive city builder + Never Ending Legacy prestige
+// ════════════════════════════════════════════════════════════════════
+
+// ── CONSTANTS ──────────────────────────────────────────────────────
+const ROMAN=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XV','XX'];
+const DYNASTY_NAMES=['The Founders','Iron Wolves','Golden Empire','Phoenix Reign','Eternal Flame','Storm Crown','Silver Pact','Jade Dynasty','Crimson Code','Star Walkers','The Reborn','Sand Kings','The Undying','Nova Throne'];
+const CITY_NAMES=['New Settlement','Hamletford','Thornwick','Crestwood','Goldreach','Ironvale','Dawnport','Stormgate','Valor City','Grand Athena','Metroplex','New Eden','Stellarion'];
+
+// ── GAME STATE ──────────────────────────────────────────────────────
+const G = {
+  gold: 200, totalGold: 200,
+  gps: 0, taxRate: 0, upkeepRate: 0,
+  pop: 0, happy: 50, tech: 0, age: 0,
+  gen: 1, dynasties: 0, dp: 0,
+  dynastyName: 'The Founders',
+  cityName: 'New Settlement',
+  presMulti: 1.0,
+  presThresh: 500000,
+  tick: 0, nextEvent: 3000,
+};
+let placed={}, bought={}, perksHeld=[], achEarned=new Set();
+let tempMods={gps:1, pop:1};
+let activeEvent=false, currentEraIdx=0;
+
+// ── BUILDING DEFINITIONS ────────────────────────────────────────────
+const BLDGS=[
+  // ── Residential ──────────────────────────────────────────────
+  {id:'shack',    z:'residential', n:'Shack',        ico:'🛖', cost:30,      pop:8,   tax:0.15, upk:0.03, hap:0,  tch:0,  req:null,         vis:{w:20,h:22,c:'#3a2c1e',wr:1,wc:2,smoke:0}},
+  {id:'cottage',  z:'residential', n:'Cottage',      ico:'🏠', cost:80,      pop:14,  tax:0.35, upk:0.07, hap:1,  tch:0,  req:{shack:3},    vis:{w:26,h:30,c:'#2a3820',wr:2,wc:2,smoke:0}},
+  {id:'house',    z:'residential', n:'House',        ico:'🏡', cost:280,     pop:30,  tax:0.9,  upk:0.18, hap:2,  tch:0,  req:{cottage:3},  vis:{w:32,h:38,c:'#2e4028',wr:2,wc:3,smoke:0}},
+  {id:'rowhouse', z:'residential', n:'Row Houses',   ico:'🏘️', cost:900,     pop:70,  tax:2.5,  upk:0.55, hap:1,  tch:0,  req:{house:4},    vis:{w:48,h:42,c:'#283420',wr:2,wc:4,smoke:0}},
+  {id:'apt',      z:'residential', n:'Apartment',    ico:'🏢', cost:2800,    pop:140, tax:7,    upk:1.5,  hap:-1, tch:0,  req:{rowhouse:3}, vis:{w:38,h:72,c:'#1e2a38',wr:5,wc:3,smoke:0}},
+  {id:'tower',    z:'residential', n:'Res. Tower',   ico:'🏙️', cost:12000,   pop:350, tax:22,   upk:5,    hap:-3, tch:2,  req:{apt:4},      vis:{w:42,h:120,c:'#1a2032',wr:8,wc:3,smoke:0}},
+  {id:'condos',   z:'residential', n:'Luxury Condos',ico:'✨', cost:60000,   pop:180, tax:60,   upk:12,   hap:10, tch:5,  req:{tower:2},    vis:{w:46,h:96,c:'#262040',wr:6,wc:3,smoke:0}},
+  // ── Commercial ───────────────────────────────────────────────
+  {id:'stall',    z:'commercial',  n:'Market Stall', ico:'🪨', cost:60,      pop:3,   tax:0.5,  upk:0.1,  hap:2,  tch:0,  req:null,         vis:{w:22,h:18,c:'#3a2e10',wr:1,wc:2,smoke:0}},
+  {id:'market',   z:'commercial',  n:'Market',       ico:'🏪', cost:220,     pop:6,   tax:1.4,  upk:0.25, hap:4,  tch:0,  req:{stall:3},    vis:{w:36,h:26,c:'#3a2810',wr:1,wc:3,smoke:0}},
+  {id:'shop',     z:'commercial',  n:'Shopping Strip',ico:'🛍️',cost:800,     pop:12,  tax:5,    upk:0.9,  hap:5,  tch:0,  req:{market:3},   vis:{w:54,h:32,c:'#3a2e14',wr:2,wc:4,smoke:0}},
+  {id:'office',   z:'commercial',  n:'Office Block', ico:'🏦', cost:4000,    pop:36,  tax:16,   upk:3.5,  hap:0,  tch:4,  req:{shop:3},     vis:{w:44,h:78,c:'#142538',wr:5,wc:3,smoke:0}},
+  {id:'mall',     z:'commercial',  n:'Grand Mall',   ico:'🛒', cost:22000,   pop:60,  tax:55,   upk:9,    hap:12, tch:6,  req:{office:3},   vis:{w:76,h:50,c:'#302514',wr:2,wc:5,smoke:0}},
+  {id:'skysc',    z:'commercial',  n:'Skyscraper',   ico:'🗼', cost:200000,  pop:120, tax:260,  upk:38,   hap:6,  tch:16, req:{mall:2},     vis:{w:40,h:170,c:'#101820',wr:11,wc:3,smoke:0}},
+  // ── Civic ────────────────────────────────────────────────────
+  {id:'well',     z:'civic',       n:'Water Well',   ico:'🪣', cost:60,      pop:0,   tax:0,    upk:0.1,  hap:3,  tch:0,  req:null,         vis:{w:18,h:16,c:'#2a2010',wr:0,wc:0,smoke:0}},
+  {id:'park',     z:'civic',       n:'City Park',    ico:'🌳', cost:350,     pop:0,   tax:0,    upk:0.6,  hap:14, tch:0,  req:null,         vis:{w:44,h:38,c:'#183010',wr:0,wc:0,smoke:0}},
+  {id:'school',   z:'civic',       n:'School',       ico:'🏫', cost:1400,    pop:0,   tax:0,    upk:2.5,  hap:6,  tch:6,  req:{cottage:5},  vis:{w:58,h:44,c:'#282840',wr:2,wc:4,smoke:0}},
+  {id:'hospital', z:'civic',       n:'Hospital',     ico:'🏥', cost:7000,    pop:0,   tax:0,    upk:9,    hap:18, tch:12, req:{school:2},   vis:{w:66,h:60,c:'#181830',wr:3,wc:4,smoke:0}},
+  {id:'police',   z:'civic',       n:'Police Dept.', ico:'🚔', cost:2200,    pop:0,   tax:0,    upk:3.5,  hap:7,  tch:2,  req:{market:3},   vis:{w:48,h:40,c:'#181820',wr:2,wc:3,smoke:0}},
+  {id:'firestat', z:'civic',       n:'Fire Station', ico:'🚒', cost:2000,    pop:0,   tax:0,    upk:3,    hap:5,  tch:2,  req:{house:3},    vis:{w:52,h:38,c:'#2a1210',wr:2,wc:3,smoke:0}},
+  {id:'library',  z:'civic',       n:'Library',      ico:'📚', cost:4000,    pop:0,   tax:0,    upk:4,    hap:8,  tch:10, req:{school:1},   vis:{w:54,h:48,c:'#1a2038',wr:3,wc:4,smoke:0}},
+  {id:'stadium',  z:'civic',       n:'Stadium',      ico:'🏟️', cost:30000,   pop:0,   tax:8,    upk:12,   hap:22, tch:4,  req:{hospital:1}, vis:{w:80,h:55,c:'#202030',wr:0,wc:0,smoke:0}},
+  {id:'uni',      z:'civic',       n:'University',   ico:'🎓', cost:35000,   pop:0,   tax:0,    upk:18,   hap:9,  tch:35, req:{school:3},   vis:{w:86,h:72,c:'#1c1a34',wr:3,wc:6,smoke:0}},
+  // ── Industrial ───────────────────────────────────────────────
+  {id:'forge',    z:'industry',    n:'Forge',        ico:'⚒️', cost:200,     pop:6,   tax:1.2,  upk:0.35, hap:-2, tch:1,  req:null,         vis:{w:36,h:28,c:'#2a1a10',wr:1,wc:2,smoke:1}},
+  {id:'factory',  z:'industry',    n:'Factory',      ico:'🏭', cost:3500,    pop:25,  tax:14,   upk:4,    hap:-6, tch:6,  req:{forge:4},    vis:{w:70,h:56,c:'#1a1010',wr:2,wc:5,smoke:2}},
+  {id:'power',    z:'industry',    n:'Power Plant',  ico:'⚡', cost:18000,   pop:0,   tax:32,   upk:12,   hap:-9, tch:12, req:{factory:3},  vis:{w:76,h:66,c:'#101018',wr:2,wc:4,smoke:3}},
+  {id:'refinery', z:'industry',    n:'Refinery',     ico:'🛢️', cost:60000,   pop:0,   tax:80,   upk:25,   hap:-12,tch:15, req:{power:2},    vis:{w:80,h:80,c:'#0e1010',wr:2,wc:4,smoke:3}},
+  {id:'techpark', z:'industry',    n:'Tech Park',    ico:'💻', cost:100000,  pop:50,  tax:110,  upk:28,   hap:6,  tch:30, req:{uni:1},      vis:{w:82,h:62,c:'#0e1820',wr:3,wc:5,smoke:0}},
+  // ── Landmarks ────────────────────────────────────────────────
+  {id:'statue',   z:'landmark',    n:'Statue',       ico:'🗿', cost:6000,    pop:0,   tax:3,    upk:0.5,  hap:10, tch:0,  req:{park:2},     vis:{w:22,h:70,c:'#303030',wr:0,wc:0,smoke:0}},
+  {id:'temple',   z:'landmark',    n:'Grand Temple', ico:'🏛️', cost:25000,   pop:0,   tax:7,    upk:2.5,  hap:22, tch:6,  req:{statue:1},   vis:{w:70,h:88,c:'#c8a050',wr:0,wc:0,smoke:0}},
+  {id:'castle',   z:'landmark',    n:'Castle',       ico:'🏰', cost:120000,  pop:0,   tax:22,   upk:6,    hap:28, tch:12, req:{temple:1},   vis:{w:88,h:108,c:'#2a2a3a',wr:0,wc:0,smoke:0}},
+  {id:'wonder',   z:'landmark',    n:'World Wonder', ico:'🌟', cost:1500000, pop:0,   tax:150,  upk:15,   hap:70, tch:60, req:{castle:1},   vis:{w:76,h:155,c:'#1e153c',wr:0,wc:0,smoke:0}},
+];
+
+// ── UPGRADES ────────────────────────────────────────────────────────
+const UPGRADES=[
+  {id:'u_roads',    n:'Paved Roads',          cost:2000,   req:{market:3},     desc:'Commercial income ×1.5',    cat:'commercial',  m:1.5},
+  {id:'u_irrig',    n:'Irrigation System',    cost:6000,   req:{well:3},       desc:'All income ×1.3',           cat:'all',         m:1.3},
+  {id:'u_sewer',    n:'Sewage System',        cost:10000,  req:{hospital:1},   desc:'Population ×1.2, +10 happy',cat:'pop',         m:1.2, hb:10},
+  {id:'u_elec',     n:'Electric Grid',        cost:25000,  req:{power:1},      desc:'All income ×1.6',           cat:'all',         m:1.6},
+  {id:'u_zoning',   n:'City Zoning Laws',     cost:18000,  req:{police:2},     desc:'Residential income ×2',     cat:'residential', m:2.0},
+  {id:'u_transit',  n:'Public Transit',       cost:35000,  req:{office:3},     desc:'+25 happiness',             cat:'none',        m:1,   hb:25},
+  {id:'u_broad',    n:'Broadband Network',    cost:70000,  req:{techpark:1},   desc:'Industry income ×2',        cat:'industry',    m:2.0},
+  {id:'u_greenact', n:'Green Space Act',      cost:12000,  req:{park:4},       desc:'+18 happiness',             cat:'none',        m:1,   hb:18},
+  {id:'u_taxcode',  n:'Tax Code Reform',      cost:60000,  req:{uni:1},        desc:'All income ×1.8',           cat:'all',         m:1.8},
+  {id:'u_tourism',  n:'Tourism Bureau',       cost:50000,  req:{statue:2},     desc:'Landmark income ×3',        cat:'landmark',    m:3.0},
+  {id:'u_health',   n:'Universal Healthcare', cost:120000, req:{hospital:3},   desc:'Pop ×1.3, +30 happy',       cat:'pop',         m:1.3, hb:30},
+  {id:'u_automate', n:'Factory Automation',   cost:180000, req:{factory:5},    desc:'Industry income ×2',        cat:'industry',    m:2.0},
+  {id:'u_heritage', n:'Heritage Programme',   cost:250000, req:{temple:1},     desc:'Civic upkeep free',         cat:'civic_free',  m:1},
+  {id:'u_golden',   n:'Golden Age Decree',    cost:600000, req:{castle:1},     desc:'ALL income ×2',             cat:'all',         m:2.0},
+  {id:'u_legend',   n:'Legendary Status',     cost:2500000,req:{wonder:1},     desc:'ALL income ×5',             cat:'all',         m:5.0},
+];
+
+// ── RANDOM EVENTS ────────────────────────────────────────────────────
+const EVENTS=[
+  {t:'🦠 Disease Outbreak',d:'A disease sweeps through the city. Citizens are in panic. Your health committee awaits orders.',cs:[
+    {l:'Fund Emergency Clinics (§8,000)',f:()=>{spend(8000);feed('Clinics deployed — outbreak contained!','good');}},
+    {l:'Issue Quarantine (−20% income, 30s)',f:()=>{tempMods.gps=0.8;setTimeout(()=>tempMods.gps=1,30000);feed('Quarantine slows the economy...','bad');G.happy-=10;}},
+  ]},
+  {t:'🌊 Flood Warning',d:'Heavy rains threaten your lower districts. Engineers and emergency services await your command.',cs:[
+    {l:'Build Flood Barriers (§12,000)',f:()=>{spend(12000);feed('Barriers hold — city spared!','good');}},
+    {l:'Mass Evacuation (−15 happiness)',f:()=>{G.happy-=15;feed('Evacuation causes widespread disruption.','bad');}},
+  ]},
+  {t:'💼 Foreign Investment',d:'An international consortium wants to invest heavily in your commercial sector. Terms are favorable.',cs:[
+    {l:'Accept Deal (+§30,000)',f:()=>{G.gold+=30000;G.totalGold+=30000;feed('Investment boom! Treasury +§30,000','good');}},
+    {l:'Decline — protect local business',f:()=>{G.happy+=8;feed('Locals appreciate your protectionism.','good');}},
+  ]},
+  {t:'⚔️ Rival City Tensions',d:'A rival mayor threatens trade embargoes. Diplomats are standing by.',cs:[
+    {l:'Negotiate Peace (§5,000 gift)',f:()=>{spend(5000);feed('Peace treaty signed. Trade flows freely.','good');}},
+    {l:'Hold Firm (−income 20s)',f:()=>{tempMods.gps=0.7;setTimeout(()=>tempMods.gps=1,20000);feed('Trade disrupted during standoff...','bad');}},
+  ]},
+  {t:'🎉 City Anniversary',d:'Your city reaches a major milestone! Citizens are celebrating in the streets.',cs:[
+    {l:'Host Grand Festival (§4,000)',f:()=>{spend(4000);G.happy+=28;feed('Festival unites the city!','good');}},
+    {l:'Modest Celebration (+12 happy)',f:()=>{G.happy+=12;feed('A warm, humble celebration.','good');}},
+  ]},
+  {t:'🔥 Factory Fire',d:'A blaze erupts in the industrial district! Quick action is critical.',cs:[
+    {l:'Deploy Fire Services (§7,000)',f:()=>{spend(7000);feed('Fire contained! Minimal damage.','good');}},
+    {l:'Let it burn (lose a building)',f:()=>{removeRandom('industry');feed('A building burned to ash!','bad');}},
+  ]},
+  {t:'🌱 Ecology Movement',d:'Citizens demand greener policies. A ballot initiative is on the table.',cs:[
+    {l:'Support Initiative (§10,000)',f:()=>{spend(10000);G.happy+=22;feed('Green initiative boosts happiness!','good');}},
+    {l:'Table the Motion (−12 happy)',f:()=>{G.happy-=12;feed('Citizens are disappointed.','bad');}},
+  ]},
+  {t:'🔭 Scientific Discovery',d:'Your university announces a major breakthrough. The world is watching.',cs:[
+    {l:'Fund the Research (§18,000)',f:()=>{spend(18000);G.tech+=60;feed('Breakthrough! +60 Tech!','special');}},
+    {l:'Patent for Revenue (+§55,000)',f:()=>{G.gold+=55000;G.totalGold+=55000;feed('Patent revenue: +§55,000!','good');}},
+  ]},
+  {t:'🌪️ Tornado Warning',d:'A tornado is approaching the outer city limits. Citizens are panicking.',cs:[
+    {l:'Open Emergency Shelters (§8,000)',f:()=>{spend(8000);feed('Citizens sheltered safely.','good');}},
+    {l:'Evacuation Alert (−pop 15s)',f:()=>{tempMods.pop=0.65;setTimeout(()=>tempMods.pop=1,15000);feed('Mass evacuation causes chaos.','bad');}},
+  ]},
+  {t:'📰 Press Scandal',d:'Journalists have exposed corruption in city hall. Public trust is shaken.',cs:[
+    {l:'Issue Public Apology (−5 happy)',f:()=>{G.happy-=5;feed('Apology issued. Trust slowly recovers.','');}},
+    {l:'Bribe the Press (§22,000)',f:()=>{spend(22000);feed('Story buried. For now...','bad');}},
+  ]},
+];
+
+// ── PRESTIGE PERKS ───────────────────────────────────────────────────
+const PERKS=[
+  {id:'p1',n:'Ancient Wisdom',  d:'+25% all income',   fn:()=>G.presMulti+=0.25},
+  {id:'p2',n:'Trade Mastery',   d:'+50% all income',   fn:()=>G.presMulti+=0.50},
+  {id:'p3',n:'Royal Bloodline', d:'+100% all income',  fn:()=>G.presMulti+=1.00},
+  {id:'p4',n:'Iron Will',       d:'+200% all income',  fn:()=>G.presMulti+=2.00},
+  {id:'p5',n:'Eternal Legacy',  d:'+500% all income',  fn:()=>G.presMulti+=5.00},
+  {id:'p6',n:'Godking',         d:'+1500% all income', fn:()=>G.presMulti+=15.0},
+  {id:'p7',n:'Omega Dynasty',   d:'+5000% all income', fn:()=>G.presMulti+=50.0},
+];
+
+// ── ACHIEVEMENTS ─────────────────────────────────────────────────────
+const ACHS=[
+  {id:'a1', ico:'👤', n:'First Citizens',    d:'Reach 50 population',        chk:()=>G.pop>=50},
+  {id:'a2', ico:'🏠', n:'Village Life',      d:'Build 5 cottages',            chk:()=>cnt('cottage')>=5},
+  {id:'a3', ico:'🏪', n:'Market Town',       d:'Build 3 markets',             chk:()=>cnt('market')>=3},
+  {id:'a4', ico:'💰', n:'First Thousands',   d:'Earn §10,000 total',          chk:()=>G.totalGold>=10000},
+  {id:'a5', ico:'🌳', n:'Green Mayor',       d:'Build 5 parks',               chk:()=>cnt('park')>=5},
+  {id:'a6', ico:'🏭', n:'Industrialist',     d:'Build a Factory',             chk:()=>cnt('factory')>=1},
+  {id:'a7', ico:'💎', n:'Millionaire Mayor', d:'Earn §1M total',              chk:()=>G.totalGold>=1e6},
+  {id:'a8', ico:'🏰', n:'Castle Lord',       d:'Build a Castle',              chk:()=>cnt('castle')>=1},
+  {id:'a9', ico:'🏙️', n:'Metropolis',        d:'Reach 10,000 population',     chk:()=>G.pop>=10000},
+  {id:'a10',ico:'🌟', n:'World Wonder',      d:'Build a World Wonder',        chk:()=>cnt('wonder')>=1},
+  {id:'a11',ico:'⚔️', n:'Undying Dynasty',   d:'Found 3 new dynasties',       chk:()=>G.dynasties>=3},
+  {id:'a12',ico:'😊', n:'Happy City',        d:'Reach 90% happiness',         chk:()=>G.happy>=90},
+  {id:'a13',ico:'🔬', n:'Tech Giant',        d:'Reach 200 tech points',       chk:()=>G.tech>=200},
+  {id:'a14',ico:'♾️', n:'Eternal Empire',   d:'Found 10 dynasties',          chk:()=>G.dynasties>=10},
+  {id:'a15',ico:'🏆', n:'Billionaire',       d:'Earn §1 billion total',       chk:()=>G.totalGold>=1e9},
+];
+
+// ── ERAS ──────────────────────────────────────────────────────────────
+const ERAS=[
+  {n:'Stone Age',   t:0},
+  {n:'Bronze Age',  t:2000},
+  {n:'Iron Age',    t:20000},
+  {n:'Medieval',    t:150000},
+  {n:'Renaissance', t:600000},
+  {n:'Industrial',  t:3000000},
+  {n:'Modern',      t:15000000},
+  {n:'Future',      t:80000000},
+];
+
+// ── HELPERS ──────────────────────────────────────────────────────────
+function fmt(n){
+  if(n>=1e12)return '§'+(n/1e12).toFixed(2)+'T';
+  if(n>=1e9) return '§'+(n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return '§'+(n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return '§'+(n/1e3).toFixed(1)+'K';
+  return '§'+Math.floor(n);
+}
+function fmtN(n){return fmt(n).slice(1);}
+function cnt(id){return placed[id]||0;}
+function spend(a){G.gold=Math.max(0,G.gold-a);}
+function reqMet(req){if(!req)return true;for(const[k,v]of Object.entries(req))if(cnt(k)<v)return false;return true;}
+function getCost(def){return Math.ceil(def.cost*Math.pow(1.13,cnt(def.id)));}
+
+function getCatMult(cat){
+  let m=1;
+  UPGRADES.forEach(u=>{if(!bought[u.id])return;if(u.cat===cat||u.cat==='all')m*=u.m;});
+  return m*G.presMulti;
+}
+
+function recalc(){
+  let tax=0,upk=0,pop=0,hap=0,tech=0;
+  BLDGS.forEach(d=>{
+    const n=cnt(d.id);if(!n)return;
+    const m=getCatMult(d.z);
+    tax+=d.tax*n*m;
+    const freeUpk=bought['u_heritage']&&d.z==='civic';
+    if(!freeUpk)upk+=d.upk*n;
+    pop+=d.pop*n;hap+=d.hap*n;tech+=d.tch*n;
+  });
+  UPGRADES.forEach(u=>{if(bought[u.id]&&u.hb)hap+=u.hb;});
+  let popM=1;
+  UPGRADES.forEach(u=>{if(bought[u.id]&&u.cat==='pop')popM*=u.m;});
+  tax*=tempMods.gps;
+  pop=Math.floor(pop*popM*tempMods.pop);
+  hap=Math.max(10,Math.min(200,50+hap));
+  G.gps=Math.max(0,tax-upk);
+  G.taxRate=tax;G.upkeepRate=upk;
+  G.pop=pop;G.happy=hap;G.tech=tech;
+}
+
+// ── STARS ────────────────────────────────────────────────────────────
+function buildStars(){
+  const layer=document.getElementById('star-layer');
+  layer.innerHTML='';
+  for(let i=0;i<220;i++){
+    const s=document.createElement('div');
+    s.className='star';
+    const sz=Math.random()*1.8+0.3;
+    const oa=(Math.random()*0.3+0.05).toFixed(2);
+    const ob=(Math.random()*0.6+0.3).toFixed(2);
+    const td=(2+Math.random()*5).toFixed(1);
+    const td2=(Math.random()*4).toFixed(1);
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*65}%;--oa:${oa};--ob:${ob};--td:${td}s;--td2:${td2}s;`;
+    layer.appendChild(s);
+  }
+}
+
+// ── CLOUDS ───────────────────────────────────────────────────────────
+function buildClouds(){
+  const vp=document.getElementById('viewport');
+  for(let i=0;i<9;i++){
+    const c=document.createElement('div');
+    c.className='cloud';
+    const w=100+Math.random()*180,h=20+Math.random()*25;
+    const dur=25+Math.random()*45,delay=-Math.random()*50;
+    c.style.cssText=`top:${Math.random()*55}%;width:${w}px;height:${h}px;animation-duration:${dur}s;animation-delay:${delay}s;`;
+    vp.appendChild(c);
+  }
+}
+
+// ── SKYLINE RENDER ───────────────────────────────────────────────────
+const ZONE_ORDER=['residential','commercial','civic','industry','landmark'];
+
+function renderSkyline(){
+  const sl=document.getElementById('skyline');
+  sl.innerHTML='';
+
+  ZONE_ORDER.forEach((zid,zi)=>{
+    // Gather buildings with counts
+    const defs=BLDGS.filter(d=>d.z===zid&&cnt(d.id)>0);
+    if(defs.length===0&&zi>0){
+      // Add placeholder divider only
+      const div=document.createElement('div');div.className='zone-divider';sl.appendChild(div);
+      return;
+    }
+
+    // Zone column
+    const zone=document.createElement('div');
+    zone.className='zone';
+    zone.id='skyzone-'+zid;
+
+    // Sort by height, tallest in center
+    const sprites=[];
+    defs.forEach(def=>{
+      const show=Math.min(cnt(def.id),6);
+      for(let i=0;i<show;i++)sprites.push(def);
+    });
+
+    // Build each building sprite
+    sprites.forEach((def,si)=>{
+      const sp=makeBuildingSprite(def,si*45);
+      zone.appendChild(sp);
+      if(si<sprites.length-1){
+        // tiny gap
+        const g=document.createElement('div');g.style.cssText='width:1px;flex-shrink:0;';zone.appendChild(g);
+      }
+    });
+
+    // Zone label
+    const lbl=document.createElement('div');
+    lbl.className='zone-label';
+    lbl.textContent=zid.toUpperCase();
+    zone.appendChild(lbl);
+
+    // Separator before zone (except first)
+    if(zi>0){const sep=document.createElement('div');sep.className='zone-divider';sl.appendChild(sep);}
+    sl.appendChild(zone);
+  });
+}
+
+function makeBuildingSprite(def,delay=0){
+  const v=def.vis;
+  const sp=document.createElement('div');
+  sp.className='bsprite';
+  sp.setAttribute('data-name',def.n);
+  sp.style.animationDelay=delay+'ms';
+
+  // Body
+  const wall=document.createElement('div');
+  wall.className='bwall';
+  wall.style.width=v.w+'px';
+  wall.style.height=v.h+'px';
+
+  // Gradient
+  const base=v.c;
+  const [r,g,b]=hexToRgb(base);
+  const lite=`rgb(${Math.min(255,r+28)},${Math.min(255,g+28)},${Math.min(255,b+28)})`;
+  const dark=`rgb(${Math.max(0,r-10)},${Math.max(0,g-10)},${Math.max(0,b-10)})`;
+  wall.style.background=`linear-gradient(180deg,${lite} 0%,${base} 60%,${dark} 100%)`;
+  wall.style.border='1px solid rgba(255,255,255,0.05)';
+  wall.style.boxShadow='3px 0 15px rgba(0,0,0,0.5),-1px 0 5px rgba(0,0,0,0.3)';
+
+  // Windows
+  if(v.wr>0&&v.wc>0){
+    const wg=document.createElement('div');
+    wg.className='bwins';
+    wg.style.gridTemplateRows=`repeat(${v.wr},1fr)`;
+    wg.style.gridTemplateColumns=`repeat(${v.wc},1fr)`;
+    const total=v.wr*v.wc;
+    for(let i=0;i<total;i++){
+      const w=document.createElement('div');
+      w.className='bwin';
+      const rng=Math.random();
+      if(rng>0.3){
+        w.classList.add(Math.random()>0.25?'on':'on2');
+        w.style.setProperty('--wd',(2+Math.random()*5).toFixed(1)+'s');
+        w.style.setProperty('--wt',(Math.random()*4).toFixed(1)+'s');
+      } else {
+        w.classList.add('off');
+      }
+      wg.appendChild(w);
+    }
+    wall.appendChild(wg);
+  }
+
+  // Rooftop color strip
+  const roof=document.createElement('div');
+  roof.className='broof';
+  roof.style.background=`rgb(${Math.min(255,r+40)},${Math.min(255,g+40)},${Math.min(255,b+40)})`;
+  wall.appendChild(roof);
+
+  // Antenna for tall buildings
+  if(v.h>70){
+    const ah=8+Math.floor(Math.random()*16);
+    const ant=document.createElement('div');
+    ant.className='bant';
+    ant.style.height=ah+'px';
+    const tip=document.createElement('div');
+    tip.className='bant-tip';
+    ant.appendChild(tip);
+    wall.appendChild(ant);
+  }
+
+  // Smoke for industrial
+  if(v.smoke>0){
+    for(let s=0;s<v.smoke;s++){
+      const sm=document.createElement('div');
+      sm.className='smoke-puff';
+      sm.style.left=(25+s*20)+'%';
+      sm.style.animationDelay=(s*1.2)+'s';
+      sm.style.animationDuration=(2.5+Math.random())+'s';
+      wall.appendChild(sm);
+    }
+  }
+
+  // Icon badge
+  const ico=document.createElement('div');
+  ico.style.cssText='position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:10px;pointer-events:none;';
+  ico.textContent=def.ico;
+  wall.appendChild(ico);
+
+  sp.appendChild(wall);
+  return sp;
+}
+
+function hexToRgb(hex){
+  const r=parseInt(hex.slice(1,3),16);
+  const g=parseInt(hex.slice(3,5),16);
+  const b=parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+
+// ── FEED ─────────────────────────────────────────────────────────────
+function feed(msg,type=''){
+  const f=document.getElementById('feed');
+  const d=document.createElement('div');
+  d.className='feed-item '+(type||'');
+  d.textContent=msg;
+  f.appendChild(d);
+  while(f.children.length>4)f.removeChild(f.firstChild);
+  setTimeout(()=>d.remove(),5500);
+}
+
+function floater(txt,x,y){
+  const vp=document.getElementById('viewport');
+  const d=document.createElement('div');
+  d.className='floater';
+  d.textContent=txt;
+  d.style.left=x+'px';
+  d.style.top=y+'px';
+  vp.appendChild(d);
+  setTimeout(()=>d.remove(),1600);
+}
+
+// ── HUD UPDATE ────────────────────────────────────────────────────────
+function updateHUD(){
+  document.getElementById('s-gold').textContent=fmt(G.gold);
+  document.getElementById('s-inc').textContent=(G.gps>=0?'+':'')+fmtN(G.gps)+'/s';
+  document.getElementById('s-pop').textContent=fmtN(G.pop);
+  document.getElementById('s-happy').textContent=Math.round(G.happy)+'%';
+  document.getElementById('s-tech').textContent=Math.round(G.tech);
+  // Era
+  let eIdx=0;for(let i=ERAS.length-1;i>=0;i--)if(G.totalGold>=ERAS[i].t){eIdx=i;break;}
+  if(eIdx!==currentEraIdx){
+    currentEraIdx=eIdx;
+    feed('🌟 Entered the '+ERAS[eIdx].n+'!','special');
+    const ni=Math.min(eIdx+G.dynasties,CITY_NAMES.length-1);
+    G.cityName=CITY_NAMES[ni];
+  }
+  document.getElementById('era-pill').textContent=ERAS[eIdx].n.toUpperCase();
+  document.getElementById('dynasty-name').textContent=G.dynastyName+' · Gen '+ROMAN[Math.min(G.gen-1,ROMAN.length-1)];
+  // Status bar
+  document.getElementById('sb-tax').textContent='+'+fmtN(G.taxRate)+'/s';
+  document.getElementById('sb-upk').textContent='-'+fmtN(G.upkeepRate)+'/s';
+  document.getElementById('sb-net').textContent=(G.gps>=0?'+':'')+fmtN(G.gps)+'/s';
+  document.getElementById('sb-earned').textContent=fmt(G.totalGold);
+  // Legacy
+  const pct=Math.min(100,(G.totalGold/G.presThresh)*100);
+  document.getElementById('l-prog').style.width=pct+'%';
+  document.getElementById('l-pct').textContent=pct.toFixed(1)+'%';
+  document.getElementById('l-thresh').textContent=fmt(G.presThresh);
+  document.getElementById('l-dyn').textContent=G.dynasties;
+  document.getElementById('l-dp').textContent=fmtN(G.dp)+' DP';
+  document.getElementById('l-mult').textContent='×'+G.presMulti.toFixed(2);
+  document.getElementById('l-gen').textContent=ROMAN[Math.min(G.gen-1,ROMAN.length-1)];
+  document.getElementById('l-age').textContent=Math.floor(G.age)+' yrs';
+  document.getElementById('l-total').textContent=fmt(G.totalGold);
+  // Prestige btn
+  const canP=G.totalGold>=G.presThresh;
+  const pb=document.getElementById('prestige-btn');
+  pb.disabled=!canP;
+  if(canP)pb.classList.add('p-pulse');else pb.classList.remove('p-pulse');
+}
+
+// ── BUILD PANEL ───────────────────────────────────────────────────────
+function buildBuildPanel(){
+  ZONE_ORDER.concat(['landmark']).forEach(zid=>{
+    const cont=document.getElementById('zone-'+zid);
+    if(!cont)return;
+    while(cont.children.length>1)cont.removeChild(cont.lastChild);
+    BLDGS.filter(d=>d.z===zid).forEach(def=>{
+      const cost=getCost(def);
+      const locked=!reqMet(def.req);
+      const canAff=G.gold>=cost;
+      const card=document.createElement('button');
+      card.className='bcard'+(locked?' locked':canAff?'':' broke');
+      card.innerHTML=`
+        <div class="bcard-ico">${def.ico}</div>
+        <div class="bcard-body">
+          <div class="bcard-name">${def.n}</div>
+          <div class="bcard-sub">Pop +${def.pop} · 😊 ${def.hap>=0?'+':''}${def.hap} · ⚙ ${def.tch}</div>
+          <div class="bcard-cost">${locked?'🔒 '+Object.entries(def.req||{}).map(([k,v])=>v+'× '+BLDGS.find(b=>b.id===k)?.n).join(', '):fmt(cost)}</div>
+        </div>
+        <div class="bcard-cnt">${cnt(def.id)||''}</div>
+        ${!locked&&canAff?'<button class="bcard-buy" onclick="event.stopPropagation();buy(\''+def.id+'\')">BUY</button>':''}
+      `;
+      if(!locked)card.addEventListener('click',()=>buy(def.id));
+      cont.appendChild(card);
+    });
+  });
+}
+
+function buy(id){
+  const def=BLDGS.find(d=>d.id===id);if(!def)return;
+  if(!reqMet(def.req)){feed('Requirements not met for '+def.n,'bad');return;}
+  const cost=getCost(def);
+  if(G.gold<cost){feed('Not enough funds for '+def.n,'bad');return;}
+  G.gold-=cost;
+  placed[id]=(placed[id]||0)+1;
+  recalc();
+  // Float gold
+  const vp=document.getElementById('viewport');
+  const rect=vp.getBoundingClientRect();
+  floater(def.ico+' +1 '+def.n,Math.random()*(rect.width*0.5)+rect.width*0.1,rect.height*0.6);
+  feed('Built: '+def.n+' ('+fmt(cost)+')','good');
+  dirty.build=true;dirty.upg=true;dirty.skyline=true;
+}
+
+// ── UPGRADES ──────────────────────────────────────────────────────────
+function buildUpgPanel(){
+  const cont=document.getElementById('upg-list');cont.innerHTML='';
+  UPGRADES.forEach(u=>{
+    const ok=reqMet(u.req),isBought=bought[u.id];
+    if(!ok&&!isBought)return;
+    const btn=document.createElement('button');
+    btn.className='ucard'+(isBought?' done':'');
+    btn.disabled=isBought||G.gold<u.cost;
+    btn.innerHTML=`
+      <div class="ucard-top">
+        <div class="ucard-name">${isBought?'✓ ':' '}${u.n}</div>
+        <div class="ucard-cost">${isBought?'DONE':fmt(u.cost)}</div>
+      </div>
+      <div class="ucard-desc">${u.desc}</div>`;
+    if(!isBought)btn.addEventListener('click',()=>{
+      if(G.gold<u.cost){feed('Not enough funds!','bad');return;}
+      spend(u.cost);bought[u.id]=true;recalc();
+      feed('Upgrade: '+u.n+' activated!','special');
+      dirty.build=true;dirty.upg=true;
+    });
+    cont.appendChild(btn);
+  });
+}
+
+// ── CITY STATS ────────────────────────────────────────────────────────
+function buildCityPanel(){
+  const g=document.getElementById('city-stat-grid');g.innerHTML='';
+  [
+    {l:'Treasury',v:fmt(G.gold),c:'sb-gold'},
+    {l:'Income/s',v:'+'+fmtN(G.gps)+'/s',c:'sb-green'},
+    {l:'Population',v:fmtN(G.pop),c:'sb-blue'},
+    {l:'Happiness',v:Math.round(G.happy)+'%',c:G.happy>=70?'sb-green':'sb-red'},
+    {l:'Tech',v:Math.round(G.tech),c:'sb-purple'},
+    {l:'City Age',v:Math.floor(G.age)+' yrs',c:''},
+    {l:'Buildings',v:Object.values(placed).reduce((a,b)=>a+b,0),c:''},
+    {l:'Upkeep/s',v:'-'+fmtN(G.upkeepRate)+'/s',c:'sb-red'},
+  ].forEach(r=>{
+    g.innerHTML+=`<div class="stat-box"><div class="sb-lbl">${r.l}</div><div class="sb-val ${r.c}">${r.v}</div></div>`;
+  });
+  const al=document.getElementById('ach-list');al.innerHTML='';
+  ACHS.forEach(a=>{
+    const done=achEarned.has(a.id);
+    al.innerHTML+=`<div class="ach ${done?'done':'locked'}">
+      <div class="ach-ico">${a.ico}</div>
+      <div><div class="ach-name">${a.n}</div><div class="ach-desc">${a.d}</div></div>
+    </div>`;
+  });
+}
+
+// ── PRESTIGE ──────────────────────────────────────────────────────────
+function openPrestige(){
+  const dp=Math.floor(G.totalGold/10000);
+  document.getElementById('prestige-reward-text').textContent='+'+fmtN(dp)+' Dynasty Points will be earned';
+  const pIdx=Math.min(G.dynasties,PERKS.length-1);
+  const pk=PERKS[pIdx];
+  document.getElementById('prestige-perk-name').textContent=pk?pk.n+' ('+pk.d+')':'Max perk tier reached!';
+  openOverlay('modal-prestige');
+}
+
+function doPrestige(){
+  const dp=Math.floor(G.totalGold/10000);
+  G.dp+=dp;G.dynasties++;G.gen++;
+  const pIdx=Math.min(G.dynasties-1,PERKS.length-1);
+  const pk=PERKS[pIdx];
+  if(pk&&!perksHeld.includes(pk.id)){
+    perksHeld.push(pk.id);pk.fn();
+    feed('Dynasty Perk unlocked: '+pk.n,'special');
+  }
+  // Reset city
+  G.gold=200;G.totalGold=200;G.age=0;
+  G.gps=0;G.taxRate=0;G.upkeepRate=0;
+  G.pop=0;G.happy=50;G.tech=0;
+  G.presThresh*=8;
+  G.dynastyName=DYNASTY_NAMES[Math.min(G.dynasties,DYNASTY_NAMES.length-1)];
+  currentEraIdx=0;
+  BLDGS.forEach(d=>{placed[d.id]=0;});
+  Object.keys(bought).forEach(k=>delete bought[k]);
+  recalc();
+  closeOverlay('modal-prestige');
+  buildPerkWrap();
+  feed('⚔️ New dynasty: '+G.dynastyName+'! Your legacy multiplies your power.','special');
+  dirty.build=true;dirty.upg=true;dirty.skyline=true;
+}
+
+function buildPerkWrap(){
+  const w=document.getElementById('perk-wrap');
+  if(!perksHeld.length){
+    w.innerHTML='<div style="font-size:10px;color:var(--text3);font-style:italic;padding:4px 0;">Found your first dynasty to unlock perks.</div>';
+    return;
+  }
+  w.innerHTML='';
+  perksHeld.forEach(pid=>{
+    const p=PERKS.find(x=>x.id===pid);if(!p)return;
+    const t=document.createElement('div');t.className='perk-tag';t.title=p.d;t.textContent=p.n;
+    w.appendChild(t);
+  });
+}
+
+// ── EVENTS ───────────────────────────────────────────────────────────
+function triggerEvent(){
+  if(activeEvent||G.totalGold<500)return;
+  activeEvent=true;
+  const ev=EVENTS[Math.floor(Math.random()*EVENTS.length)];
+  document.getElementById('ev-title').textContent=ev.t;
+  document.getElementById('ev-desc').textContent=ev.d;
+  const cc=document.getElementById('ev-choices');cc.innerHTML='';
+  ev.cs.forEach(c=>{
+    const btn=document.createElement('button');btn.className='ev-choice';btn.textContent=c.l;
+    btn.addEventListener('click',()=>{
+      c.f();recalc();
+      closeOverlay('modal-event');activeEvent=false;
+    });
+    cc.appendChild(btn);
+  });
+  openOverlay('modal-event');
+  document.getElementById('viewport').classList.add('shaking');
+  setTimeout(()=>document.getElementById('viewport').classList.remove('shaking'),600);
+}
+
+function removeRandom(zone){
+  const cands=BLDGS.filter(d=>d.z===zone&&cnt(d.id)>0);
+  if(!cands.length)return;
+  const def=cands[Math.floor(Math.random()*cands.length)];
+  placed[def.id]--;recalc();dirty.skyline=true;
+}
+
+// ── ACHIEVEMENTS ─────────────────────────────────────────────────────
+function checkAchs(){
+  ACHS.forEach(a=>{
+    if(!achEarned.has(a.id)&&a.chk()){
+      achEarned.add(a.id);
+      const d=document.createElement('div');
+      d.className='ach-popup';
+      d.innerHTML=`<b>ACHIEVEMENT UNLOCKED</b><span>${a.ico} ${a.n}</span>`;
+      document.body.appendChild(d);
+      setTimeout(()=>d.remove(),4500);
+    }
+  });
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────
+function switchTab(name){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('pane-'+name).classList.add('on');
+  const names=['build','upgrades','city','legacy'];
+  document.querySelectorAll('.rtab')[names.indexOf(name)]?.classList.add('on');
+  if(name==='city')buildCityPanel();
+  if(name==='upgrades')buildUpgPanel();
+  if(name==='build')buildBuildPanel();
+}
+
+function jumpZone(z){
+  switchTab('build');
+  const el=document.getElementById('zone-'+z);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── TOOL ─────────────────────────────────────────────────────────────
+function setTool(t){
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tb-'+t)?.classList.add('active');
+  document.getElementById('grid-ov').classList.toggle('on',t==='build'||t==='demolish');
+  if(t==='build')switchTab('build');
+}
+
+// ── OVERLAYS ──────────────────────────────────────────────────────────
+function openOverlay(id){document.getElementById(id).classList.add('open');}
+function closeOverlay(id){document.getElementById(id).classList.remove('open');}
+
+// ── DIRTY FLAGS (batch redraws) ────────────────────────────────────────
+const dirty={build:false,upg:false,skyline:false};
+
+// ── SAVE / LOAD ────────────────────────────────────────────────────────
+function saveGame(){
+  try{localStorage.setItem('cl_v3',JSON.stringify({G,placed,bought,perksHeld,achEarned:[...achEarned],currentEraIdx}));}catch(e){}
+}
+function loadGame(){
+  try{
+    const d=JSON.parse(localStorage.getItem('cl_v3')||'null');if(!d)return;
+    Object.assign(G,d.G);
+    if(d.placed)Object.assign(placed,d.placed);
+    if(d.bought)Object.assign(bought,d.bought);
+    perksHeld=d.perksHeld||[];
+    achEarned=new Set(d.achEarned||[]);
+    currentEraIdx=d.currentEraIdx||0;
+    // Reapply prestige multipliers
+    G.presMulti=1.0;
+    perksHeld.forEach(pid=>{const p=PERKS.find(x=>x.id===pid);if(p)p.fn();});
+  }catch(e){}
+}
+
+// ── MAIN LOOP ───────────────────────────────────────────────────────────
+let lastT=performance.now();
+let skyTimer=0,panelTimer=0,floatTimer=0;
+
+function loop(now){
+  const dt=Math.min((now-lastT)/1000,0.5);lastT=now;
+  G.tick++;G.age+=dt/14;
+
+  const gained=G.gps*dt;
+  G.gold+=gained;G.totalGold+=gained;
+
+  updateHUD();
+  checkAchs();
+
+  // Periodic float
+  floatTimer+=dt;
+  if(floatTimer>8&&G.gps>0){
+    const vp=document.getElementById('viewport');
+    const r=vp.getBoundingClientRect();
+    floater('+'+fmtN(G.gps)+'/s',60+Math.random()*(r.width*0.6),r.height*0.55+Math.random()*80);
+    floatTimer=0;
+  }
+
+  // Batch-redraw expensive panels
+  skyTimer+=dt;
+  if(skyTimer>5||dirty.skyline){renderSkyline();skyTimer=0;dirty.skyline=false;}
+  panelTimer+=dt;
+  if(panelTimer>2||dirty.build){buildBuildPanel();panelTimer=0;dirty.build=false;}
+  if(dirty.upg){buildUpgPanel();dirty.upg=false;}
+
+  // Random events
+  if(G.tick>=G.nextEvent&&!activeEvent){
+    triggerEvent();
+    G.nextEvent=G.tick+1800+Math.floor(Math.random()*3600);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────
+BLDGS.forEach(d=>{placed[d.id]=0;});
+loadGame();
+recalc();
+buildStars();
+buildClouds();
+buildBuildPanel();
+buildUpgPanel();
+renderSkyline();
+buildPerkWrap();
+setInterval(saveGame,30000);
+feed('Welcome, Mayor! Build your city — and found new dynasties to grow your legacy.','info');
+feed('Select buildings in the BUILD panel. Income is automatic — no clicking needed!','info');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
