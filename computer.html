@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>COMPUTER // Ultra Hacker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;}
+:root{
+  --green:#00ff41;--dgreen:#007a1f;--bg:#0d0d0d;--panel:#111;--border:#1a2a1a;
+  --red:#ff2222;--yellow:#ffff00;--cyan:#00ffff;--orange:#ff9900;--blue:#4499ff;
+  --panel2:#0f1a0f;
+}
+body{background:var(--bg);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:12px;overflow:hidden;height:100vh;width:100vw;position:relative;}
+
+/* BOOT SCREEN */
+#boot{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:'VT323',monospace;font-size:18px;color:#00ff41;}
+#boot .logo{font-size:48px;letter-spacing:6px;margin-bottom:30px;text-shadow:0 0 20px #00ff41;}
+#bootlog{width:500px;height:200px;overflow:hidden;line-height:1.6;}
+#bootbar{width:500px;height:4px;background:#111;margin-top:10px;border:1px solid #00ff4133;}
+#bootfill{height:100%;width:0%;background:var(--green);transition:width .05s linear;box-shadow:0 0 8px var(--green);}
+
+/* DESKTOP */
+#desktop{position:fixed;inset:0;background:radial-gradient(ellipse at 30% 60%,#0a1a0a,#050805);display:none;}
+
+/* TASKBAR */
+#taskbar{position:absolute;bottom:0;left:0;right:0;height:36px;background:#0a110a;border-top:1px solid #1a2a1a;display:flex;align-items:center;padding:0 8px;gap:6px;z-index:100;}
+.tbtn{background:#0f1a0f;border:1px solid #1a2a1a;color:var(--green);padding:4px 10px;font-family:'Share Tech Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s;}
+.tbtn:hover,.tbtn.active{background:#0a2a0a;border-color:var(--green);box-shadow:0 0 6px #00ff4144;}
+#clock{margin-left:auto;color:#00ff4177;font-size:11px;}
+#repbar{flex:1;max-width:180px;margin-left:8px;}
+#repbar label{font-size:10px;color:#00ff4155;}
+#repfill{height:6px;background:var(--green);width:0%;box-shadow:0 0 4px var(--green);transition:width .5s;}
+#reptxt{font-size:10px;color:#00ff4188;}
+
+/* WINDOWS */
+.win{position:absolute;background:var(--panel2);border:1px solid #1a3a1a;box-shadow:0 0 20px #00ff4122,inset 0 0 30px #00000088;min-width:200px;min-height:120px;display:none;flex-direction:column;z-index:10;}
+.win.active{z-index:50;border-color:#00ff4155;box-shadow:0 0 30px #00ff4133;}
+.wbar{background:#0a1a0a;border-bottom:1px solid #1a3a1a;padding:5px 8px;display:flex;align-items:center;gap:8px;cursor:move;font-size:11px;}
+.wbar .wt{flex:1;color:var(--green);letter-spacing:1px;}
+.wcls{background:none;border:none;color:#ff444488;cursor:pointer;font-size:14px;padding:0 2px;}
+.wcls:hover{color:var(--red);}
+.wbody{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+
+/* ICONS */
+#icons{position:absolute;top:16px;left:16px;display:flex;flex-direction:column;gap:16px;}
+.icon{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;width:60px;padding:6px;border:1px solid transparent;transition:all .15s;}
+.icon:hover{border-color:#00ff4133;background:#00ff4108;}
+.icon .ic{font-size:28px;line-height:1;}
+.icon span{font-size:9px;color:#00ff4199;text-align:center;}
+
+/* TERMINAL */
+#termBody{flex:1;padding:8px;overflow-y:auto;font-size:11px;line-height:1.6;background:#050e05;}
+#termInput{display:flex;align-items:center;padding:4px 8px;border-top:1px solid #1a3a1a;background:#050e05;}
+#termInput span{color:var(--green);margin-right:4px;}
+#termIn{flex:1;background:none;border:none;color:var(--green);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;}
+.terml{line-height:1.6;} .terml.cmd{color:#00ff4188;} .terml.ok{color:var(--green);} .terml.err{color:var(--red);} .terml.info{color:var(--cyan);} .terml.warn{color:var(--yellow);}
+
+/* BROWSER */
+#browserNav{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#0a110a;border-bottom:1px solid #1a3a1a;}
+#browserNav input{flex:1;background:#060e06;border:1px solid #1a3a1a;color:var(--green);padding:3px 8px;font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;}
+#browserNav input:focus{border-color:#00ff4155;}
+.navbtn{background:#0f1a0f;border:1px solid #1a2a1a;color:var(--green);padding:2px 8px;font-size:11px;cursor:pointer;}
+.navbtn:hover{border-color:var(--green);}
+#browserPage{flex:1;overflow-y:auto;padding:12px;background:#060e06;font-size:11px;line-height:1.8;}
+
+/* FILE EXPLORER */
+#fileTree{width:140px;border-right:1px solid #1a3a1a;overflow-y:auto;padding:8px;background:#060e06;}
+#fileTree .folder{color:var(--yellow);cursor:pointer;margin:2px 0;padding:2px 4px;} .folder:hover{background:#1a2a00;}
+#fileTree .file{color:#00ff4199;cursor:pointer;margin:2px 0 2px 12px;padding:2px 4px;font-size:10px;} .file:hover{background:#002a00;color:var(--green);}
+#fileView{flex:1;padding:10px;overflow-y:auto;background:#060e06;white-space:pre-wrap;font-size:11px;line-height:1.7;color:#00ff4199;}
+
+/* MISSIONS */
+#missionList{flex:1;overflow-y:auto;padding:10px;}
+.mcard{border:1px solid #1a3a1a;margin-bottom:8px;padding:10px;background:#060e06;cursor:pointer;transition:all .15s;}
+.mcard:hover{border-color:#00ff4155;background:#0a1a0a;}
+.mcard.active{border-color:var(--cyan);background:#001a1a;}
+.mcard.done{border-color:#00ff4133;opacity:.5;}
+.mtitle{color:var(--green);font-size:12px;margin-bottom:4px;}
+.mdiff{font-size:10px;padding:1px 6px;border:1px solid;display:inline-block;margin-bottom:4px;}
+.mdiff.easy{color:var(--green);border-color:var(--green);} .mdiff.med{color:var(--yellow);border-color:var(--yellow);} .mdiff.hard{color:var(--red);border-color:var(--red);}
+.mdesc{color:#00ff4177;font-size:10px;line-height:1.5;}
+#missionDetail{border-top:1px solid #1a3a1a;padding:10px;background:#050e05;}
+#missionDetail h3{color:var(--cyan);margin-bottom:8px;}
+.step{padding:4px 0;color:#00ff4188;font-size:11px;}
+.step.done{color:#00ff4144;text-decoration:line-through;}
+.step.active{color:var(--yellow);}
+#hackBtn{background:#00ff4111;border:1px solid var(--green);color:var(--green);padding:6px 20px;font-family:'Share Tech Mono',monospace;font-size:11px;cursor:pointer;margin-top:8px;transition:all .2s;}
+#hackBtn:hover{background:#00ff4122;box-shadow:0 0 10px #00ff4144;}
+
+/* DOWNLOADER */
+#dlList{flex:1;padding:10px;overflow-y:auto;}
+.dlitem{border:1px solid #1a3a1a;margin-bottom:6px;padding:8px;background:#060e06;}
+.dlitem .dname{color:var(--cyan);font-size:11px;margin-bottom:4px;}
+.dlitem .ddesc{color:#00ff4166;font-size:10px;margin-bottom:6px;}
+.dlprog{height:4px;background:#1a3a1a;margin-bottom:4px;} .dlprogfill{height:100%;width:0%;background:var(--cyan);box-shadow:0 0 4px var(--cyan);transition:width .3s;}
+.dlbtn{background:#00111a;border:1px solid var(--cyan);color:var(--cyan);padding:3px 12px;font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;}
+.dlbtn:hover{background:#002233;} .dlbtn:disabled{opacity:.3;cursor:default;}
+.dlbtn.green{border-color:var(--green);color:var(--green);background:#001100;}
+
+/* NOTEPAD */
+#noteArea{flex:1;background:#050e05;border:none;color:var(--green);font-family:'Share Tech Mono',monospace;font-size:11px;padding:8px;outline:none;resize:none;line-height:1.7;}
+
+/* PROGRESS BARS & MISC */
+.pbar{height:6px;background:#1a2a1a;margin:2px 0;} .pbarfill{height:100%;background:var(--green);box-shadow:0 0 4px var(--green);transition:width .4s;}
+.tag{display:inline-block;padding:1px 6px;border:1px solid;font-size:9px;margin-right:4px;}
+.tag.g{color:var(--green);border-color:var(--green);} .tag.r{color:var(--red);border-color:var(--red);} .tag.y{color:var(--yellow);border-color:var(--yellow);} .tag.c{color:var(--cyan);border-color:var(--cyan);}
+
+/* SCANLINES */
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,65,.015) 3px,rgba(0,255,65,.015) 4px);pointer-events:none;z-index:9998;}
+
+/* NOTIFY */
+#notify{position:fixed;top:10px;right:10px;z-index:9000;display:flex;flex-direction:column;gap:6px;}
+.notif{background:#0a1a0a;border:1px solid var(--green);padding:8px 14px;font-size:11px;color:var(--green);max-width:280px;box-shadow:0 0 12px #00ff4133;animation:slidein .3s ease;}
+.notif.warn{border-color:var(--yellow);color:var(--yellow);}
+.notif.err{border-color:var(--red);color:var(--red);}
+.notif.info{border-color:var(--cyan);color:var(--cyan);}
+@keyframes slidein{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);}}
+</style>
+</head>
+<body>
+
+<!-- BOOT -->
+<div id="boot">
+  <div class="logo">COMPUTER</div>
+  <div style="color:#00ff4155;letter-spacing:3px;margin-bottom:20px;font-size:14px">// ULTRA HACKER OS v2.4.1 //</div>
+  <div id="bootlog"></div>
+  <div id="bootbar"><div id="bootfill"></div></div>
+</div>
+
+<!-- DESKTOP -->
+<div id="desktop">
+  <!-- Icons -->
+  <div id="icons">
+    <div class="icon" ondblclick="openWin('terminal')"><div class="ic">⬛</div><span>TERMINAL</span></div>
+    <div class="icon" ondblclick="openWin('browser')"><div class="ic">🌐</div><span>BROWSER</span></div>
+    <div class="icon" ondblclick="openWin('files')"><div class="ic">📁</div><span>FILES</span></div>
+    <div class="icon" ondblclick="openWin('missions')"><div class="ic">🎯</div><span>MISSIONS</span></div>
+    <div class="icon" ondblclick="openWin('downloader')"><div class="ic">⬇</div><span>DOWNLOAD</span></div>
+    <div class="icon" ondblclick="openWin('notepad')"><div class="ic">📄</div><span>NOTEPAD</span></div>
+  </div>
+
+  <!-- TERMINAL -->
+  <div class="win" id="terminal" style="width:520px;height:320px;left:100px;top:60px;">
+    <div class="wbar" onmousedown="dragStart(event,'terminal')">
+      <span class="wt">▶ TERMINAL — root@hack</span>
+      <button class="wcls" onclick="closeWin('terminal')">✕</button>
+    </div>
+    <div class="wbody" style="display:flex;flex-direction:column;">
+      <div id="termBody"></div>
+      <div id="termInput"><span>root@hack:~$</span><input id="termIn" autocomplete="off" spellcheck="false" onkeydown="termKey(event)"></div>
+    </div>
+  </div>
+
+  <!-- BROWSER -->
+  <div class="win" id="browser" style="width:580px;height:380px;left:140px;top:40px;">
+    <div class="wbar" onmousedown="dragStart(event,'browser')">
+      <span class="wt">🌐 HACKNET BROWSER</span>
+      <button class="wcls" onclick="closeWin('browser')">✕</button>
+    </div>
+    <div class="wbody">
+      <div id="browserNav">
+        <button class="navbtn" onclick="browseBack()">◀</button>
+        <input id="urlBar" value="hacknet://home" onkeydown="if(event.key==='Enter')browse(this.value)">
+        <button class="navbtn" onclick="browse(document.getElementById('urlBar').value)">GO</button>
+      </div>
+      <div id="browserPage"></div>
+    </div>
+  </div>
+
+  <!-- FILES -->
+  <div class="win" id="files" style="width:480px;height:300px;left:200px;top:80px;">
+    <div class="wbar" onmousedown="dragStart(event,'files')">
+      <span class="wt">📁 FILE EXPLORER</span>
+      <button class="wcls" onclick="closeWin('files')">✕</button>
+    </div>
+    <div class="wbody" style="flex-direction:row;">
+      <div id="fileTree"></div>
+      <div id="fileView">// Select a file to view</div>
+    </div>
+  </div>
+
+  <!-- MISSIONS -->
+  <div class="win" id="missions" style="width:400px;height:400px;left:170px;top:50px;">
+    <div class="wbar" onmousedown="dragStart(event,'missions')">
+      <span class="wt">🎯 MISSION BOARD</span>
+      <button class="wcls" onclick="closeWin('missions')">✕</button>
+    </div>
+    <div class="wbody">
+      <div id="missionList"></div>
+      <div id="missionDetail" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- DOWNLOADER -->
+  <div class="win" id="downloader" style="width:360px;height:340px;left:240px;top:70px;">
+    <div class="wbar" onmousedown="dragStart(event,'downloader')">
+      <span class="wt">⬇ PACKAGE MANAGER</span>
+      <button class="wcls" onclick="closeWin('downloader')">✕</button>
+    </div>
+    <div class="wbody"><div id="dlList"></div></div>
+  </div>
+
+  <!-- NOTEPAD -->
+  <div class="win" id="notepad" style="width:380px;height:280px;left:220px;top:60px;">
+    <div class="wbar" onmousedown="dragStart(event,'notepad')">
+      <span class="wt">📄 NOTEPAD</span>
+      <button class="wcls" onclick="closeWin('notepad')">✕</button>
+    </div>
+    <div class="wbody"><textarea id="noteArea" placeholder="// Your notes here..."></textarea></div>
+  </div>
+
+  <!-- TASKBAR -->
+  <div id="taskbar">
+    <button class="tbtn" onclick="openWin('terminal')">⬛ TERM</button>
+    <button class="tbtn" onclick="openWin('browser')">🌐 BROWSER</button>
+    <button class="tbtn" onclick="openWin('files')">📁 FILES</button>
+    <button class="tbtn" onclick="openWin('missions')">🎯 MISSIONS</button>
+    <button class="tbtn" onclick="openWin('downloader')">⬇ DL</button>
+    <button class="tbtn" onclick="openWin('notepad')">📄 NOTES</button>
+    <div id="repbar">
+      <div style="display:flex;justify-content:space-between;"><label>REP</label><span id="reptxt">0 / 1000</span></div>
+      <div class="pbar"><div id="repfill" class="pbarfill"></div></div>
+    </div>
+    <div id="clock">00:00:00</div>
+  </div>
+</div>
+
+<!-- NOTIFY -->
+<div id="notify"></div>
+
+<script>
+// ===== STATE =====
+const S={
+  rep:0, maxRep:1000,
+  tools:[], // installed tools
+  files:{ // virtual filesystem
+    '~':{
+      'readme.txt':'// Welcome to COMPUTER\n// You are a master hacker.\n// Complete missions to grow your reputation.\n// Use the terminal, browser, and tools.\n',
+      'notes.txt':'Personal notes...\n',
+      'hacks':{'target_list.txt':'[CLASSIFIED]\nTarget A: corp-db.local\nTarget B: gov-net.zone\nTarget C: darkweb-node.onion\n'},
+      'tools':{},
+      'downloads':{}
+    }
+  },
+  missions:[
+    {id:0,title:'FIRST CONTACT',diff:'easy',desc:'Ping a target server and grab its hostname.',rep:80,done:false,active:false,
+     steps:['Open Terminal','Type: ping target-01.local','Type: grab hostname','Report back'],cmds:['ping target-01.local','grab hostname']},
+    {id:1,title:'DATA LEECH',diff:'easy',desc:'Connect to corp-db and dump the user table.',rep:120,done:false,active:false,
+     steps:['Install sqlmap (downloader)','Run: sqlmap corp-db.local','Dump users table','Encrypt the loot'],cmds:['sqlmap corp-db.local','dump users','encrypt loot.db']},
+    {id:2,title:'GHOST PROTOCOL',diff:'med',desc:'Breach gov-net.zone without triggering the IDS.',rep:250,done:false,active:false,
+     steps:['Install stealth-kit','Run: stealth on','Connect to gov-net.zone','Exfil /etc/shadow','stealth off'],cmds:['stealth on','connect gov-net.zone','exfil /etc/shadow','stealth off']},
+    {id:3,title:'VAULT CRACKER',diff:'med',desc:'Crack the encrypted vault on darkbank.onion.',rep:300,done:false,active:false,
+     steps:['Install winraw (extract archives)','Install hashcat','Run: hashcat vault.hash','Unzip the vault with winraw','Read the secret'],cmds:['hashcat vault.hash','winraw vault.zip','cat secret.txt']},
+    {id:4,title:'ZERO DAY',diff:'hard',desc:'Exploit the 0-day in MegaCorp mainframe and plant a backdoor.',rep:600,done:false,active:false,
+     steps:['Get exploit-kit','Run: exploit megacorp.sys','Deploy backdoor.sh','Cover tracks: wipe logs'],cmds:['exploit megacorp.sys','deploy backdoor.sh','wipe logs']},
+    {id:5,title:'OPERATION BLACKOUT',diff:'hard',desc:'Take down the surveillance grid. Full blackout.',rep:900,done:false,active:false,
+     steps:['Requires all previous tools','Run: blackout grid-01','blackout grid-02','blackout grid-03','Escape route: vpn bounce'],cmds:['blackout grid-01','blackout grid-02','blackout grid-03','vpn bounce']},
+  ],
+  activeMission:null,
+  missionStep:0,
+  termHistory:[],
+  termIdx:0,
+  browserHistory:['hacknet://home'],
+  browserPos:0,
+};
+
+const TOOLS=[
+  {id:'winraw',name:'WinRAW',desc:'Extract and compress archives (.zip .rar .tar)',icon:'📦',size:'2.4 MB'},
+  {id:'sqlmap',name:'SQLMap',desc:'Automated SQL injection and database takeover',icon:'💉',size:'5.1 MB'},
+  {id:'stealth-kit',name:'Stealth Kit',desc:'Hide your network traffic from IDS systems',icon:'👻',size:'3.8 MB'},
+  {id:'hashcat',name:'HashCat',desc:'GPU-accelerated password and hash cracker',icon:'🔓',size:'12.2 MB'},
+  {id:'exploit-kit',name:'Exploit Kit',desc:'Collection of known CVE exploits',icon:'💣',size:'8.7 MB'},
+  {id:'nmap',name:'NMap Pro',desc:'Network scanner and port mapper',icon:'🗺',size:'4.2 MB'},
+  {id:'vpn-ghost',name:'VPN Ghost',desc:'Multi-hop anonymous VPN routing',icon:'🔀',size:'1.9 MB'},
+];
+
+// ===== BOOT =====
+const bootLines=[
+  'BIOS v2.4 — Initializing hardware...',
+  'CPU: HackCore i9 @ 4.8GHz ... OK',
+  'RAM: 64GB DDR5 ... OK',
+  'Loading HACK_OS kernel ...',
+  'Mounting filesystem ...',
+  'Starting network daemon ...',
+  'Loading steganography modules ...',
+  'Connecting to darknet relay ...',
+  'Bypassing firewall layer 1 ...',
+  'Bypassing firewall layer 2 ...',
+  '[OK] All systems nominal',
+  'Welcome, operator.',
+];
+let bi=0;
+function bootTick(){
+  const log=document.getElementById('bootlog');
+  const fill=document.getElementById('bootfill');
+  if(bi<bootLines.length){
+    const d=document.createElement('div');
+    d.textContent='> '+bootLines[bi++];
+    d.style.color=bi===bootLines.length?'#00ff41':'#00ff4188';
+    log.appendChild(d);log.scrollTop=log.scrollHeight;
+    fill.style.width=(bi/bootLines.length*100)+'%';
+    setTimeout(bootTick,bi<6?80:bi<10?120:200);
+  } else {
+    setTimeout(()=>{
+      document.getElementById('boot').style.display='none';
+      document.getElementById('desktop').style.display='block';
+      initDesktop();
+    },600);
+  }
+}
+setTimeout(bootTick,400);
+
+// ===== INIT =====
+function initDesktop(){
+  buildFileTree();buildMissions();buildDL();
+  setInterval(updateClock,1000);updateClock();
+  openWin('terminal');
+  setTimeout(()=>openWin('missions'),300);
+  termPrint('HACK_OS v2.4 — Type [help] for commands','info');
+  termPrint('Reputation: '+S.rep+' / '+S.maxRep,'ok');
+  browse('hacknet://home');
+}
+
+function updateClock(){
+  const n=new Date();document.getElementById('clock').textContent=n.toLocaleTimeString();
+}
+
+function updateRep(v){
+  S.rep=Math.min(S.maxRep,S.rep+v);
+  document.getElementById('repfill').style.width=(S.rep/S.maxRep*100)+'%';
+  document.getElementById('reptxt').textContent=S.rep+' / '+S.maxRep;
+}
+
+// ===== WINDOWS =====
+function openWin(id){
+  const w=document.getElementById(id);
+  w.style.display='flex';
+  w.classList.add('active');
+  // bring to front
+  document.querySelectorAll('.win').forEach(x=>x.style.zIndex=x===w?50:10);
+  document.querySelectorAll('.tbtn').forEach(b=>{b.classList.remove('active');if(b.textContent.toLowerCase().includes(id.slice(0,4).toLowerCase()))b.classList.add('active');});
+  if(id==='terminal')setTimeout(()=>document.getElementById('termIn').focus(),50);
+}
+function closeWin(id){document.getElementById(id).style.display='none';}
+
+// DRAG
+let drag=null,dx=0,dy=0;
+function dragStart(e,id){
+  drag=document.getElementById(id);
+  dx=e.clientX-drag.offsetLeft;dy=e.clientY-drag.offsetTop;
+  document.addEventListener('mousemove',dragMove);document.addEventListener('mouseup',dragEnd);
+  drag.classList.add('active');
+}
+function dragMove(e){if(drag){drag.style.left=(e.clientX-dx)+'px';drag.style.top=(e.clientY-dy)+'px';}}
+function dragEnd(){drag=null;document.removeEventListener('mousemove',dragMove);document.removeEventListener('mouseup',dragEnd);}
+
+// ===== TERMINAL =====
+const CMDS={
+  help:()=>{termPrint('Commands: help, ls, cat [file], ping [host], clear, rep, tools, missions, nmap [host], connect [host], use [tool]','info');},
+  ls:()=>{const f=S.files['~'];termPrint(Object.keys(f).join('  '),'ok');},
+  clear:()=>{document.getElementById('termBody').innerHTML='';},
+  rep:()=>{termPrint('Reputation: '+S.rep+'/'+S.maxRep+' | Level: '+repLevel(),'info');},
+  tools:()=>{if(S.tools.length===0)termPrint('No tools installed. Use downloader.','warn');else termPrint('Installed: '+S.tools.join(', '),'ok');},
+  missions:()=>{const m=S.missions.filter(x=>!x.done);termPrint(m.length+' active missions. Open Mission Board for details.','info');},
+};
+
+function termKey(e){
+  const inp=document.getElementById('termIn');
+  if(e.key==='Enter'){
+    const val=inp.value.trim();
+    if(!val)return;
+    S.termHistory.unshift(val);S.termIdx=-1;
+    termPrint('root@hack:~$ '+val,'cmd');
+    inp.value='';
+    processCmd(val);
+  } else if(e.key==='ArrowUp'){
+    S.termIdx=Math.min(S.termIdx+1,S.termHistory.length-1);
+    inp.value=S.termHistory[S.termIdx]||'';
+  } else if(e.key==='ArrowDown'){
+    S.termIdx=Math.max(S.termIdx-1,-1);
+    inp.value=S.termIdx>=0?S.termHistory[S.termIdx]:'';
+  }
+}
+
+function termPrint(txt,cls='ok'){
+  const b=document.getElementById('termBody');
+  const d=document.createElement('div');d.className='terml '+cls;d.textContent=txt;
+  b.appendChild(d);b.scrollTop=b.scrollHeight;
+}
+
+function processCmd(raw){
+  const parts=raw.split(' ');const cmd=parts[0].toLowerCase();const arg=parts.slice(1).join(' ');
+  if(CMDS[cmd]){CMDS[cmd](arg);return;}
+  // mission step commands
+  if(S.activeMission!==null){
+    const m=S.missions[S.activeMission];
+    if(m.cmds[S.missionStep]&&raw.trim()===m.cmds[S.missionStep]){
+      advanceMission();return;
+    }
+  }
+  // built-in handlers
+  if(cmd==='cat'){catFile(arg);return;}
+  if(cmd==='ping'){fakePing(arg);return;}
+  if(cmd==='nmap'){fakeNmap(arg);return;}
+  if(cmd==='connect'){fakeConnect(arg);return;}
+  if(cmd==='use'){fakeUse(arg);return;}
+  if(cmd==='sqlmap'){fakeTool('sqlmap','Running SQL injection on '+arg+'...',arg);return;}
+  if(cmd==='dump'){fakeTool('sqlmap','Dumping table: '+arg+'...',arg);return;}
+  if(cmd==='encrypt'){fakeTool(null,'Encrypting '+arg+' with AES-256...',arg);return;}
+  if(cmd==='stealth'){fakeStealthToggle(arg);return;}
+  if(cmd==='exfil'){fakeExfil(arg);return;}
+  if(cmd==='hashcat'){fakeTool('hashcat','Cracking hash: '+arg+'...',arg);return;}
+  if(cmd==='winraw'){fakeWinraw(arg);return;}
+  if(cmd==='exploit'){fakeTool('exploit-kit','Launching exploit against '+arg+'...',arg);return;}
+  if(cmd==='deploy'){fakeDeployBackdoor(arg);return;}
+  if(cmd==='wipe'){termPrint('Wiping logs...','warn');setTimeout(()=>termPrint('[DONE] Logs cleared. You were never here.','ok'),1200);return;}
+  if(cmd==='blackout'){fakeBlackout(arg);return;}
+  if(cmd==='vpn'){fakeVPN(arg);return;}
+  if(cmd==='grab'){termPrint('Hostname: '+arg+'-node.internal ['+rndIP()+']','ok');advanceMission();return;}
+  termPrint('Command not found: '+cmd+'. Type [help]','err');
+}
+
+function catFile(f){
+  const fs=S.files['~'];
+  if(fs[f]){termPrint(fs[f],'ok');return;}
+  for(const k in fs){if(typeof fs[k]==='object'&&fs[k][f]){termPrint(fs[k][f],'ok');return;}}
+  termPrint('File not found: '+f,'err');
+}
+function fakePing(h){
+  termPrint('PING '+h+' ('+rndIP()+')','ok');
+  let i=0;const iv=setInterval(()=>{
+    termPrint(`64 bytes from ${rndIP()}: icmp_seq=${i} ttl=64 time=${(Math.random()*20+1).toFixed(1)}ms`,'ok');
+    if(++i>=4){clearInterval(iv);termPrint('4 packets transmitted, 4 received. 0% loss.','info');advanceMission();}
+  },300);
+}
+function fakeNmap(h){
+  if(!hasTool('nmap')){termPrint('nmap not installed. Download it first.','err');return;}
+  termPrint('Starting NMap scan of '+h+'...','info');
+  const ports=['22/tcp open  ssh','80/tcp open  http','443/tcp open  https','3306/tcp open  mysql','8080/tcp open  http-alt'];
+  let i=0;const iv=setInterval(()=>{termPrint(ports[i],'ok');if(++i>=ports.length)clearInterval(iv);},200);
+}
+function fakeConnect(h){
+  termPrint('Connecting to '+h+'...','info');
+  setTimeout(()=>{termPrint('Connection established. [SESSION OPEN]','ok');advanceMission();},800);
+}
+function fakeUse(t){
+  if(!hasTool(t)){termPrint(t+' not installed.','err');return;}
+  termPrint('Loading '+t+'...','info');setTimeout(()=>termPrint('['+t.toUpperCase()+'] Ready.','ok'),500);
+}
+function fakeTool(req,msg,arg){
+  if(req&&!hasTool(req)){termPrint(req+' not installed. Check downloader.','err');return;}
+  termPrint(msg,'warn');
+  let p=0;const iv=setInterval(()=>{
+    p+=Math.random()*18+5;if(p>=100){p=100;clearInterval(iv);termPrint('[DONE] '+arg+' processed successfully.','ok');advanceMission();}
+    else termPrint('  ['+bar(p)+'] '+Math.floor(p)+'%','info');
+  },300);
+}
+function fakeStealthToggle(m){
+  if(!hasTool('stealth-kit')){termPrint('stealth-kit not installed.','err');return;}
+  if(m==='on'){termPrint('[STEALTH] Traffic encrypted. IDS evasion active.','ok');advanceMission();}
+  else{termPrint('[STEALTH] Disabled.','warn');advanceMission();}
+}
+function fakeExfil(f){
+  termPrint('Exfiltrating '+f+'...','warn');
+  let p=0;const iv=setInterval(()=>{p+=25;termPrint('  Transferred '+p+'%','info');if(p>=100){clearInterval(iv);termPrint('[DONE] '+f+' exfiltrated.','ok');advanceMission();}},400);
+}
+function fakeWinraw(f){
+  if(!hasTool('winraw')){termPrint('winraw not installed. Get it from downloader.','err');return;}
+  termPrint('Extracting '+f+'...','warn');
+  setTimeout(()=>{termPrint('[WINRAW] Extracted: secret.txt, key.bin, data.csv','ok');advanceMission();},900);
+}
+function fakeDeployBackdoor(f){
+  termPrint('Deploying '+f+' to target...','warn');
+  setTimeout(()=>{termPrint('[SUCCESS] Backdoor planted. Persistent access established.','ok');advanceMission();},1100);
+}
+function fakeBlackout(g){
+  termPrint('Sending blackout signal to '+g+'...','warn');
+  setTimeout(()=>{termPrint('[BLACKOUT] '+g+' is offline.','ok');advanceMission();},700);
+}
+function fakeVPN(m){
+  if(m==='bounce'){termPrint('Routing through 7 anonymous nodes...','info');setTimeout(()=>termPrint('[VPN] Trace complete. Origin: [REDACTED]','ok'),1000);}
+}
+function rndIP(){return [Math.random()*254|0,Math.random()*254|0,Math.random()*254|0,Math.random()*254|0].join('.');}
+function bar(p){const l=20,f=Math.round(p/100*l);return '█'.repeat(f)+'░'.repeat(l-f);}
+
+// ===== MISSIONS =====
+function buildMissions(){
+  const ml=document.getElementById('missionList');ml.innerHTML='';
+  S.missions.forEach(m=>{
+    const d=document.createElement('div');
+    d.className='mcard'+(m.done?' done':'')+(m.active?' active':'');
+    d.innerHTML=`<div class="mtitle">${m.done?'✓ ':''}"${m.title}"</div>
+      <span class="mdiff ${m.diff}">${m.diff.toUpperCase()}</span>
+      <span class="tag y">+${m.rep} REP</span>
+      <div class="mdesc">${m.desc}</div>`;
+    if(!m.done) d.onclick=()=>selectMission(m.id);
+    ml.appendChild(d);
+  });
+}
+
+function selectMission(id){
+  S.activeMission=id;S.missionStep=0;
+  S.missions.forEach(m=>m.active=m.id===id);
+  const m=S.missions[id];
+  const dd=document.getElementById('missionDetail');dd.style.display='block';
+  renderMissionDetail(m);buildMissions();
+  notify('Mission accepted: "'+m.title+'"','info');
+  openWin('terminal');termPrint('>> MISSION: '+m.title,'warn');termPrint('Step 1: '+m.steps[0],'info');
+}
+
+function renderMissionDetail(m){
+  const dd=document.getElementById('missionDetail');
+  let html=`<h3>"${m.title}"</h3>`;
+  m.steps.forEach((s,i)=>{
+    const cls=i<S.missionStep?'done':i===S.missionStep?'active':'';
+    html+=`<div class="step ${cls}">${i<S.missionStep?'✓':i===S.missionStep?'▶':' '} ${s}</div>`;
+  });
+  html+=`<button id="hackBtn" onclick="hackBtnClick()">EXECUTE STEP</button>`;
+  dd.innerHTML=html;
+}
+
+function advanceMission(){
+  if(S.activeMission===null)return;
+  const m=S.missions[S.activeMission];
+  S.missionStep++;
+  if(S.missionStep>=m.steps.length){completeMission(m);return;}
+  renderMissionDetail(m);
+  termPrint('Step '+(S.missionStep+1)+': '+m.steps[S.missionStep],'info');
+}
+
+function completeMission(m){
+  m.done=true;m.active=false;S.activeMission=null;
+  updateRep(m.rep);buildMissions();
+  document.getElementById('missionDetail').style.display='none';
+  notify('[MISSION COMPLETE] "'+m.title+'" +'+m.rep+' REP','');
+  termPrint('[MISSION COMPLETE] +'+m.rep+' REP','ok');
+  termPrint('Total Reputation: '+S.rep+'/'+S.maxRep,'info');
+  addFile('~','loot_'+m.id+'.dat','[CLASSIFIED LOOT]\nMission: '+m.title+'\nTimestamp: '+Date.now()+'\nStatus: EXFILTRATED\n');
+  buildFileTree();
+}
+
+function hackBtnClick(){
+  if(S.activeMission===null)return;
+  const m=S.missions[S.activeMission];
+  const exp=m.cmds[S.missionStep];
+  openWin('terminal');
+  termPrint('Hint: type "'+exp+'"','warn');
+}
+
+function repLevel(){
+  if(S.rep<100)return 'SCRIPT KIDDIE';if(S.rep<300)return 'JUNIOR HACKER';
+  if(S.rep<600)return 'BLACK HAT';if(S.rep<900)return 'ELITE';return 'LEGEND';
+}
+
+// ===== BROWSER =====
+const PAGES={
+  'hacknet://home':`<div style="color:var(--green);font-size:20px;font-family:'VT323',monospace;margin-bottom:12px;">HACKNET BROWSER v3.1</div>
+<div style="color:#00ff4166;margin-bottom:16px;">Your encrypted gateway to the underground web.</div>
+<div style="margin-bottom:8px;"><span class="tag c">BOOKMARKS</span></div>
+<div>• <a href="#" onclick="browse('hacknet://github')" style="color:var(--cyan);text-decoration:none;">hacknet://github</a> — Code repositories</div>
+<div>• <a href="#" onclick="browse('hacknet://darkmarket')" style="color:var(--cyan);text-decoration:none;">hacknet://darkmarket</a> — Tools marketplace</div>
+<div>• <a href="#" onclick="browse('hacknet://forums')" style="color:var(--cyan);text-decoration:none;">hacknet://forums</div>
+<div>• <a href="#" onclick="browse('hacknet://pastebin')" style="color:var(--cyan);text-decoration:none;">hacknet://pastebin</a> — Leaked data dumps</div>
+<div>• <a href="#" onclick="browse('hacknet://news')" style="color:var(--cyan);text-decoration:none;">hacknet://news</a> — Underground news</div>`,
+
+  'hacknet://github':`<div style="color:var(--cyan);font-size:18px;margin-bottom:12px;">⌂ HACKNET://GITHUB</div>
+<div style="color:#555;margin-bottom:16px;">Repository hosting for elite operators.</div>
+<div class="tag g">PUBLIC REPOS</div><br><br>
+<b style="color:var(--green)">ultra-hacker/toolchain</b> <span class="tag c">★ 9.4k</span><br>
+<span style="color:#555">Collection of offensive security tools. Updated daily.</span><br><br>
+<b style="color:var(--green)">0xDEAD/stealth-framework</b> <span class="tag y">★ 7.1k</span><br>
+<span style="color:#555">Advanced IDS evasion and traffic obfuscation.</span><br><br>
+<b style="color:var(--green)">shadownet/exploit-db</b> <span class="tag r">★ 12.3k</span><br>
+<span style="color:#555">Live database of unpatched CVEs and 0-days.</span><br><br>
+<b style="color:var(--green)">anon-dev/winraw</b> <span class="tag g">★ 3.2k</span><br>
+<span style="color:#555">Open source archive extraction utility.</span>`,
+
+  'hacknet://darkmarket':`<div style="color:var(--red);font-size:18px;margin-bottom:12px;">⚠ DARKMARKET — AUTHORIZED ACCESS ONLY</div>
+<div style="color:#555;margin-bottom:16px;">Trade tools, data, and exploits anonymously.</div>
+<div class="tag r">LISTINGS</div><br><br>
+<b style="color:var(--green)">WinRAW v4.2</b> — Extract any archive format<br>
+<span style="color:#555">Seller: anon-dev | Price: 40 REP</span><br><br>
+<b style="color:var(--green)">HashCat Pro</b> — Hash cracker, GPU-enabled<br>
+<span style="color:#555">Seller: crackerz | Price: 100 REP</span><br><br>
+<b style="color:var(--green)">Zero-Day Bundle</b> — 3 unpatched CVEs<br>
+<span style="color:#555">Seller: 0xGhost | Price: 500 REP</span><br><br>
+<span style="color:#444">→ Use the Package Manager (downloader) to install tools for free.</span>`,
+
+  'hacknet://forums':`<div style="color:var(--yellow);font-size:18px;margin-bottom:12px;">UNDERGROUND FORUMS — r/blackhat</div>
+<div style="color:#555;margin-bottom:16px;font-size:10px;">Members: 84,291 | Online: 1,337</div>
+<b style="color:var(--green)">[GUIDE] How to stay anonymous in 2025</b><br>
+<span style="color:#555">Posted by: ghost_zero | 892 replies</span><br><br>
+<b style="color:var(--green)">[RELEASE] SQLMap v2.8 drops today</b><br>
+<span style="color:#555">Posted by: inj3ct0r | 234 replies</span><br><br>
+<b style="color:var(--green)">[ASK] Best tool for hash cracking on budget hardware?</b><br>
+<span style="color:#555">Posted by: n00b_hax | 56 replies</span><br><br>
+<b style="color:var(--green)">[NEWS] MegaCorp mainframe vulnerability confirmed</b><br>
+<span style="color:#555">Posted by: 0xDEAD | 1,204 replies</span>`,
+
+  'hacknet://pastebin':`<div style="color:var(--orange);font-size:18px;margin-bottom:12px;">PASTEBIN — LEAKED DATA</div>
+<div style="color:#555;margin-bottom:16px;">Anonymous data dumps. Handle with care.</div>
+<div class="tag r">RECENT LEAKS</div><br><br>
+<b style="color:var(--green)">corp-db_users.sql</b> — 2.3M records<br>
+<span style="color:#555">2024-11-14 | Format: MySQL dump</span><br><br>
+<b style="color:var(--green)">gov-net_shadow</b> — /etc/shadow extract<br>
+<span style="color:#555">2024-12-01 | 18,442 hashes</span><br><br>
+<b style="color:var(--green)">megacorp_internal.doc</b> — Strategy docs<br>
+<span style="color:#555">2024-12-20 | Leaked by: insider</span>`,
+
+  'hacknet://news':`<div style="color:var(--green);font-size:18px;margin-bottom:12px;">UNDERGROUND NEWS FEED</div>
+<div style="color:#555;margin-bottom:16px;font-size:10px;">// Unfiltered. Uncensored. //</div>
+<b style="color:var(--cyan)">MegaCorp hit by ransomware — $50M demanded</b><br>
+<span style="color:#555">Threat actor group SHADOWNET claims responsibility. Mainframe offline.</span><br><br>
+<b style="color:var(--cyan)">gov-net.zone IDS bypassed using new stealth technique</b><br>
+<span style="color:#555">Researchers demonstrate full stealth bypass using traffic shaping.</span><br><br>
+<b style="color:var(--cyan)">WinRAW 0-day patched — update now</b><br>
+<span style="color:#555">Archive extraction flaw allowed arbitrary code execution. Patch available.</span>`,
+};
+
+function browse(url){
+  url=url.trim();
+  const bar=document.getElementById('urlBar');bar.value=url;
+  const page=document.getElementById('browserPage');
+  if(PAGES[url]){page.innerHTML=PAGES[url];}
+  else{page.innerHTML=`<div style="color:var(--red)">404 — Page not found: ${url}</div><div style="color:#444;margin-top:8px;">Try: hacknet://home</div>`;}
+  if(S.browserPos<S.browserHistory.length-1)S.browserHistory.splice(S.browserPos+1);
+  S.browserHistory.push(url);S.browserPos=S.browserHistory.length-1;
+}
+function browseBack(){
+  if(S.browserPos>0){S.browserPos--;browse(S.browserHistory[S.browserPos]);}}
+
+// ===== FILES =====
+function buildFileTree(){
+  const t=document.getElementById('fileTree');t.innerHTML='';
+  renderDir(t,S.files['~'],'~');
+}
+function renderDir(el,dir,name){
+  const fd=document.createElement('div');fd.className='folder';fd.textContent='📁 '+name;el.appendChild(fd);
+  for(const k in dir){
+    if(typeof dir[k]==='string'){
+      const fi=document.createElement('div');fi.className='file';fi.textContent='📄 '+k;
+      fi.onclick=()=>viewFile(dir[k],k);el.appendChild(fi);
+    } else {
+      renderDir(el,dir[k],k);
+    }
+  }
+}
+function viewFile(content,name){
+  document.getElementById('fileView').textContent='// '+name+'\n\n'+content;
+}
+function addFile(dir,name,content){
+  const p=dir==='~'?S.files['~']:S.files['~'][dir];
+  if(p) p[name]=content;
+}
+
+// ===== DOWNLOADER =====
+function buildDL(){
+  const dl=document.getElementById('dlList');dl.innerHTML='';
+  TOOLS.forEach(t=>{
+    const inst=S.tools.includes(t.id);
+    const d=document.createElement('div');d.className='dlitem';d.id='dl_'+t.id;
+    d.innerHTML=`<div class="dname">${t.icon} ${t.name}</div>
+      <div class="ddesc">${t.desc}</div>
+      <div style="color:#444;font-size:9px;margin-bottom:6px;">Size: ${t.size}</div>
+      <div class="dlprog" id="prog_${t.id}"><div class="dlprogfill" id="fill_${t.id}"></div></div>
+      <button class="dlbtn ${inst?'green':''}" id="btn_${t.id}" ${inst?'disabled':''} onclick="installTool('${t.id}')">${inst?'✓ INSTALLED':'INSTALL'}</button>`;
+    dl.appendChild(d);
+  });
+}
+function installTool(id){
+  const btn=document.getElementById('btn_'+id);
+  btn.disabled=true;btn.textContent='INSTALLING...';
+  let p=0;const fill=document.getElementById('fill_'+id);
+  const iv=setInterval(()=>{
+    p+=Math.random()*15+5;if(p>=100){p=100;fill.style.width='100%';clearInterval(iv);
+      S.tools.push(id);btn.className='dlbtn green';btn.textContent='✓ INSTALLED';
+      notify('Installed: '+id,'');termPrint('[INSTALLED] '+id+' is ready.','ok');
+    } else fill.style.width=p+'%';
+  },200);
+}
+function hasTool(id){return S.tools.includes(id);}
+
+// ===== NOTIFY =====
+function notify(msg,type=''){
+  const c=document.getElementById('notify');
+  const n=document.createElement('div');n.className='notif '+(type||'');n.textContent=msg;
+  c.appendChild(n);setTimeout(()=>n.remove(),3500);
+}
+</script>
+</body>
+</html>
