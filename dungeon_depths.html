@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DUNGEON DEPTHS — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a0f;color:#eee;font-family:"Courier New",monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;}
+canvas{display:block;image-rendering:pixelated;border:2px solid #333;box-shadow:0 0 40px rgba(255,100,0,.15);}
+#ui{display:flex;gap:16px;align-items:center;padding:8px 16px;flex-wrap:wrap;justify-content:center;font-size:12px;max-width:640px;width:100%;}
+#ui span{color:#aaa;}#ui b{color:#fff;}
+.bar-wrap{display:flex;align-items:center;gap:6px;}
+.bar{height:10px;border-radius:3px;overflow:hidden;background:#222;width:80px;}
+.bar-fill{height:100%;border-radius:3px;transition:width .3s;}
+#hpbar .bar-fill{background:linear-gradient(90deg,#c00,#f44);}
+#mpbar .bar-fill{background:linear-gradient(90deg,#006,#44f);}
+#xpbar .bar-fill{background:linear-gradient(90deg,#660,#ff0);}
+a{color:#f84;font-size:11px;text-decoration:none;}a:hover{color:#fc8;}
+</style>
+</head>
+<body>
+<div id="ui">
+  <div class="bar-wrap" id="hpbar"><span>❤️</span><div class="bar"><div class="bar-fill" id="hp-fill" style="width:100%"></div></div><b id="hp-txt">20/20</b></div>
+  <div class="bar-wrap" id="mpbar"><span>💙</span><div class="bar"><div class="bar-fill" id="mp-fill" style="width:100%"></div></div><b id="mp-txt">10/10</b></div>
+  <div class="bar-wrap" id="xpbar"><span>⭐</span><div class="bar"><div class="bar-fill" id="xp-fill" style="width:0%"></div></div><b id="xp-txt">Lv1</b></div>
+  <span>💰<b id="gold-txt">0</b></span>
+  <span>🏆<b id="floor-txt">Floor 1</b></span>
+  <span id="msg-txt" style="color:#f84;"></span>
+  <a href="index.html">← Back</a>
+</div>
+<canvas id="c" width="640" height="480"></canvas>
+
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=640,H=480,TS=32; // tile size
+const COLS=20,ROWS=15;
+
+// ── COLOURS ──
+const COL={
+  wall:'#1a0a00',wallLit:'#3a1a08',floor:'#0d0d0d',floorLit:'#1a1510',
+  player:'#4fc3f7',enemy:'#f44',boss:'#f84',item:'#ffd700',
+  stairs:'#88ff88',door:'#8b4513',
+  fireball:'#ff6600',slash:'#88ccff',
+  ui:'#ffd700',
+};
+
+// ── TILES ──
+const T={WALL:0,FLOOR:1,DOOR:2,STAIRS:3,CHEST:4};
+
+// ── STATE ──
+let map=[],rooms=[],entities=[],items=[];
+let px=1,py=1,floor=1;
+let hp=20,maxHp=20,mp=10,maxMp=10,xp=0,xpNext=50,gold=0,level=1;
+let atk=5,def=2,spells=['Fireball','Heal'];
+let camX=0,camY=0;
+let msgs=[],msgTimer=0;
+let gameState='playing'; // playing, dead, levelup, shop
+let selectedSpell=0;
+let keys={};
+let moveTimer=0;
+let visMap=[];
+let animTick=0;
+let particles=[];
+let shopItems=[];
+let levelUpChoices=[];
+
+// ── MAP GENERATION ──
+function genMap(){
+  map=Array.from({length:ROWS},()=>Array(COLS).fill(T.WALL));
+  visMap=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  rooms=[];entities=[];items=[];
+
+  // Dig rooms
+  const attempts=40;
+  for(let a=0;a<attempts;a++){
+    const rw=3+Math.floor(Math.random()*5);
+    const rh=3+Math.floor(Math.random()*4);
+    const rx=1+Math.floor(Math.random()*(COLS-rw-2));
+    const ry=1+Math.floor(Math.random()*(ROWS-rh-2));
+    // Check overlap
+    let ok=true;
+    for(const r of rooms){
+      if(rx<r.x+r.w+1&&rx+rw>r.x-1&&ry<r.y+r.h+1&&ry+rh>r.y-1){ok=false;break;}
+    }
+    if(ok){
+      for(let y=ry;y<ry+rh;y++) for(let x=rx;x<rx+rw;x++) map[y][x]=T.FLOOR;
+      rooms.push({x:rx,y:ry,w:rw,h:rh});
+    }
+    if(rooms.length>=8) break;
+  }
+
+  // Connect rooms with corridors
+  for(let i=1;i<rooms.length;i++){
+    const a=rooms[i-1],b=rooms[i];
+    const ax=a.x+Math.floor(a.w/2),ay=a.y+Math.floor(a.h/2);
+    const bx=b.x+Math.floor(b.w/2),by=b.y+Math.floor(b.h/2);
+    let cx=ax,cy=ay;
+    while(cx!==bx){cx+=cx<bx?1:-1;if(cy>0&&cy<ROWS-1)map[cy][cx]=T.FLOOR;}
+    while(cy!==by){cy+=cy<by?1:-1;if(cx>0&&cx<COLS-1)map[cy][cx]=T.FLOOR;}
+  }
+
+  // Spawn player in first room
+  const r0=rooms[0];
+  px=r0.x+1;py=r0.y+1;
+
+  // Stairs in last room
+  const rLast=rooms[rooms.length-1];
+  map[rLast.y+1][rLast.x+1]=T.STAIRS;
+
+  // Enemies
+  for(let i=1;i<rooms.length;i++){
+    const r=rooms[i];
+    const isBossRoom=i===rooms.length-1;
+    if(isBossRoom){
+      spawnEnemy(r.x+Math.floor(r.w/2),r.y+Math.floor(r.h/2),true);
+    } else {
+      const n=1+Math.floor(Math.random()*2)+Math.floor(floor/2);
+      for(let j=0;j<Math.min(n,3);j++){
+        const ex=r.x+1+Math.floor(Math.random()*(r.w-2));
+        const ey=r.y+1+Math.floor(Math.random()*(r.h-2));
+        spawnEnemy(ex,ey,false);
+      }
+    }
+  }
+
+  // Items/chests
+  for(let i=0;i<rooms.length;i++){
+    if(Math.random()<0.4){
+      const r=rooms[i];
+      items.push({x:r.x+Math.floor(r.w/2),y:r.y+Math.floor(r.h/2),
+        type:Math.random()<0.5?'hp':'mp',picked:false});
+    }
+  }
+
+  computeVis();
+}
+
+function spawnEnemy(x,y,boss){
+  const hp=boss?(30+floor*15):(8+floor*3+Math.floor(Math.random()*6));
+  entities.push({x,y,hp,maxHp:hp,atk:boss?(4+floor*2):(2+floor),
+    boss,dead:false,moveTimer:0,name:boss?`BOSS Lv${floor}`:`Goblin`,
+    emoji:boss?'👹':'👺',id:Math.random()});
+}
+
+// ── VISIBILITY ──
+function computeVis(){
+  // Simple FOV: mark tiles near player as visible
+  const range=6;
+  for(let dy=-range;dy<=range;dy++){
+    for(let dx=-range;dx<=range;dx++){
+      const nx=px+dx,ny=py+dy;
+      if(nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist>range) continue;
+      // Raycast
+      const steps=Math.ceil(dist*2);
+      let blocked=false;
+      for(let s=1;s<steps;s++){
+        const rx=Math.round(px+dx*s/steps);
+        const ry=Math.round(py+dy*s/steps);
+        if(rx<0||rx>=COLS||ry<0||ry>=ROWS) break;
+        if(map[ry][rx]===T.WALL){blocked=true;break;}
+      }
+      if(!blocked){
+        visMap[ny][nx]=2; // visible
+      }
+    }
+  }
+  // Decay visible to seen
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    if(visMap[y][x]===2&&(x<px-range||x>px+range||y<py-range||y>py+range)) visMap[y][x]=1;
+  }
+}
+
+// ── CAMERA ──
+function updateCam(){
+  const tw=TS,th=TS;
+  const targetX=px*tw-W/2+tw/2;
+  const targetY=py*th-H/2+th/2;
+  camX+=(targetX-camX)*0.15;
+  camY+=(targetY-camY)*0.15;
+  camX=Math.max(0,Math.min(camX,COLS*tw-W));
+  camY=Math.max(0,Math.min(camY,ROWS*th-H));
+}
+
+// ── MOVEMENT ──
+function tryMove(dx,dy){
+  const nx=px+dx,ny=py+dy;
+  if(nx<0||nx>=COLS||ny<0||ny>=ROWS) return;
+  if(map[ny][nx]===T.WALL) return;
+
+  // Attack enemy?
+  const enemy=entities.find(e=>e.x===nx&&e.y===ny&&!e.dead);
+  if(enemy){
+    attackEnemy(enemy);
+    return;
+  }
+
+  // Pick up item?
+  const item=items.find(i=>i.x===nx&&i.y===ny&&!i.picked);
+  if(item){
+    item.picked=true;
+    if(item.type==='hp'){hp=Math.min(maxHp,hp+8);msg('❤️ +8 HP',COL.item);}
+    else{mp=Math.min(maxMp,mp+5);msg('💙 +5 MP',COL.item);}
+    spawnParticles(nx*TS+TS/2-camX,ny*TS+TS/2-camY,COL.item,8);
+  }
+
+  // Stairs?
+  if(map[ny][nx]===T.STAIRS){
+    floor++;
+    msg(`⬇️ Floor ${floor}!`,COL.stairs);
+    genMap();
+    updateHUD();
+    return;
+  }
+
+  px=nx;py=ny;
+  computeVis();
+  enemyTurn();
+}
+
+function attackEnemy(e){
+  const dmg=Math.max(1,atk-Math.floor(Math.random()*2)+Math.floor(Math.random()*3));
+  e.hp-=dmg;
+  spawnParticles(e.x*TS+TS/2-camX,e.y*TS+TS/2-camY,COL.slash,6);
+  msg(`⚔️ Hit ${e.name} for ${dmg}!`,'#88ccff');
+  if(e.hp<=0){
+    e.dead=true;
+    const xpGain=e.boss?(20+floor*10):(5+floor*2);
+    const goldGain=e.boss?(15+floor*5):(2+floor);
+    xp+=xpGain;gold+=goldGain;
+    msg(`💀 Killed! +${xpGain}XP +${goldGain}💰`,COL.item);
+    spawnParticles(e.x*TS+TS/2-camX,e.y*TS+TS/2-camY,'#ff4400',20);
+    checkLevelUp();
+  }
+  enemyTurn();
+}
+
+function enemyTurn(){
+  for(const e of entities){
+    if(e.dead) continue;
+    const dist=Math.abs(e.x-px)+Math.abs(e.y-py);
+    if(dist<=8){
+      // Move toward player
+      if(dist>1){
+        const dx=Math.sign(px-e.x),dy=Math.sign(py-e.y);
+        // Try horizontal then vertical
+        if(dx!==0&&map[e.y][e.x+dx]!==T.WALL&&!entities.find(o=>!o.dead&&o.x===e.x+dx&&o.y===e.y)){
+          e.x+=dx;
+        } else if(dy!==0&&map[e.y+dy]&&map[e.y+dy][e.x]!==T.WALL&&!entities.find(o=>!o.dead&&o.x===e.x&&o.y===e.y+dy)){
+          e.y+=dy;
+        }
+      }
+      // Attack player
+      if(Math.abs(e.x-px)+Math.abs(e.y-py)===1){
+        const dmg=Math.max(0,e.atk-def+Math.floor(Math.random()*2));
+        hp-=dmg;
+        msg(`${e.emoji} ${e.name} hit you for ${dmg}!`,'#ff4444');
+        spawnParticles(px*TS+TS/2-camX,py*TS+TS/2-camY,'#ff0000',4);
+        if(hp<=0){hp=0;gameState='dead';}
+      }
+    }
+  }
+  updateHUD();
+}
+
+function castSpell(){
+  if(selectedSpell===0){ // Fireball
+    if(mp<4){msg('Not enough MP!','#f84');return;}
+    mp-=4;
+    // Hit nearest enemy in range
+    const targets=entities.filter(e=>!e.dead&&Math.sqrt((e.x-px)**2+(e.y-py)**2)<=5);
+    if(targets.length===0){msg('No target!','#f84');return;}
+    const t=targets.sort((a,b)=>(Math.abs(a.x-px)+Math.abs(a.y-py))-(Math.abs(b.x-px)+Math.abs(b.y-py)))[0];
+    const dmg=atk*2+5;
+    t.hp-=dmg;
+    spawnParticles(t.x*TS+TS/2-camX,t.y*TS+TS/2-camY,COL.fireball,15);
+    msg(`🔥 Fireball! ${dmg} dmg!`,COL.fireball);
+    if(t.hp<=0){
+      t.dead=true;xp+=10+floor*3;gold+=3;
+      msg('💀 Burned!',COL.fireball);checkLevelUp();
+    }
+  } else { // Heal
+    if(mp<3){msg('Not enough MP!','#f84');return;}
+    mp-=3;
+    const heal=Math.floor(maxHp*0.3);
+    hp=Math.min(maxHp,hp+heal);
+    spawnParticles(px*TS+TS/2-camX,py*TS+TS/2-camY,'#00ff88',10);
+    msg(`✨ Healed ${heal} HP!`,'#00ff88');
+  }
+  updateHUD();
+}
+
+function checkLevelUp(){
+  if(xp>=xpNext){
+    xp-=xpNext;xpNext=Math.floor(xpNext*1.5);level++;
+    gameState='levelup';
+    levelUpChoices=[
+      {name:'Strength',desc:`ATK +${2+level}`,apply:()=>{atk+=2+level;}},
+      {name:'Vitality',desc:`Max HP +${8+level*2}`,apply:()=>{maxHp+=8+level*2;hp=Math.min(hp+8,maxHp);}},
+      {name:'Arcana',desc:`Max MP +5, spells stronger`,apply:()=>{maxMp+=5;mp=Math.min(mp+5,maxMp);}},
+      {name:'Defense',desc:`DEF +${1+Math.floor(level/2)}`,apply:()=>{def+=1+Math.floor(level/2);}},
+    ];
+    // shuffle, pick 3
+    levelUpChoices.sort(()=>Math.random()-.5);
+    levelUpChoices=levelUpChoices.slice(0,3);
+  }
+}
+
+// ── PARTICLES ──
+function spawnParticles(x,y,color,n){
+  for(let i=0;i<n;i++){
+    particles.push({x,y,vx:(Math.random()-.5)*4,vy:-1-Math.random()*3,
+      color,life:30,maxLife:30,size:2+Math.random()*3});
+  }
+}
+
+// ── MESSAGES ──
+function msg(text,color='#fff'){
+  msgs.unshift({text,color,life:120});
+  if(msgs.length>4) msgs.pop();
+  document.getElementById('msg-txt').textContent=text;
+  document.getElementById('msg-txt').style.color=color;
+}
+
+// ── HUD ──
+function updateHUD(){
+  document.getElementById('hp-fill').style.width=(hp/maxHp*100)+'%';
+  document.getElementById('hp-txt').textContent=`${hp}/${maxHp}`;
+  document.getElementById('mp-fill').style.width=(mp/maxMp*100)+'%';
+  document.getElementById('mp-txt').textContent=`${mp}/${maxMp}`;
+  document.getElementById('xp-fill').style.width=(xp/xpNext*100)+'%';
+  document.getElementById('xp-txt').textContent=`Lv${level}`;
+  document.getElementById('gold-txt').textContent=gold;
+  document.getElementById('floor-txt').textContent=`Floor ${floor}`;
+}
+
+// ── DRAW ──
+function drawTile(x,y,vis){
+  const t=map[y][x];
+  const sx=x*TS-camX,sy=y*TS-camY;
+  if(sx+TS<0||sx>W||sy+TS<0||sy>H) return;
+
+  const dim=vis===1?0.35:1;
+  ctx.globalAlpha=dim;
+
+  if(t===T.WALL){
+    ctx.fillStyle=vis===2?COL.wallLit:COL.wall;
+    ctx.fillRect(sx,sy,TS,TS);
+    // Top highlight
+    ctx.fillStyle='rgba(255,255,255,0.05)';
+    ctx.fillRect(sx,sy,TS,2);
+  } else {
+    ctx.fillStyle=vis===2?COL.floorLit:COL.floor;
+    ctx.fillRect(sx,sy,TS,TS);
+    // Floor dots
+    if(vis===2){
+      ctx.fillStyle='rgba(255,255,255,0.03)';
+      ctx.fillRect(sx+8,sy+8,2,2);
+      ctx.fillRect(sx+22,sy+22,2,2);
+    }
+  }
+
+  if(vis===2){
+    if(t===T.STAIRS){
+      ctx.fillStyle=COL.stairs;
+      ctx.font='20px serif';
+      ctx.textAlign='center';
+      ctx.fillText('▼',sx+TS/2,sy+TS/2+7);
+    }
+  }
+  ctx.globalAlpha=1;
+}
+
+function draw(){
+  ctx.fillStyle='#000';
+  ctx.fillRect(0,0,W,H);
+
+  // Tiles
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    if(visMap[y][x]>0) drawTile(x,y,visMap[y][x]);
+  }
+
+  // Items
+  for(const item of items){
+    if(item.picked||visMap[item.y]?.[item.x]!==2) continue;
+    const sx=item.x*TS-camX,sy=item.y*TS-camY;
+    ctx.font='18px serif';ctx.textAlign='center';
+    ctx.fillText(item.type==='hp'?'❤️':'💙',sx+TS/2,sy+TS/2+6);
+  }
+
+  // Entities
+  for(const e of entities){
+    if(e.dead||visMap[e.y]?.[e.x]!==2) continue;
+    const sx=e.x*TS-camX,sy=e.y*TS-camY;
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,.4)';
+    ctx.beginPath();ctx.ellipse(sx+TS/2,sy+TS-4,8,4,0,0,Math.PI*2);ctx.fill();
+    // Emoji
+    ctx.font=(e.boss?'24px':'18px')+' serif';
+    ctx.textAlign='center';
+    ctx.fillText(e.emoji,sx+TS/2,sy+TS/2+7);
+    // HP bar
+    const bw=TS-4,bh=4;
+    ctx.fillStyle='#300';ctx.fillRect(sx+2,sy+2,bw,bh);
+    ctx.fillStyle=e.boss?'#f84':'#f44';
+    ctx.fillRect(sx+2,sy+2,bw*(e.hp/e.maxHp),bh);
+  }
+
+  // Player
+  {
+    const sx=px*TS-camX,sy=py*TS-camY;
+    // Glow
+    ctx.shadowColor=COL.player;ctx.shadowBlur=12;
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,.4)';
+    ctx.beginPath();ctx.ellipse(sx+TS/2,sy+TS-4,8,4,0,0,Math.PI*2);ctx.fill();
+    ctx.font='20px serif';ctx.textAlign='center';
+    ctx.fillText('🧙',sx+TS/2,sy+TS/2+7);
+    ctx.shadowBlur=0;
+  }
+
+  // Particles
+  particles=particles.filter(p=>p.life>0);
+  for(const p of particles){
+    ctx.globalAlpha=p.life/p.maxLife;
+    ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.life-=2;
+  }
+  ctx.globalAlpha=1;
+
+  // Messages
+  msgs.forEach((m,i)=>{
+    m.life--;
+    ctx.globalAlpha=Math.min(1,m.life/30);
+    ctx.fillStyle=m.color;
+    ctx.font='12px "Courier New"';ctx.textAlign='left';
+    ctx.fillText(m.text,8,H-16-i*18);
+  });
+  msgs=msgs.filter(m=>m.life>0);
+  ctx.globalAlpha=1;
+
+  // Spell bar
+  ctx.fillStyle='rgba(0,0,0,.6)';
+  ctx.fillRect(W-140,H-50,130,42);
+  ctx.strokeStyle='rgba(255,255,255,.1)';ctx.strokeRect(W-140,H-50,130,42);
+  spells.forEach((s,i)=>{
+    const sel=i===selectedSpell;
+    ctx.fillStyle=sel?'rgba(255,215,0,.2)':'rgba(255,255,255,.05)';
+    ctx.fillRect(W-134+i*62,H-44,56,32);
+    if(sel){ctx.strokeStyle='#ffd700';ctx.lineWidth=1;ctx.strokeRect(W-134+i*62,H-44,56,32);}
+    ctx.fillStyle=sel?'#ffd700':'#aaa';
+    ctx.font='10px "Courier New"';ctx.textAlign='center';
+    ctx.fillText(['🔥 F','✨ H'][i],W-106+i*62,H-26);
+    ctx.fillText(['4MP','3MP'][i],W-106+i*62,H-16);
+    ctx.lineWidth=1;
+  });
+  ctx.fillStyle='#666';ctx.font='10px "Courier New"';ctx.textAlign='left';
+  ctx.fillText('[Q/E] spell [F] cast',W-134,H-54);
+
+  // Overlays
+  if(gameState==='dead') drawDead();
+  if(gameState==='levelup') drawLevelUp();
+}
+
+function drawDead(){
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#f44';ctx.font='bold 48px "Courier New"';ctx.textAlign='center';
+  ctx.fillText('YOU DIED',W/2,H/2-20);
+  ctx.fillStyle='#aaa';ctx.font='16px "Courier New"';
+  ctx.fillText(`Floor ${floor} — Level ${level} — ${gold}💰 gold`,W/2,H/2+20);
+  ctx.fillStyle='#ffd700';ctx.font='14px "Courier New"';
+  ctx.fillText('Press R to restart',W/2,H/2+60);
+}
+
+function drawLevelUp(){
+  ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#ffd700';ctx.font='bold 32px "Courier New"';ctx.textAlign='center';
+  ctx.fillText(`⭐ LEVEL UP! Lv${level}`,W/2,H/2-100);
+  ctx.fillStyle='#aaa';ctx.font='13px "Courier New"';
+  ctx.fillText('Choose an upgrade:',W/2,H/2-65);
+  levelUpChoices.forEach((c,i)=>{
+    const bx=W/2-180,by=H/2-40+i*60;
+    ctx.fillStyle='rgba(255,215,0,.1)';ctx.fillRect(bx,by,360,50);
+    ctx.strokeStyle='rgba(255,215,0,.4)';ctx.strokeRect(bx,by,360,50);
+    ctx.fillStyle='#ffd700';ctx.font='bold 14px "Courier New"';ctx.textAlign='left';
+    ctx.fillText(`[${i+1}] ${c.name}`,bx+12,by+20);
+    ctx.fillStyle='#aaa';ctx.font='12px "Courier New"';
+    ctx.fillText(c.desc,bx+12,by+38);
+  });
+}
+
+// ── INPUT ──
+document.addEventListener('keydown',e=>{
+  if(gameState==='dead'){
+    if(e.key==='r'||e.key==='R'){restart();}
+    return;
+  }
+  if(gameState==='levelup'){
+    const n=parseInt(e.key);
+    if(n>=1&&n<=levelUpChoices.length){
+      levelUpChoices[n-1].apply();
+      gameState='playing';
+      msg(`💪 ${levelUpChoices[n-1].name} upgraded!`,'#ffd700');
+      updateHUD();
+    }
+    return;
+  }
+  if(gameState!=='playing') return;
+  e.preventDefault();
+  const mv={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
+    KeyW:[0,-1],KeyS:[0,1],KeyA:[-1,0],KeyD:[1,0]};
+  if(mv[e.code]) tryMove(...mv[e.code]);
+  if(e.code==='KeyQ') selectedSpell=(selectedSpell-1+spells.length)%spells.length;
+  if(e.code==='KeyE') selectedSpell=(selectedSpell+1)%spells.length;
+  if(e.code==='KeyF') castSpell();
+  if(e.code==='Space') castSpell();
+});
+
+function restart(){
+  hp=20;maxHp=20;mp=10;maxMp=10;xp=0;xpNext=50;gold=0;level=1;
+  atk=5;def=2;floor=1;gameState='playing';msgs=[];particles=[];
+  genMap();updateHUD();
+}
+
+// ── LOOP ──
+function loop(){
+  animTick++;
+  updateCam();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+genMap();
+updateHUD();
+loop();
+</script>
+</body>
+</html>
