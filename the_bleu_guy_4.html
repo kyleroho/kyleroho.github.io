@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Minimal Platformer 4: The Red Uprising — by Kyle</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+  canvas { display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  MINIMAL PLATFORMER 4: THE RED UPRISING  — HTML5 Canvas Port
+//  Original Python by Kyle, ported by Claude
+// ═══════════════════════════════════════════════════════════════
+
+const W = 1024, H = 768, FPS = 60;
+const GRAVITY = 0.8, JUMP = -15, DBL_JUMP = -12;
+const PSPEED = 5, ESPEED = 2, BSPEED = 1.5, PROJSPEED = 5;
+
+// Colors
+const C = {
+  WHITE:(r,g,b,a=1)=>`rgba(255,255,255,${a})`,
+  BLACK:'#1e1e1e', RED:'#dc5050', BLUE:'#5096dc',
+  GREEN:'#64c864', YELLOW:'#ffdc64', GRAY:'#787878',
+  DGRAY:'#3c3c3c', PURPLE:'#9664c8', CYAN:'#64dcdc',
+  ORANGE:'#f08c28', BROWN:'#8c5028', PLATFORM:'#1e1e1e'
+};
+
+const canvas = document.getElementById('c');
+canvas.width = W; canvas.height = H;
+const ctx = canvas.getContext('2d');
+
+// ── INPUT ───────────────────────────────────────────────────────
+const keys = {}, keysDown = {}, keysUp = {};
+document.addEventListener('keydown', e => {
+  if (!keys[e.code]) keysDown[e.code] = true;
+  keys[e.code] = true;
+  e.preventDefault();
+});
+document.addEventListener('keyup', e => {
+  keys[e.code] = false;
+  keysUp[e.code] = true;
+});
+
+let mouseX=0, mouseY=0, mouseClick=false;
+canvas.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  mouseX = e.clientX - r.left; mouseY = e.clientY - r.top;
+});
+canvas.addEventListener('click', e => {
+  const r = canvas.getBoundingClientRect();
+  mouseX = e.clientX - r.left; mouseY = e.clientY - r.top;
+  mouseClick = true;
+});
+
+// ── SAVE / LOAD ─────────────────────────────────────────────────
+const SAVE_KEY = 'pfg_mp4_save';
+function saveGame(g) {
+  try {
+    const d = {
+      bankCoins: g.bankCoins, shopCoins: g.shopCoins,
+      levelsBeaten: [...g.levelsBeaten], stickersFound: [...g.stickersFound],
+      maxCombo: g.maxCombo, clickerClicks: g.clickerClicks,
+      clickerCps: g.clickerCps, clickerUpgrades: g.clickerUpgrades,
+      hatEquipped: g.hatEquipped, colorEquipped: g.colorEquipped,
+      hatsOwned: [...g.hatsOwned], currentLevel: g.currentLevel,
+      achievements: [...g.achievementsEarned], totalDeaths: g.totalDeaths,
+      highScore: g.highScore, runsCompleted: g.runsCompleted,
+      dailyCompleted: g.dailyCompleted, dailySeed: g.dailySeed,
+      bestTimes: Object.fromEntries(g.bestTimes)
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(d));
+    return true;
+  } catch(e) { return false; }
+}
+function loadGame(g) {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    g.bankCoins = d.bankCoins||0;
+    g.shopCoins = d.shopCoins||0;
+    g.levelsBeaten = new Set(d.levelsBeaten||[]);
+    g.stickersFound = new Set(d.stickersFound||[]);
+    g.maxCombo = d.maxCombo||0;
+    g.clickerClicks = d.clickerClicks||0;
+    g.clickerCps = d.clickerCps||0;
+    g.clickerUpgrades = d.clickerUpgrades||{auto:0,eyes:0,cape:0,shoes:0,hat:0};
+    g.hatEquipped = d.hatEquipped||null;
+    g.colorEquipped = d.colorEquipped||'#5096dc';
+    g.hatsOwned = new Set(d.hatsOwned||[]);
+    g.currentLevel = d.currentLevel||0;
+    g.achievementsEarned = new Set(d.achievements||[]);
+    g.totalDeaths = d.totalDeaths||0;
+    g.highScore = d.highScore||0;
+    g.runsCompleted = d.runsCompleted||0;
+    if (d.dailySeed === g.dailySeed) g.dailyCompleted = d.dailyCompleted||false;
+    g.bestTimes = new Map(Object.entries(d.bestTimes||{}).map(([k,v])=>[+k,v]));
+    return true;
+  } catch(e) { return false; }
+}
+
+// ── MATH HELPERS ────────────────────────────────────────────────
+const sin = Math.sin, cos = Math.cos, abs = Math.abs, sqrt = Math.sqrt;
+const PI = Math.PI, rand = Math.random;
+function rnd(min, max) { return min + rand()*(max-min); }
+function rndi(min, max) { return Math.floor(rnd(min, max+1)); }
+function lerp(a,b,t) { return a+(b-a)*t; }
+
+// ── DRAWING HELPERS ─────────────────────────────────────────────
+let _t = 0; // global time counter (frames)
+function now() { return _t / FPS; }
+
+function fillRect(x,y,w,h,col,r=0) {
+  ctx.fillStyle = col;
+  if (r>0) { ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.fill(); }
+  else ctx.fillRect(x,y,w,h);
+}
+function strokeRect(x,y,w,h,col,lw=1,r=0) {
+  ctx.strokeStyle=col; ctx.lineWidth=lw;
+  if(r>0){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.stroke();}
+  else ctx.strokeRect(x,y,w,h);
+}
+function fillCircle(x,y,r,col) {
+  ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,r,0,PI*2); ctx.fill();
+}
+function strokeCircle(x,y,r,col,lw=1) {
+  ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.beginPath(); ctx.arc(x,y,r,0,PI*2); ctx.stroke();
+}
+function fillPoly(pts,col) {
+  ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath(); ctx.fill();
+}
+function drawText(txt,x,y,col,size=20,align='left',font='monospace') {
+  ctx.fillStyle=col; ctx.font=`${size}px ${font}`; ctx.textAlign=align;
+  ctx.fillText(txt,x,y);
+}
+function drawTextShadow(txt,x,y,col,size=20,align='center') {
+  ctx.font=`bold ${size}px monospace`; ctx.textAlign=align;
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  ctx.fillText(txt,x+2,y+2);
+  ctx.fillStyle=col;
+  ctx.fillText(txt,x,y);
+}
+function drawGradientBg(r1,g1,b1,r2,g2,b2) {
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,`rgb(${r1},${g1},${b1})`);
+  grad.addColorStop(1,`rgb(${r2},${g2},${b2})`);
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+}
+function alpha(col, a) {
+  // Convert named color + alpha
+  if (col.startsWith('#')) {
+    const r=parseInt(col.slice(1,3),16), g=parseInt(col.slice(3,5),16), b=parseInt(col.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  if (col.startsWith('rgb(')) return col.replace('rgb(','rgba(').replace(')',`,${a})`);
+  return col;
+}
+
+// ── PARTICLE ────────────────────────────────────────────────────
+class Particle {
+  constructor(x,y,vx,vy,col,life) {
+    this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.col=col;
+    this.life=life; this.maxLife=life;
+  }
+  update() { this.x+=this.vx; this.y+=this.vy; this.vy+=0.1; this.life--; }
+  draw() {
+    if(this.life<=0) return;
+    const a = this.life/this.maxLife;
+    ctx.globalAlpha=a;
+    fillCircle(this.x,this.y,3,this.col);
+    ctx.globalAlpha=1;
+  }
+}
+
+// ── MOVING PLATFORM ─────────────────────────────────────────────
+class MovingPlatform {
+  constructor(x,y,w,h,rangeX=0,rangeY=0,speed=2) {
+    this.sx=x; this.sy=y; this.x=x; this.y=y;
+    this.w=w; this.h=h;
+    this.rangeX=rangeX; this.rangeY=rangeY; this.speed=speed;
+    this.dirX=1; this.dirY=1;
+    this.isMoving=true;
+  }
+  get left(){return this.x;}
+  get right(){return this.x+this.w;}
+  get top(){return this.y;}
+  get bottom(){return this.y+this.h;}
+  get width(){return this.w;}
+  get height(){return this.h;}
+  update() {
+    if(this.rangeX>0){
+      this.x+=this.speed*this.dirX;
+      if(abs(this.x-this.sx)>=this.rangeX) this.dirX*=-1;
+    }
+    if(this.rangeY>0){
+      this.y+=this.speed*this.dirY;
+      if(abs(this.y-this.sy)>=this.rangeY) this.dirY*=-1;
+    }
+  }
+  draw(cx,cy) {
+    fillRect(this.x-cx, this.y-cy, this.w, this.h, '#1e1e1e', 2);
+    strokeRect(this.x-cx, this.y-cy, this.w, this.h, '#787878', 2, 2);
+  }
+}
+
+// ── PLAYER ──────────────────────────────────────────────────────
+class Player {
+  constructor(x,y) {
+    this.x=x; this.y=y; this.w=20; this.h=20;
+    this.vx=0; this.vy=0;
+    this.onGround=false; this.canDblJump=true;
+    this.speedBoost=0; this.invincible=0; this.megaJump=0;
+    this.shootCd=0; this.facingRight=true;
+    this.color='#5096dc';
+  }
+  get left(){return this.x;}
+  get right(){return this.x+this.w;}
+  get top(){return this.y;}
+  get bottom(){return this.y+this.h;}
+
+  update(platforms, projectiles) {
+    if(this.speedBoost>0) this.speedBoost--;
+    if(this.invincible>0) this.invincible--;
+    if(this.megaJump>0) this.megaJump--;
+    if(this.shootCd>0) this.shootCd--;
+
+    // Shoot (Ctrl)
+    if((keys['ControlLeft']||keys['ControlRight']) && this.shootCd===0 && projectiles) {
+      let svx=0, svy=0;
+      if(keys['ArrowUp']||keys['KeyW']) svy=-PROJSPEED;
+      else if(keys['ArrowDown']||keys['KeyS']) svy=PROJSPEED;
+      else if(keys['ArrowLeft']||keys['KeyA']){svx=-PROJSPEED;this.facingRight=false;}
+      else if(keys['ArrowRight']||keys['KeyD']){svx=PROJSPEED;this.facingRight=true;}
+      else svx = this.facingRight?PROJSPEED:-PROJSPEED;
+      projectiles.push(new Projectile(this.x+this.w/2, this.y+this.h/2, svx, svy, true));
+      this.shootCd=15;
+    }
+
+    const speed = this.speedBoost>0 ? PSPEED*2 : PSPEED;
+    if(keys['ArrowLeft']||keys['KeyA']){
+      this.vx=Math.max(this.vx-1,-speed); this.facingRight=false;
+    } else if(keys['ArrowRight']||keys['KeyD']){
+      this.vx=Math.min(this.vx+1,speed); this.facingRight=true;
+    } else {
+      this.vx*=0.8; if(abs(this.vx)<0.5) this.vx=0;
+    }
+
+    this.vy+=GRAVITY;
+    this.x+=this.vx;
+    for(const p of platforms) this._collideX(p);
+    this.y+=this.vy;
+    this.onGround=false;
+    for(const p of platforms) this._collideY(p);
+  }
+
+  _collideX(p) {
+    if(this._overlaps(p)) {
+      if(this.vx>0){this.x=p.left-this.w;}
+      else if(this.vx<0){this.x=p.right;}
+      this.vx=0;
+    }
+  }
+  _collideY(p) {
+    if(this._overlaps(p)) {
+      if(this.vy>0){this.y=p.top-this.h;this.vy=0;this.onGround=true;this.canDblJump=true;}
+      else if(this.vy<0){this.y=p.bottom;this.vy=0;}
+    }
+  }
+  _overlaps(p) {
+    return this.x<p.right && this.right>p.left && this.y<p.bottom && this.bottom>p.top;
+  }
+
+  jump() {
+    const jp=this.megaJump>0?JUMP*1.5:JUMP;
+    const dp=this.megaJump>0?DBL_JUMP*1.5:DBL_JUMP;
+    if(this.onGround){this.vy=jp;}
+    else if(this.canDblJump){this.vy=dp;this.canDblJump=false;}
+  }
+
+  draw(cx,cy) {
+    const t=now();
+    const bounce=sin(t*6)*2*(this.onGround?1:0);
+    const px=this.x-cx, py=this.y-cy+bounce;
+    const col=this.color||'#5096dc';
+
+    // Speed trail
+    if(this.speedBoost>0){
+      for(let i=0;i<3;i++){
+        const tx=px-(i+1)*8*(this.facingRight?1:-1);
+        ctx.globalAlpha=0.15-i*0.04;
+        fillRect(tx,py,this.w,this.h,col,4);
+        ctx.globalAlpha=1;
+      }
+    }
+
+    // Invincible flash
+    if(this.invincible>0 && Math.floor(t*8)%2===0){
+      strokeRect(px-2,py-2,this.w+4,this.h+4,'#ffffff',2,4);
+    }
+
+    // Body
+    fillRect(px,py,this.w,this.h,col,4);
+
+    // Eyes
+    const ex=this.facingRight?px+13:px+4;
+    fillCircle(ex,py+6,4,'#ffffff');
+    fillCircle(ex+(this.facingRight?1:-1),py+7,2,'#111111');
+
+    // Legs
+    const walk=abs(this.vx)>0.5?sin(t*18)*3:0;
+    const legCol=this._darken(col,40);
+    fillRect(px+3,py+this.h,7,5+walk,legCol);
+    fillRect(px+10,py+this.h,7,5-walk,legCol);
+
+    // Gun arm
+    fillRect(this.facingRight?px+this.w:px-10,py+8,10,5,'#787878');
+  }
+
+  _darken(hex,amt) {
+    const r=Math.max(0,parseInt(hex.slice(1,3),16)-amt);
+    const g=Math.max(0,parseInt(hex.slice(3,5),16)-amt);
+    const b=Math.max(0,parseInt(hex.slice(5,7),16)-amt);
+    return `rgb(${r},${g},${b})`;
+  }
+}
+
+// ── ENEMIES ─────────────────────────────────────────────────────
+class Enemy {
+  constructor(x,y,patrol) {
+    this.x=x; this.y=y; this.w=18; this.h=18;
+    this.startX=x; this.patrol=patrol; this.dir=1;
+  }
+  get left(){return this.x;} get right(){return this.x+this.w;}
+  get top(){return this.y;} get bottom(){return this.y+this.h;}
+  update(platforms){
+    this.x+=ESPEED*this.dir;
+    if(abs(this.x-this.startX)>=this.patrol) this.dir*=-1;
+    for(const p of platforms){
+      if(this.x<p.right&&this.right>p.left&&this.y<p.bottom&&this.bottom>p.top){
+        this.dir*=-1; this.x-=ESPEED*this.dir*2; break;
+      }
+    }
+  }
+  draw(cx,cy) {
+    const wobble=sin(_t*0.02)*1;
+    fillRect(this.x-cx,this.y-cy+wobble,this.w,this.h,C.RED,3);
+    fillCircle(this.x-cx+5,this.y-cy+5+wobble,2,C.YELLOW);
+    fillCircle(this.x-cx+13,this.y-cy+5+wobble,2,C.YELLOW);
+  }
+}
+
+class FastEnemy {
+  constructor(x,y,patrol){
+    this.x=x;this.y=y;this.w=14;this.h=14;
+    this.startX=x;this.patrol=patrol;this.dir=1;
+  }
+  get left(){return this.x;} get right(){return this.x+this.w;}
+  get top(){return this.y;} get bottom(){return this.y+this.h;}
+  update(platforms){
+    this.x+=ESPEED*2.2*this.dir;
+    if(abs(this.x-this.startX)>=this.patrol) this.dir*=-1;
+  }
+  draw(cx,cy){
+    const wobble=sin(_t*0.03)*2;
+    fillRect(this.x-cx,this.y-cy+wobble,this.w,this.h,C.ORANGE,3);
+    fillCircle(this.x-cx+3,this.y-cy+4+wobble,2,'#ffffff');
+    fillCircle(this.x-cx+9,this.y-cy+4+wobble,2,'#ffffff');
+    // speed line
+    ctx.strokeStyle='#ffb450';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(this.x-cx-6,this.y-cy+7);ctx.lineTo(this.x-cx-1,this.y-cy+7);ctx.stroke();
+  }
+}
+
+class ShieldEnemy {
+  constructor(x,y,patrol){
+    this.x=x;this.y=y;this.w=20;this.h=20;
+    this.startX=x;this.patrol=patrol;this.dir=1;this.health=2;this.hitFlash=0;
+  }
+  get left(){return this.x;} get right(){return this.x+this.w;}
+  get top(){return this.y;} get bottom(){return this.y+this.h;}
+  update(platforms){
+    this.x+=ESPEED*0.8*this.dir;
+    if(abs(this.x-this.startX)>=this.patrol) this.dir*=-1;
+    if(this.hitFlash>0) this.hitFlash--;
+  }
+  draw(cx,cy){
+    const col=this.hitFlash>0?'#ffffff':'#6464c8';
+    fillRect(this.x-cx,this.y-cy,this.w,this.h,col,4);
+    const shieldX=this.dir<0?this.x-cx-8:this.x-cx+this.w-2;
+    const shieldCol=this.health===2?'#96c8ff':'#646464';
+    fillRect(shieldX,this.y-cy-2,8,24,shieldCol,3);
+    strokeRect(shieldX,this.y-cy-2,8,24,'#ffffff',1,3);
+    fillCircle(this.x-cx+5,this.y-cy+7,2,C.YELLOW);
+    fillCircle(this.x-cx+13,this.y-cy+7,2,C.YELLOW);
+    for(let i=0;i<this.health;i++) fillCircle(this.x-cx+4+i*8,this.y-cy-7,3,C.GREEN);
+  }
+}
+
+class JumperEnemy {
+  constructor(x,y,patrol){
+    this.x=x;this.y=y;this.baseY=y;this.w=16;this.h=16;
+    this.startX=x;this.patrol=patrol;this.dir=1;
+    this.phase=rnd(0,PI*2);
+  }
+  get left(){return this.x;} get right(){return this.x+this.w;}
+  get top(){return this.y;} get bottom(){return this.y+this.h;}
+  update(platforms){
+    this.x+=ESPEED*this.dir;
+    if(abs(this.x-this.startX)>=this.patrol) this.dir*=-1;
+    this.phase+=0.08;
+    this.y=this.baseY+sin(this.phase)*22;
+  }
+  draw(cx,cy){
+    fillRect(this.x-cx,this.y-cy,this.w,this.h,'#b43cb4',5);
+    fillCircle(this.x-cx+5,this.y-cy+5,2,'#ffffff');
+    fillCircle(this.x-cx+11,this.y-cy+5,2,'#ffffff');
+  }
+}
+
+// ── BOSS ─────────────────────────────────────────────────────────
+class Boss {
+  constructor(x,y,health=5){
+    this.x=x;this.y=y;this.w=50;this.h=50;
+    this.startX=x;this.health=health;this.maxHealth=health;
+    this.dir=1;this.patrol=200;this.shootTimer=0;
+  }
+  get left(){return this.x;} get right(){return this.x+this.w;}
+  get top(){return this.y;} get bottom(){return this.y+this.h;}
+  update(platforms,player,projectiles){
+    this.x+=BSPEED*this.dir;
+    if(abs(this.x-this.startX)>=this.patrol) this.dir*=-1;
+    for(const p of platforms){
+      if(this.x<p.right&&this.right>p.left&&this.y<p.bottom&&this.bottom>p.top){
+        this.dir*=-1; break;
+      }
+    }
+    this.shootTimer++;
+    if(this.shootTimer>=120){
+      const dx=player.x-this.x, dy=player.y-this.y;
+      const d=sqrt(dx*dx+dy*dy)||1;
+      projectiles.push(new Projectile(this.x+this.w/2,this.y,dx/d*PROJSPEED,dy/d*PROJSPEED,false));
+      this.shootTimer=0;
+    }
+  }
+  draw(cx,cy){
+    const wobble=sin(_t*0.015)*2;
+    fillRect(this.x-cx,this.y-cy+wobble,this.w,this.h,C.PURPLE,4);
+    fillCircle(this.x-cx+15,this.y-cy+15+wobble,5,C.YELLOW);
+    fillCircle(this.x-cx+35,this.y-cy+15+wobble,5,C.YELLOW);
+    // Health bar
+    fillRect(this.x-cx,this.y-cy-10+wobble,this.w,5,'#333');
+    fillRect(this.x-cx,this.y-cy-10+wobble,this.w*(this.health/this.maxHealth),5,C.RED);
+  }
+}
+
+class FlyingBoss {
+  constructor(x,y,health=5){
+    this.x=x;this.y=y;this.w=60;this.h=60;
+    this.health=health;this.maxHealth=health;
+    this.dirX=1;this.speed=3;this.wingFlap=0;
+  }
+  get left(){return this.x;} get right(){return this.x+this.w;}
+  get top(){return this.y;} get bottom(){return this.y+this.h;}
+  update(player){
+    this.x+=this.speed*this.dirX;
+    this.y+=sin(_t*0.01)*2;
+    if(rand()<0.02) this.dirX*=-1;
+    if(this.x<100) this.dirX=1;
+    if(this.x>1400) this.dirX=-1;
+    this.y=Math.max(100,Math.min(500,this.y));
+    this.wingFlap+=0.3;
+  }
+  draw(cx,cy){
+    const wo=sin(this.wingFlap)*15;
+    // Wings
+    fillPoly([[this.x-cx,this.y-cy+30],[this.x-cx-30,this.y-cy+20+wo],[this.x-cx-20,this.y-cy+40+wo]],'#b43232');
+    fillPoly([[this.x-cx+this.w,this.y-cy+30],[this.x-cx+this.w+30,this.y-cy+20+wo],[this.x-cx+this.w+20,this.y-cy+40+wo]],'#b43232');
+    // Body
+    fillRect(this.x-cx,this.y-cy,this.w,this.h,C.RED,4);
+    fillCircle(this.x-cx+18,this.y-cy+20,5,C.YELLOW);
+    fillCircle(this.x-cx+42,this.y-cy+20,5,C.YELLOW);
+    // Evil grin
+    ctx.strokeStyle=C.YELLOW;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(this.x-cx+30,this.y-cy+38,10,0,PI);ctx.stroke();
+    // HP bar
+    fillRect(this.x-cx,this.y-cy-15,this.w,8,'#111');
+    fillRect(this.x-cx,this.y-cy-15,this.w*(this.health/this.maxHealth),8,C.RED);
+    strokeRect(this.x-cx,this.y-cy-15,this.w,8,'#333',1);
+  }
+}
+
+// ── PROJECTILE ──────────────────────────────────────────────────
+class Projectile {
+  constructor(x,y,vx,vy,isPlayer=false){
+    this.x=x;this.y=y;this.vx=vx;this.vy=vy;
+    this.isPlayer=isPlayer;this.w=8;this.h=8;
+  }
+  get left(){return this.x;} get right(){return this.x+this.w;}
+  get top(){return this.y;} get bottom(){return this.y+this.h;}
+  update(){ this.x+=this.vx; this.y+=this.vy; }
+  draw(cx,cy){
+    const col=this.isPlayer?C.CYAN:C.RED;
+    fillCircle(this.x-cx+4,this.y-cy+4,4,col);
+  }
+}
+
+// ── COIN ────────────────────────────────────────────────────────
+class Coin {
+  constructor(x,y){ this.x=x;this.y=y;this.w=16;this.h=16;this.collected=false; }
+  draw(cx,cy){
+    if(this.collected) return;
+    const scale=abs(sin(_t*0.01));
+    const w=this.w*scale;
+    if(w<2) return;
+    ctx.beginPath();
+    ctx.ellipse(this.x-cx+this.w/2,this.y-cy+this.h/2,w/2,this.h/2,0,0,PI*2);
+    ctx.fillStyle=C.YELLOW; ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(this.x-cx+this.w/2,this.y-cy+this.h/2,Math.max(1,(w-4)/2),(this.h-4)/2,0,0,PI*2);
+    ctx.fillStyle='#ffffff'; ctx.fill();
+  }
+}
+
+// ── GEM ─────────────────────────────────────────────────────────
+class Gem {
+  constructor(x,y,type=0){
+    this.x=x;this.y=y;this.w=16;this.h=16;this.collected=false;
+    this.type=type;this.anim=rnd(0,PI*2);
+    const cols=['#64c8ff','#b464ff','#ff64b4','#64ffb4'];
+    this.col=cols[type%4];
+  }
+  draw(cx,cy){
+    if(this.collected) return;
+    this.anim+=0.06;
+    const bob=sin(this.anim)*3;
+    const cx2=this.x-cx+8, cy2=this.y-cy+8+bob;
+    // Glow
+    const grd=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,14);
+    grd.addColorStop(0,alpha(this.col,0.4));
+    grd.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cx2,cy2,14,0,PI*2); ctx.fill();
+    // Diamond
+    fillPoly([[cx2,cy2-7],[cx2+5,cy2],[cx2,cy2+7],[cx2-5,cy2]],this.col);
+    strokeRect(cx2-5,cy2-7,10,14,'#ffffff',1);
+    // Shine
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx2-2,cy2-4);ctx.lineTo(cx2+1,cy2-1);ctx.stroke();
+  }
+}
+
+// ── POWER-UP ────────────────────────────────────────────────────
+class PowerUp {
+  constructor(x,y,type='speed'){
+    this.x=x;this.y=y;this.w=24;this.h=24;
+    this.type=type;this.collected=false;
+    const cols={speed:C.PURPLE,invincible:C.YELLOW,mega_jump:C.GREEN,magnet:C.CYAN};
+    this.col=cols[type]||C.PURPLE;
+  }
+  draw(cx,cy){
+    if(this.collected) return;
+    const pulse=sin(_t*0.01)*3;
+    strokeRect(this.x-cx-2,this.y-cy+pulse-2,this.w+4,this.h+4,this.col,2,3);
+    fillRect(this.x-cx,this.y-cy+pulse,this.w,this.h,this.col,3);
+    const letter={'speed':'S','invincible':'I','mega_jump':'J','magnet':'M'}[this.type]||'P';
+    drawText(letter,this.x-cx+this.w/2,this.y-cy+pulse+16,'#ffffff',14,'center','monospace');
+  }
+}
+
+// ── SPIKE ───────────────────────────────────────────────────────
+class Spike {
+  constructor(x,y){ this.x=x;this.y=y;this.w=20;this.h=20; }
+  draw(cx,cy){
+    fillPoly([[this.x-cx,this.y+this.h-cy],[this.x-cx+10,this.y-cy],[this.x-cx+20,this.y+this.h-cy]],'#787878');
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(this.x-cx,this.y+this.h-cy);
+    ctx.lineTo(this.x-cx+10,this.y-cy);
+    ctx.lineTo(this.x-cx+20,this.y+this.h-cy);
+    ctx.stroke();
+  }
+}
+
+// ── STICKER ─────────────────────────────────────────────────────
+const STICKER_EMOJIS=["⭐","🌟","💎","🔥","❄️","🍄","🎵","🎯","👑","⚡","🌈","🦋","🐉","🏆","💫","🎪","🎭","🎨","🚀","🌙","🍀","🦅","💜","🌺","⚔️","🛡️","🎸","🎺","🎻","🥇"];
+
+// ── NPC ─────────────────────────────────────────────────────────
+const NPC_TIPS=[
+  "CTRL = Shoot enemies!",
+  "SHIFT = Dash and dodge!",
+  "Collect a sticker per level!",
+  "Double jump with SPACE again!",
+  "Gems give +5 coins each!",
+  "Shield guys (blue) need 2 hits!",
+];
+class NPC {
+  constructor(x,y,tipIdx=0){
+    this.x=x;this.y=y;this.w=20;this.h=24;
+    this.tip=NPC_TIPS[tipIdx%NPC_TIPS.length];
+    this.anim=rnd(0,PI*2);
+    this.talking=false;
+  }
+  update(player){
+    this.anim+=0.05;
+    this.talking=abs((this.x+10)-(player.x+10))<120;
+  }
+  draw(cx,cy){
+    const px=this.x-cx, py=this.y-cy;
+    const bob=sin(this.anim*2)*2;
+    fillRect(px,py+bob,20,24,'#3cb450',5);
+    fillCircle(px+14,py+8+bob,3,'#ffffff');
+    fillCircle(px+15,py+9+bob,1,'#000000');
+    if(this.talking){
+      // Exclamation
+      drawText('!',px+7,py+bob-5,C.YELLOW,18,'left','monospace');
+      // Speech bubble
+      const bx=px-140, by=py-50;
+      fillRect(bx,by,180,40,'#ffffff',8);
+      strokeRect(bx,by,180,40,'#3cb450',2,8);
+      ctx.font='12px monospace'; ctx.textAlign='left';
+      const words=this.tip.split(' '); let line=''; let ly=by+14;
+      for(const w of words){
+        const test=line+w+' ';
+        if(ctx.measureText(test).width>168){
+          ctx.fillStyle='#143c14'; ctx.fillText(line.trim(),bx+6,ly); ly+=14; line=w+' ';
+        } else line=test;
+      }
+      ctx.fillStyle='#143c14'; ctx.fillText(line.trim(),bx+6,ly);
+    }
+  }
+}
+
+// ── FLOATY TEXT ─────────────────────────────────────────────────
+class FloatyText {
+  constructor(x,y,text,col='#ffdc64',life=60){
+    this.x=x;this.y=y;this.text=text;this.col=col;this.life=life;this.maxLife=life;this.vy=-2;
+  }
+  update(){ this.y+=this.vy; this.life--; }
+  draw(cx,cy){
+    ctx.globalAlpha=this.life/this.maxLife;
+    drawTextShadow(this.text,this.x-cx,this.y-cy,this.col,20,'left');
+    ctx.globalAlpha=1;
+  }
+}
+
+// ── LEVEL DEFINITIONS ───────────────────────────────────────────
+function makeRect(x,y,w,h){ return {x,y,w,h,left:x,right:x+w,top:y,bottom:y+h,width:w,height:h}; }
+function mp(x,y,w,h,rx=0,ry=0,sp=2){ return new MovingPlatform(x,y,w,h,rx,ry,sp); }
+
+function buildLevels(){
+  const L=[];
+
+  // Level 1
+  L.push({
+    platforms:[makeRect(0,700,300,68),makeRect(350,650,200,20),makeRect(600,600,200,20),makeRect(850,550,200,20),makeRect(1100,500,300,268)],
+    moving:[],
+    enemies:[],
+    npcs:[new NPC(130,670,0),new NPC(610,572,2)],
+    coins:[new Coin(420,620),new Coin(670,570),new Coin(920,520)],
+    powerUps:[],spikes:[],
+    spawn:[50,650],exit:[1200,450],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Level 2
+  L.push({
+    platforms:[makeRect(0,700,250,68),makeRect(300,650,150,20),makeRect(500,600,150,20),makeRect(700,550,150,20),makeRect(900,500,200,268)],
+    moving:[],
+    enemies:[new Enemy(320,630,80)],
+    npcs:[],
+    coins:[new Coin(350,620),new Coin(550,570),new Coin(750,520)],
+    powerUps:[],spikes:[],
+    spawn:[50,650],exit:[1000,450],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Level 3
+  L.push({
+    platforms:[makeRect(0,700,200,68),makeRect(250,650,150,20),makeRect(600,550,150,20),makeRect(950,450,200,318)],
+    moving:[mp(400,600,120,15,150,0,2)],
+    enemies:[],npcs:[],
+    coins:[new Coin(300,620),new Coin(650,520),new Coin(1000,420)],
+    powerUps:[new PowerUp(450,570,'speed')],spikes:[],
+    spawn:[50,650],exit:[1050,400],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Level 4
+  L.push({
+    platforms:[makeRect(0,700,200,68),makeRect(250,650,150,20),makeRect(450,550,150,20),makeRect(650,500,150,20),makeRect(850,400,150,20),makeRect(1050,350,250,418)],
+    moving:[],
+    enemies:[new Enemy(670,480,100)],npcs:[],
+    coins:[new Coin(300,620),new Coin(500,520),new Coin(700,470),new Coin(900,370),new Coin(1100,320)],
+    powerUps:[],
+    spikes:[new Spike(550,680),new Spike(570,680)],
+    spawn:[50,650],exit:[1150,300],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Level 5 - Flying Boss
+  L.push({
+    platforms:[makeRect(0,700,200,68),makeRect(250,650,900,118)],
+    moving:[mp(400,200,100,15,0,350,3),mp(650,250,100,15,0,350,3),mp(900,200,100,15,0,350,3)],
+    enemies:[],npcs:[],
+    coins:[new Coin(450,300),new Coin(700,300),new Coin(950,300)],
+    powerUps:[new PowerUp(575,620,'mega_jump')],spikes:[],
+    spawn:[50,650],exit:[700,620],boss:null,flyingBoss:new FlyingBoss(650,300,5),world:'normal'
+  });
+
+  // Level 6
+  L.push({
+    platforms:[makeRect(0,700,200,68),makeRect(250,650,130,20),makeRect(450,620,130,20),makeRect(650,590,130,20),makeRect(850,560,130,20),makeRect(1050,530,130,20),makeRect(1250,500,130,20),makeRect(1450,470,130,20),makeRect(1650,440,130,20),makeRect(1850,410,300,358)],
+    moving:[],
+    enemies:[new Enemy(270,622,80),new FastEnemy(670,562,120),new Enemy(1070,502,80),new FastEnemy(1470,442,120)],
+    npcs:[],
+    coins:[new Coin(290,620),new Coin(490,590),new Coin(690,560),new Coin(890,530),new Coin(1090,500),new Coin(1290,470),new Coin(1490,440),new Coin(1690,410)],
+    powerUps:[new PowerUp(890,530,'speed')],
+    spikes:[new Spike(370,680),new Spike(570,680),new Spike(970,680),new Spike(1170,680),new Spike(1570,680)],
+    spawn:[50,640],exit:[1950,380],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Level 7
+  L.push({
+    platforms:[makeRect(0,700,200,68),makeRect(220,590,130,20),makeRect(420,540,130,20),makeRect(620,490,130,20),makeRect(820,540,130,20),makeRect(1020,490,130,20),makeRect(1220,440,130,20),makeRect(1420,490,130,20),makeRect(1620,350,300,418)],
+    moving:[mp(320,460,110,15,0,100,2),mp(720,420,110,15,0,100,2),mp(1120,380,110,15,0,100,2)],
+    enemies:[new Enemy(240,562,80),new Enemy(640,462,80),new Enemy(1240,412,80)],npcs:[],
+    coins:[new Coin(270,560),new Coin(450,510),new Coin(650,460),new Coin(850,510),new Coin(1050,460),new Coin(1250,410)],
+    powerUps:[new PowerUp(650,460,'mega_jump')],
+    spikes:(()=>{const s=[];for(let x=200;x<1630;x+=60)s.push(new Spike(x,682));return s;})(),
+    spawn:[50,650],exit:[1720,318],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Level 8
+  L.push({
+    platforms:[makeRect(0,700,300,68),makeRect(40,620,180,20),makeRect(240,545,180,20),makeRect(40,470,180,20),makeRect(240,395,180,20),makeRect(40,320,180,20),makeRect(240,245,180,20),makeRect(40,170,180,20),makeRect(350,100,150,20)],
+    moving:[mp(180,580,130,15,100,0,2),mp(140,430,130,15,100,0,2),mp(180,275,130,15,100,0,2)],
+    enemies:[new Enemy(260,415,80),new Enemy(60,190,80)],npcs:[],
+    coins:[new Coin(80,590),new Coin(270,515),new Coin(80,440),new Coin(270,365),new Coin(80,290),new Coin(270,215),new Coin(80,140)],
+    powerUps:[new PowerUp(270,215,'invincible'),new PowerUp(80,440,'mega_jump')],
+    spikes:[new Spike(180,680),new Spike(200,680),new Spike(220,680)],
+    spawn:[50,640],exit:[370,70],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Level 9
+  L.push({
+    platforms:[makeRect(0,700,180,68),makeRect(230,640,90,20),makeRect(390,590,90,20),makeRect(550,540,90,20),makeRect(710,590,90,20),makeRect(870,540,90,20),makeRect(1030,490,90,20),makeRect(1190,540,90,20),makeRect(1350,490,90,20),makeRect(1510,440,90,20),makeRect(1670,390,90,20),makeRect(1830,340,280,428)],
+    moving:[mp(460,400,90,15,80,0,3),mp(920,380,90,15,80,0,3),mp(1380,360,90,15,80,0,3)],
+    enemies:[new Enemy(250,612,60),new Enemy(570,512,60),new Enemy(890,512,60),new Enemy(1210,512,60),new Enemy(1530,412,60)],npcs:[],
+    coins:[new Coin(250,610),new Coin(410,560),new Coin(570,510),new Coin(730,560),new Coin(890,510),new Coin(1050,460),new Coin(1210,510),new Coin(1370,460),new Coin(1530,410)],
+    powerUps:[new PowerUp(1050,460,'speed')],
+    spikes:(()=>{const s=[];for(let x=180;x<1830;x+=30)s.push(new Spike(x,680));return s;})(),
+    spawn:[50,640],exit:[1920,310],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Level 10 - Boss
+  L.push({
+    platforms:[makeRect(0,700,200,68),makeRect(200,650,900,18),makeRect(300,500,150,20),makeRect(650,420,150,20)],
+    moving:[],
+    enemies:[],npcs:[],
+    coins:[new Coin(350,470),new Coin(700,390)],
+    powerUps:[new PowerUp(400,620,'invincible'),new PowerUp(750,620,'mega_jump')],spikes:[],
+    spawn:[50,630],exit:[950,620],boss:new Boss(700,600,5),flyingBoss:null,world:'normal'
+  });
+
+  // Level 11 - Gauntlet
+  L.push({
+    platforms:[makeRect(0,700,200,68),makeRect(220,650,110,20),makeRect(400,600,110,20),makeRect(580,550,110,20),makeRect(760,500,110,20),makeRect(940,450,110,20),makeRect(1120,400,110,20),makeRect(1300,350,110,20),makeRect(1480,300,110,20),makeRect(1660,250,110,20),makeRect(1840,200,280,568)],
+    moving:[mp(490,350,100,15,120,0,2),mp(1030,280,100,15,120,0,2)],
+    enemies:[new Enemy(240,622,80),new FastEnemy(420,572,100),new ShieldEnemy(600,522,80),new JumperEnemy(780,472,80),new Enemy(960,422,80),new ShieldEnemy(1140,372,80),new FastEnemy(1320,322,100),new JumperEnemy(1500,272,80)],npcs:[],
+    coins:[new Coin(250,620),new Coin(430,570),new Coin(610,520),new Coin(790,470),new Coin(970,420),new Coin(1150,370),new Coin(1330,320),new Coin(1510,270),new Coin(1680,220)],
+    powerUps:[new PowerUp(790,470,'invincible')],
+    spikes:[new Spike(340,680),new Spike(520,680),new Spike(700,680),new Spike(880,680),new Spike(1060,680),new Spike(1240,680),new Spike(1420,680),new Spike(1600,680)],
+    spawn:[50,640],exit:[1930,170],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Levels 12-15: generate
+  const l12={
+    platforms:[makeRect(0,700,200,68),makeRect(220,600,120,20),makeRect(420,500,120,20),makeRect(620,600,120,20),makeRect(820,500,120,20),makeRect(1020,400,120,20),makeRect(1220,500,120,20),makeRect(1420,400,120,20),makeRect(1620,300,120,20),makeRect(1820,400,120,20),makeRect(2020,300,280,468)],
+    moving:[mp(320,350,100,15,0,180,2),mp(720,350,100,15,0,180,2),mp(1120,280,100,15,0,180,2),mp(1720,250,100,15,0,180,2)],
+    enemies:[new Enemy(240,572,90),new Enemy(640,572,90),new Enemy(1040,372,90),new Enemy(1640,272,90),new Enemy(1840,372,90)],npcs:[],
+    coins:[new Coin(240,570),new Coin(440,470),new Coin(640,570),new Coin(840,470),new Coin(1040,370),new Coin(1240,470),new Coin(1440,370),new Coin(1640,270),new Coin(1840,370)],
+    powerUps:[new PowerUp(1040,370,'speed'),new PowerUp(1640,270,'mega_jump')],
+    spikes:[new Spike(360,680),new Spike(760,680),new Spike(1160,680),new Spike(1560,680),new Spike(1960,680)],
+    spawn:[50,640],exit:[2100,270],boss:null,flyingBoss:null,world:'normal'
+  };
+  L.push(l12);
+
+  const spikes13=(()=>{const s=[];for(let x=180;x<1950;x+=50)s.push(new Spike(x,680));return s;})();
+  L.push({
+    platforms:[makeRect(0,700,180,68),makeRect(220,580,100,20),makeRect(550,500,100,20),makeRect(900,420,100,20),makeRect(1250,340,100,20),makeRect(1600,260,100,20),makeRect(1950,180,280,588)],
+    moving:[mp(380,280,110,15,140,0,4),mp(720,280,110,15,140,0,4),mp(1060,280,110,15,140,0,4),mp(1400,280,110,15,140,0,4)],
+    enemies:[new Enemy(240,552,90),new Enemy(570,472,90),new Enemy(920,392,90),new Enemy(1270,312,90),new Enemy(1620,232,90)],npcs:[],
+    coins:[new Coin(240,550),new Coin(430,380),new Coin(570,470),new Coin(770,380),new Coin(920,390),new Coin(1110,380),new Coin(1270,310),new Coin(1620,230)],
+    powerUps:[new PowerUp(770,360,'speed'),new PowerUp(1110,360,'speed')],spikes:spikes13,
+    spawn:[50,640],exit:[2040,150],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  const spikes14=(()=>{const s=[];for(let x=160;x<1800;x+=25)s.push(new Spike(x,680));return s;})();
+  L.push({
+    platforms:[makeRect(0,700,160,68),makeRect(200,645,90,20),makeRect(360,595,90,20),makeRect(520,545,90,20),makeRect(680,495,90,20),makeRect(840,445,90,20),makeRect(1000,395,90,20),makeRect(1160,345,90,20),makeRect(1320,295,90,20),makeRect(1480,245,90,20),makeRect(1640,195,90,20),makeRect(1800,145,280,623)],
+    moving:[mp(290,380,80,15,100,0,3),mp(770,320,80,15,0,160,3),mp(1250,250,80,15,100,0,3),mp(1570,160,80,15,0,120,3)],
+    enemies:[new Enemy(220,617,70),new Enemy(380,567,70),new Enemy(540,517,70),new Enemy(700,467,70),new Enemy(860,417,70),new Enemy(1020,367,70),new Enemy(1180,317,70),new Enemy(1340,267,70),new Enemy(1500,217,70)],npcs:[],
+    coins:[new Coin(220,615),new Coin(380,565),new Coin(540,515),new Coin(700,465),new Coin(860,415),new Coin(1020,365),new Coin(1180,315),new Coin(1340,265),new Coin(1500,215),new Coin(1660,165)],
+    powerUps:[new PowerUp(700,465,'speed'),new PowerUp(1180,315,'invincible')],spikes:spikes14,
+    spawn:[50,640],exit:[1880,115],boss:null,flyingBoss:null,world:'normal'
+  });
+
+  // Level 15 - Final Boss
+  L.push({
+    platforms:[makeRect(0,700,200,68),makeRect(250,660,1000,108)],
+    moving:[mp(400,200,100,15,0,380,3),mp(600,250,100,15,0,380,3),mp(800,200,100,15,0,380,3),mp(1000,250,100,15,0,380,3)],
+    enemies:[],npcs:[],
+    coins:[new Coin(450,300),new Coin(650,300),new Coin(850,300),new Coin(1050,300)],
+    powerUps:[new PowerUp(500,620,'mega_jump'),new PowerUp(800,620,'invincible')],spikes:[],
+    spawn:[50,630],exit:[1050,615],boss:null,flyingBoss:new FlyingBoss(700,300,8),world:'normal'
+  });
+
+  // Woods world levels 16-30
+  for(let i=16;i<=30;i++){
+    const platforms=[makeRect(0,700,200,68)];
+    let x=250,y=650;
+    const num=15+(i-16);
+    const pattern=(i-16)%5;
+    for(let j=0;j<num;j++){
+      const pw=pattern!==2?120:80;
+      platforms.push(makeRect(x,y,pw,20));
+      if(pattern===0){x+=180;y-=j%2===0?60:-20;}
+      else if(pattern===1){x+=200;y-=j%3===0?70:(j%3===1?50:-40);}
+      else if(pattern===2){x+=220;y-=j%2===0?50:-30;}
+      else if(pattern===3){x+=240;y-=j%2===0?55:-35;}
+      else{x+=190+(j%3)*10;y-=j%2===0?65:-25;}
+      if(y<250)y=350; if(y>650)y=550;
+    }
+    platforms.push(makeRect(x,y,300,768-y));
+
+    const moving=[];
+    if(i%3===1) moving.push(mp(500,500,100,15,150,0,2));
+    if(i%4===2) moving.push(mp(800,400,100,15,0,200,2));
+
+    const enemies=[];
+    const ne=Math.floor((i-15)/2)+1;
+    for(let k=0;k<ne;k++){
+      const ex=300+k*350, ey=630-(k%4)*80;
+      const et=(i+k)%4;
+      if(et===0) enemies.push(new Enemy(ex,ey,80));
+      else if(et===1) enemies.push(new FastEnemy(ex,ey,100));
+      else if(et===2) enemies.push(new ShieldEnemy(ex,ey,70));
+      else enemies.push(new JumperEnemy(ex,ey,90));
+    }
+
+    const coins=[];
+    const nc=Math.min(10,i-14);
+    for(let j=0;j<nc;j++) coins.push(new Coin(300+j*220,620-(j%5)*60));
+
+    const powerUps=[];
+    if(i%3===0) powerUps.push(new PowerUp(x-400,y-80,['speed','invincible','mega_jump'][Math.floor(i/3)%3]));
+
+    const spikes=[];
+    const nsg=Math.floor((i-15)/3);
+    for(let k=0;k<nsg;k++){
+      const sx=400+k*400;
+      spikes.push(new Spike(sx,680),new Spike(sx+20,680));
+      if(i>25) spikes.push(new Spike(sx+40,680));
+    }
+
+    L.push({platforms,moving,enemies,npcs:[],coins,powerUps,spikes,
+      spawn:[50,650],exit:[x+100,y-50],boss:null,flyingBoss:null,world:'woods'});
+  }
+
+  return L;
+}
+
+const LEVEL_NAMES={
+  0:"Level 1 — First Steps",1:"Level 2 — Stairway",2:"Level 3 — The Climb",3:"Level 4 — Danger Zone",
+  4:"Level 5 — FLYING BOSS",5:"Level 6 — The Long Road",6:"Level 7 — The Pit",7:"Level 8 — The Tower",
+  8:"Level 9 — Chaos Bridge",9:"Level 10 — BOSS FIGHT",10:"Level 11 — The Gauntlet",
+  11:"Level 12 — The Maze",12:"Level 13 — Speed Run",13:"Level 14 — All In",14:"Level 15 — FINAL BOSS",
+  15:"Level 16 — Into the Woods",16:"Level 17 — Dark Trees",17:"Level 18 — The Deep",
+  18:"Level 19 — Lost Path",19:"Level 20 — Halfway",20:"Level 21 — Ancient Grove",
+  21:"Level 22 — Twisted Roots",22:"Level 23 — The Canopy",23:"Level 24 — Thorns",
+  24:"Level 25 — Red Guy Lurks",25:"Level 26 — Shadow Walk",26:"Level 27 — The Fortress",
+  27:"Level 28 — Almost There",28:"Level 29 — Final Approach",29:"Level 30 — RED GUY'S LAIR"
+};
+
+const ACHIEVEMENTS={
+  first_blood:['First Blood','Kill your first enemy','🗡️'],
+  combo3:['Hat Trick','Get a x3 combo','🎩'],
+  combo10:['UNSTOPPABLE','Get a x10 combo','💥'],
+  all_coins_1:['Coin Collector','Grab every coin in a level','💰'],
+  speed_run:['Speedrunner','Beat a level in under 15 sec','⚡'],
+  no_damage:['Ghost Run','Beat a level without dying','👻'],
+  sticker_5:['Sticker Fan','Collect 5 stickers','⭐'],
+  sticker_all:['Sticker Master','Collect all 30 stickers','🌟'],
+  boss1:['Boss Slayer','Defeat your first boss','👑'],
+  boss_all:['Champion','Defeat all bosses','🏆'],
+  dasher:['Speed Demon','Dash 20 times','💨'],
+  level15:['Halfway There','Beat level 15','🌲'],
+  level30:['The End?','Beat all 30 levels','🎖️'],
+  hat_owner:['Fashion Icon','Own your first hat','🎩'],
+  all_hats:['Hat Collector','Own all 5 hats','👒'],
+  wowy:['Wowy','Defeat the final boss','🤩'],
+};
+
+const HATS=[
+  {name:'Party Hat',cost:30,key:'party'},
+  {name:'Crown',cost:80,key:'crown'},
+  {name:'Wizard Hat',cost:60,key:'wizard'},
+  {name:'Cowboy',cost:50,key:'cowboy'},
+  {name:'Halo',cost:100,key:'halo'},
+];
+
+// ── GAME STATE ───────────────────────────────────────────────────
+class Game {
+  constructor() {
+    this.levels = buildLevels();
+    this.state = 'intro'; // intro, menu, playing, gameover, win
+    this.introTimer = 0;
+    this.menuOption = 0;
+    this.startLevel = 1;
+
+    // Persistent
+    this.bankCoins = 0;
+    this.shopCoins = 0;
+    this.levelsBeaten = new Set();
+    this.stickersFound = new Set();
+    this.maxCombo = 0;
+    this.clickerClicks = 0;
+    this.clickerCps = 0;
+    this.clickerUpgrades = {auto:0,eyes:0,cape:0,shoes:0,hat:0};
+    this.hatEquipped = null;
+    this.colorEquipped = '#5096dc';
+    this.hatsOwned = new Set();
+    this.currentLevel = 0;
+    this.achievementsEarned = new Set();
+    this.totalDeaths = 0;
+    this.highScore = 0;
+    this.runsCompleted = 0;
+    this.bestTimes = new Map();
+    this.shopSpent = 0;
+
+    // Daily
+    const now2 = new Date();
+    this.dailySeed = Math.floor(now2.getTime()/(1000*60*60*24));
+    this.dailyLevel = this.dailySeed%30;
+    this.dailyGoal = ['no_damage','speed_run','all_coins'][Math.floor(this.dailySeed/30)%3];
+    this.dailyCompleted = false;
+    this.dailyReward = 25;
+
+    // Level state
+    this.platforms = [];
+    this.movingPlatforms = [];
+    this.enemies = [];
+    this.npcs = [];
+    this.coins = [];
+    this.gems = [];
+    this.powerUps = [];
+    this.spikes = [];
+    this.projectiles = [];
+    this.particles = [];
+    this.floatyTexts = [];
+    this.boss = null;
+    this.flyingBoss = null;
+    this.exitRect = null;
+    this.player = null;
+    this.bossDefeated = false;
+
+    this.camX = 0; this.camY = 0;
+    this.coinsCollected = 0;
+    this.totalCoins = 0;
+    this.playerHealth = 3;
+    this.playerMaxHealth = 3;
+    this.invincibilityFrames = 0;
+    this.gameOver = false;
+    this.gameOverTimer = 0;
+    this.levelTimer = 0;
+    this.levelNoDeath = true;
+    this.runCoins = 0;
+
+    this.combo = 0;
+    this.comboTimer = 0;
+    this.dashCd = 0;
+    this.dashTimer = 0;
+    this.shakeTimer = 0;
+    this.shakeIntensity = 0;
+    this.coinMagnet = 0;
+    this.sessionKills = 0;
+    this.dashCount = 0;
+
+    this.levelBannerTimer = 0;
+    this.levelBannerName = '';
+    this.stickerRect = null;
+    this.stickerAnim = 0;
+
+    this.saveNotif = 0;
+    this.paused = false;
+    this.pauseOption = 0;
+
+    this.shopOpen = false;
+    this.shopTab = 0;
+    this.mapOpen = false;
+    this.achievementsOpen = false;
+
+    this.achievementPopups = [];
+    this.cheatBuffer = [];
+
+    // Clouds
+    this.clouds = Array.from({length:14},(_,i)=>({
+      x:i*280+rndi(0,200), y:80+rndi(0,120),
+      w:80+rndi(0,80), speed:0.3+rnd(0,0.3),
+      layer:rndi(0,2)
+    }));
+
+    this.menuGrad = 0;
+    this.menuParticles = [];
+
+    loadGame(this);
+    this.loadLevel(this.currentLevel);
+  }
+
+  loadLevel(idx) {
+    if(idx>=this.levels.length){ this.state='win'; return; }
+    const lv=this.levels[idx];
+    this.currentLevel=idx;
+
+    // Deep copy enemies/coins/etc so re-loading works
+    this.platforms=[...lv.platforms];
+    this.movingPlatforms=lv.moving.map(m=>new MovingPlatform(m.sx,m.sy,m.w,m.h,m.rangeX,m.rangeY,m.speed));
+    this.platforms=[...lv.platforms,...this.movingPlatforms];
+    this.enemies=lv.enemies.map(e=>{
+      if(e instanceof FastEnemy) return new FastEnemy(e.startX,e.y,e.patrol);
+      if(e instanceof ShieldEnemy) return new ShieldEnemy(e.startX,e.y,e.patrol);
+      if(e instanceof JumperEnemy) return new JumperEnemy(e.startX,e.baseY||e.y,e.patrol);
+      return new Enemy(e.startX,e.y,e.patrol);
+    });
+    this.npcs=(lv.npcs||[]).map(n=>new NPC(n.x,n.y));
+    this.coins=lv.coins.map(c=>new Coin(c.x,c.y));
+    this.powerUps=lv.powerUps.map(p=>new PowerUp(p.x,p.y,p.type));
+    this.spikes=lv.spikes.map(s=>new Spike(s.x,s.y));
+    this.boss=lv.boss?new Boss(lv.boss.x,lv.boss.y,lv.boss.maxHealth||5):null;
+    this.flyingBoss=lv.flyingBoss?new FlyingBoss(lv.flyingBoss.x,lv.flyingBoss.y,lv.flyingBoss.maxHealth||5):null;
+
+    this.player=new Player(...lv.spawn);
+    this.player.color=this.colorEquipped;
+    this.exitRect={x:lv.exit[0],y:lv.exit[1],w:40,h:40,left:lv.exit[0],right:lv.exit[0]+40,top:lv.exit[1],bottom:lv.exit[1]+40};
+    this.projectiles=[];
+    this.particles=[];
+    this.floatyTexts=[];
+    this.coinsCollected=0;
+    this.totalCoins=this.coins.length;
+    this.bossDefeated=false;
+    this.levelTimer=0;
+    this.invincibilityFrames=60;
+    this.gameOver=false;
+    this.gameOverTimer=0;
+    this.levelNoDeath=true;
+    this.playerHealth=Math.min(this.playerMaxHealth,(this.playerHealth||3)+1);
+
+    // Sticker placement on a real platform
+    const plats=lv.platforms;
+    const seed=idx*137+42;
+    const pick=Math.max(1,Math.min(plats.length-1,seed%Math.max(1,plats.length-1)));
+    const p=plats[pick];
+    this.stickerRect={x:p.x+p.w/2-12,y:p.y-30,w:24,h:24};
+    this.stickerRect.left=this.stickerRect.x;
+    this.stickerRect.right=this.stickerRect.x+this.stickerRect.w;
+    this.stickerRect.top=this.stickerRect.y;
+    this.stickerRect.bottom=this.stickerRect.y+this.stickerRect.h;
+    this.stickerAnim=0;
+
+    // Gems
+    this.gems=[];
+    const gx=lv.exit[0]-150, gy=lv.exit[1]-60;
+    this.gems.push(new Gem(gx,gy,idx%4));
+    if(idx%3===0&&plats.length>3){
+      const gp=plats[Math.floor(plats.length/2)];
+      this.gems.push(new Gem(gp.x+gp.w/2-8,gp.y-30,(idx+2)%4));
+    }
+
+    this.levelBannerTimer=180;
+    this.levelBannerName=LEVEL_NAMES[idx]||`Level ${idx+1}`;
+  }
+
+  unlockAchievement(id) {
+    if(this.achievementsEarned.has(id)||!ACHIEVEMENTS[id]) return;
+    this.achievementsEarned.add(id);
+    const [name,desc,icon]=ACHIEVEMENTS[id];
+    this.achievementPopups.push({name,desc,icon,timer:240});
+    this.shopCoins+=10;
+    saveGame(this);
+  }
+
+  checkAchievements() {
+    if(this.levelsBeaten.has(14)) this.unlockAchievement('level15');
+    if(this.levelsBeaten.size>=30) this.unlockAchievement('level30');
+    if(this.levelsBeaten.has(9)||this.levelsBeaten.has(14)||this.levelsBeaten.has(29)) this.unlockAchievement('boss1');
+    if(this.levelsBeaten.has(9)&&this.levelsBeaten.has(14)&&this.levelsBeaten.has(29)) this.unlockAchievement('boss_all');
+    if(this.stickersFound.size>=5) this.unlockAchievement('sticker_5');
+    if(this.stickersFound.size>=30) this.unlockAchievement('sticker_all');
+    if(this.maxCombo>=3) this.unlockAchievement('combo3');
+    if(this.maxCombo>=10) this.unlockAchievement('combo10');
+    if(this.dashCount>=20) this.unlockAchievement('dasher');
+    if(this.hatsOwned.size>=1) this.unlockAchievement('hat_owner');
+    if(this.hatsOwned.size>=5) this.unlockAchievement('all_hats');
+  }
+
+  // ── DRAWING ─────────────────────────────────────────────────────
+
+  drawBackground() {
+    const isWoods=this.currentLevel>=15&&this.state==='playing';
+    if(isWoods) {
+      drawGradientBg(60,80,40, 90,140,60);
+      // Tree silhouettes
+      for(let i=0;i<15;i++){
+        const x=((i*120-this.camX*0.2)%1800+1800)%1800-50;
+        const y=H-180;
+        fillRect(x+40,y,20,180,'#3c2814');
+        fillPoly([[x+50,y-40],[x+10,y],[x+90,y]],'#285020');
+      }
+      // Leaves
+      for(let i=0;i<30;i++){
+        const px=((i*213-this.camX*0.3)%W+W)%W;
+        const py=((i*137+_t*0.05)*1)%H;
+        ctx.fillStyle='#9664320';
+        ctx.fillStyle='rgba(150,100,50,0.6)';
+        ctx.beginPath(); ctx.ellipse(px,py,4,2.5,0,0,PI*2); ctx.fill();
+      }
+    } else {
+      drawGradientBg(20,20,60, 40,50,140);
+      // Stars
+      for(let i=0;i<50;i++){
+        const sx=((i*157-this.camX*0.05)%W+W)%W;
+        const sy=(i*97)%(H/2);
+        const br=150+(i*31)%105;
+        fillCircle(sx,sy,1,`rgb(${br},${br},${br})`);
+      }
+      // Mountains
+      for(let i=0;i<15;i++){
+        const x=((i*120-this.camX*0.2)%1800+1800)%1800;
+        const y=H-200+sin(i*0.5)*50;
+        fillPoly([[x,y],[x+60,H-100],[x+120,H-100]],'#3c3250');
+      }
+      this.drawClouds();
+    }
+  }
+
+  drawClouds() {
+    const t=now();
+    for(const cloud of this.clouds){
+      cloud.x-=cloud.speed;
+      if(cloud.x<-cloud.w-100) cloud.x=W+100;
+      const alpha=[0.15,0.27,0.4][cloud.layer];
+      ctx.globalAlpha=alpha;
+      for(const [bx,by,br] of [[cloud.w/2,20,20],[cloud.w/3,20,15],[2*cloud.w/3,20,17],[cloud.w/4,24,12],[3*cloud.w/4,22,13]]){
+        fillCircle(cloud.x+bx,cloud.y+by,br,'#ffffff');
+      }
+      ctx.globalAlpha=1;
+    }
+  }
+
+  drawHat(key,px,py) {
+    const s=ctx;
+    if(key==='party'){
+      fillPoly([[px+10,py-18],[px+2,py+2],[px+18,py+2]],'#ff50c8');
+      fillCircle(px+10,py-18,3,C.YELLOW);
+      [[px+4,C.RED],[px+10,C.YELLOW],[px+16,C.CYAN]].forEach(([cx2,c])=>fillCircle(cx2,py+2,3,c));
+    } else if(key==='crown'){
+      const pts=[[px+2,py],[px+2,py-10],[px+6,py-6],[px+10,py-14],[px+14,py-6],[px+18,py-10],[px+18,py]];
+      fillPoly(pts,C.YELLOW);
+      strokeRect(px+2,py-14,16,14,'#b48c00',1);
+      [px+4,px+10,px+16].forEach(cx2=>fillCircle(cx2,py-4,2,C.RED));
+    } else if(key==='wizard'){
+      fillPoly([[px+10,py-22],[px+2,py],[px+18,py]],C.PURPLE);
+      ctx.beginPath();ctx.ellipse(px+10,py-2,10,5,0,0,PI*2);ctx.fillStyle='#782890';ctx.fill();
+      fillCircle(px+10,py-22,3,C.YELLOW);
+    } else if(key==='cowboy'){
+      ctx.beginPath();ctx.ellipse(px+10,py-3,8,5,0,0,PI*2);ctx.fillStyle=C.BROWN;ctx.fill();
+      ctx.beginPath();ctx.ellipse(px+10,py+1,12,4,0,0,PI*2);ctx.fillStyle=C.BROWN;ctx.fill();
+      ctx.strokeStyle='#502810';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(px+2,py-1);ctx.lineTo(px+18,py-1);ctx.stroke();
+    } else if(key==='halo'){
+      ctx.strokeStyle=C.YELLOW;ctx.lineWidth=2;
+      ctx.beginPath();ctx.ellipse(px+10,py-16,8,3,0,0,PI*2);ctx.stroke();
+    }
+  }
+
+  drawPlayer(cx,cy) {
+    if(!this.player) return;
+    this.player.color=this.colorEquipped;
+    this.player.draw(cx,cy);
+    if(this.hatEquipped) {
+      this.drawHat(this.hatEquipped,this.player.x-cx+2,this.player.y-cy-2);
+    }
+  }
+
+  drawUI() {
+    // HUD panel
+    ctx.fillStyle='rgba(0,0,0,0.55)';
+    ctx.beginPath();ctx.roundRect(8,8,260,90,8);ctx.fill();
+    ctx.strokeStyle='rgba(60,80,160,0.8)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(8,8,260,90,8);ctx.stroke();
+
+    const world=this.currentLevel>=15?'🌲 WOODS WORLD':'⭐ NORMAL WORLD';
+    const wCol=this.currentLevel>=15?C.GREEN:C.CYAN;
+    drawText(world,16,28,wCol,16,'left','monospace');
+    drawText(`Level  ${this.currentLevel+1} / 30`,16,50,C.WHITE,18,'left','monospace');
+    drawText(`Coins  ${this.coinsCollected} / ${this.totalCoins}`,16,72,C.YELLOW,16,'left','monospace');
+
+    // Power-up bars
+    let barY=108;
+    const pups=[];
+    if(this.player.speedBoost>0) pups.push(['SPEED',this.player.speedBoost,300,C.ORANGE]);
+    if(this.player.invincible>0) pups.push(['SHIELD',this.player.invincible,300,C.PURPLE]);
+    if(this.player.megaJump>0) pups.push(['JUMP+',this.player.megaJump,300,C.GREEN]);
+    for(const [lbl,val,max,col] of pups){
+      fillRect(8,barY,180,22,'#282828',3);
+      fillRect(8,barY,Math.round(180*val/max),22,col,3);
+      strokeRect(8,barY,180,22,'#ffffff',1,3);
+      drawText(lbl,12,barY+15,'#ffffff',12,'left','monospace');
+      barY+=28;
+    }
+
+    // Health hearts
+    for(let i=0;i<this.playerMaxHealth;i++){
+      const hx=W-30-i*32, hy=12;
+      const col=i<this.playerHealth?'#dc285c':'#3c1e23';
+      fillCircle(hx-5,hy+7,7,col);
+      fillCircle(hx+5,hy+7,7,col);
+      fillPoly([[hx-12,hy+10],[hx+12,hy+10],[hx,hy+24]],col);
+      if(i<this.playerHealth) fillCircle(hx-5,hy+5,3,'#ff6478');
+    }
+
+    // Controls hint
+    drawText('CTRL=Shoot  SPACE=Jump  SHIFT=Dash  P=Pause  F5=Save',W-10,H-8,'rgba(80,80,100,0.9)',12,'right','monospace');
+
+    // Boss defeated banner
+    if(this.bossDefeated){
+      const pulse=abs(sin(now()*4))*80+175;
+      drawTextShadow('BOSS DEFEATED! → GO TO EXIT',W/2,155,`rgb(0,${Math.round(pulse)},0)`,44,'center');
+    }
+
+    // Dash bar
+    if(this.dashCd>0){
+      drawText('DASH',W-90,H-50,C.CYAN,14,'left','monospace');
+      fillRect(W-90,H-34,80,8,'#282828');
+      fillRect(W-90,H-34,Math.round(80*(1-this.dashCd/40)),8,C.CYAN);
+    } else {
+      drawText('DASH ready!',W-100,H-50,C.CYAN,12,'left','monospace');
+    }
+
+    // Coin magnet
+    if(this.coinMagnet>0){
+      drawText('🧲 MAGNET',8,178,C.CYAN,14,'left','monospace');
+      fillRect(8,182,120,14,'rgba(20,20,40,0.8)');
+      fillRect(8,182,Math.round(120*this.coinMagnet/300),14,C.CYAN);
+    }
+
+    // Level timer
+    const secs=Math.floor(this.levelTimer/60);
+    const best=this.bestTimes.get(this.currentLevel);
+    const tcol=best&&this.levelTimer<best?C.GREEN:C.WHITE;
+    drawText(`⏱ ${secs}s`+(best?`  best:${Math.floor(best/60)}s`:''),W/2,H-8,tcol,12,'center','monospace');
+
+    // Save notif
+    if(this.saveNotif>0){
+      this.saveNotif--;
+      ctx.globalAlpha=Math.min(1,this.saveNotif*0.04);
+      drawTextShadow('💾 SAVED!',W/2,40,C.GREEN,28,'center');
+      ctx.globalAlpha=1;
+    }
+  }
+
+  drawBossHealthBar() {
+    const boss=this.boss||this.flyingBoss;
+    if(!boss) return;
+    const maxHP=(this.flyingBoss?8:5);
+    const hp=boss.health;
+    const bw=500,bh=24,bx=W/2-bw/2,by=18;
+    fillRect(bx-4,by-4,bw+8,bh+8,'#140a0a',8);
+    fillRect(bx,by,bw,bh,'#3c1414',6);
+    const r=hp>maxHP/3?220:Math.round(200+abs(sin(now()*5))*55);
+    const g=Math.round(20+(hp/maxHP)*180);
+    fillRect(bx,by,Math.round(bw*hp/maxHP),bh,`rgb(${r},${g},20)`,6);
+    for(let i=1;i<maxHP;i++){
+      const sx=bx+Math.round(bw*i/maxHP);
+      ctx.strokeStyle='#1e0f0f';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(sx,by);ctx.lineTo(sx,by+bh);ctx.stroke();
+    }
+    strokeRect(bx-4,by-4,bw+8,bh+8,'#c83232',2,8);
+    const bname=this.flyingBoss?'👑 FLYING BOSS':'👑 BOSS';
+    drawTextShadow(`${bname}  ${hp}/${maxHP} HP`,W/2,by+16,'#ffffff',14,'center');
+    if(hp===1&&Math.floor(now()*4)%2===0){
+      drawText('⚠️ LAST HP!',W/2,by+bh+20,C.RED,16,'center','monospace');
+    }
+  }
+
+  drawLevelBanner() {
+    if(this.levelBannerTimer<=0) return;
+    this.levelBannerTimer--;
+    const t=this.levelBannerTimer;
+    let a,ox;
+    if(t>150){a=Math.round(255*(180-t)/30);ox=Math.round((180-t)/30*80);}
+    else if(t>30){a=255;ox=0;}
+    else{a=Math.round(255*t/30);ox=Math.round((30-t)/30*80);}
+    ctx.globalAlpha=a/255*0.6;
+    fillRect(W/2-350+ox,H/2-35,700,70,'#000000',8);
+    ctx.globalAlpha=a/255;
+    drawTextShadow(this.levelBannerName,W/2+ox,H/2+8,C.YELLOW,36,'center');
+    ctx.globalAlpha=1;
+  }
+
+  drawMiniMap() {
+    const mx=W-210, my=H-160, mw=200, mh=150;
+    fillRect(mx,my,mw,mh,'rgba(30,30,50,0.85)',4);
+    strokeRect(mx,my,mw,mh,'#ffffff',1,4);
+    // Find bounds
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(const p of this.platforms){
+      minX=Math.min(minX,p.x); minY=Math.min(minY,p.y);
+      maxX=Math.max(maxX,p.x+p.w); maxY=Math.max(maxY,p.y+p.h);
+    }
+    minX-=50;minY-=50;maxX+=50;maxY+=50;
+    const lw=maxX-minX||W, lh=maxY-minY||H;
+    const scale=Math.min(mw/lw, mh/lh, 0.1);
+    const tX=(x)=>mx+(x-minX)*scale;
+    const tY=(y)=>my+(y-minY)*scale;
+    for(const p of this.platforms){
+      fillRect(tX(p.x),tY(p.y),Math.max(1,p.w*scale),Math.max(1,p.h*scale),'#ffffff');
+    }
+    for(const e of this.enemies){
+      fillRect(tX(e.x),tY(e.y),Math.max(2,e.w*scale),Math.max(2,e.h*scale),C.RED);
+    }
+    for(const c of this.coins) if(!c.collected){
+      fillRect(tX(c.x),tY(c.y),3,3,C.YELLOW);
+    }
+    if(this.exitRect) fillRect(tX(this.exitRect.x),tY(this.exitRect.y),5,8,C.GREEN);
+    if(this.player) fillRect(tX(this.player.x),tY(this.player.y),4,4,C.BLUE);
+  }
+
+  drawExitPortal(cx,cy) {
+    if(!this.exitRect) return;
+    const t=now();
+    const ex=this.exitRect.x-cx, ey=this.exitRect.y-cy;
+    const cxx=ex+20, cyy=ey+20;
+    for(let ring=0;ring<3;ring++){
+      const r2=28+ring*10, a2=t*(1.5-ring*0.4);
+      const cr=Math.round(abs(sin(a2+ring))*100+80);
+      const cg=Math.round(abs(sin(a2+ring+1))*150+80);
+      strokeCircle(cxx,cyy,r2,`rgb(${cr},220,${cg})`,2);
+    }
+    // Glow
+    const grd=ctx.createRadialGradient(cxx,cyy,0,cxx,cyy,30);
+    grd.addColorStop(0,'rgba(0,200,80,0.5)');
+    grd.addColorStop(1,'rgba(0,200,80,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cxx,cyy,30,0,PI*2); ctx.fill();
+    // Spokes
+    for(let j=0;j<8;j++){
+      const a3=j/8*PI*2+t*2;
+      const sx=cxx+cos(a3)*14, sy=cyy+sin(a3)*14;
+      ctx.strokeStyle='rgba(100,255,150,0.6)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(cxx,cyy);ctx.lineTo(sx,sy);ctx.stroke();
+    }
+    drawText('EXIT',cxx,ey-20,C.WHITE,14,'center','monospace');
+  }
+
+  drawAchievementPopups() {
+    for(let i=this.achievementPopups.length-1;i>=0;i--){
+      const pop=this.achievementPopups[i];
+      pop.timer--;
+      if(pop.timer<=0){this.achievementPopups.splice(i,1);continue;}
+      const slideIn=Math.min(1,(240-pop.timer)/20);
+      const slideOut=Math.max(0,1-pop.timer/30);
+      const xOff=Math.round((1-slideIn+slideOut)*320);
+      const px=W-310+xOff, py=60+i*80;
+      ctx.fillStyle='rgba(20,30,20,0.85)';
+      ctx.beginPath();ctx.roundRect(px,py,295,66,10);ctx.fill();
+      ctx.strokeStyle='#50c850';ctx.lineWidth=2;
+      ctx.beginPath();ctx.roundRect(px,py,295,66,10);ctx.stroke();
+      ctx.font='22px serif'; ctx.fillStyle='#ffffff'; ctx.textAlign='left';
+      ctx.fillText(pop.icon,px+8,py+36);
+      drawText('Achievement Unlocked!',px+44,py+20,'#64dc64',14,'left','monospace');
+      drawText(pop.name,px+44,py+36,C.WHITE,14,'left','monospace');
+      drawText(pop.desc,px+44,py+52,'rgba(160,160,160,0.9)',11,'left','monospace');
+    }
+  }
+
+  drawCombo() {
+    if(this.combo<2||this.comboTimer<=0) return;
+    ctx.globalAlpha=Math.min(1,this.comboTimer*0.02);
+    const col=`rgb(255,${Math.max(0,255-this.combo*20)},0)`;
+    drawTextShadow(`x${this.combo} COMBO!`,W/2,80,col,42,'center');
+    ctx.globalAlpha=1;
+  }
+
+  drawPause() {
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,W,H);
+    drawTextShadow('⏸ PAUSED',W/2,130,C.WHITE,56,'center');
+    const opts=['▶  Resume (P)','🏠  Back to Menu (ESC)','💾  Save (F5)'];
+    for(let i=0;i<opts.length;i++){
+      const active=i===this.pauseOption;
+      const col=active?C.YELLOW:'rgba(140,140,160,0.9)';
+      drawTextShadow(opts[i],W/2,390+i*60,col,active?32:26,'center');
+      if(active){
+        const pulse=abs(sin(now()*4))*30;
+        ctx.strokeStyle=`rgba(${60+pulse},${80+pulse},${200+pulse},0.8)`;
+        ctx.lineWidth=2;
+        ctx.beginPath();
+        const w2=300;
+        ctx.roundRect(W/2-w2/2,376+i*60,w2,42,8); ctx.stroke();
+      }
+    }
+  }
+
+  drawGameOver() {
+    this.gameOverTimer++;
+    for(let y=0;y<H;y++){
+      const p=y/H;
+      ctx.fillStyle=`rgb(${Math.round(40+p*20)},0,${Math.round(10+p*10)})`;
+      ctx.fillRect(0,y,W,1);
+    }
+    const fade=Math.min(255,this.gameOverTimer*5)/255;
+    ctx.globalAlpha=fade;
+    drawTextShadow('GAME OVER',W/2,180,C.RED,80,'center');
+    const lines=[`Level reached: ${this.currentLevel+1}`,`Total coins: ${this.bankCoins}`,`Deaths: ${this.totalDeaths}`,`Max combo: x${this.maxCombo}`];
+    for(let i=0;i<lines.length;i++) drawText(lines[i],W/2,310+i*44,'rgba(200,150,150,0.9)',22,'center','monospace');
+    if(this.gameOverTimer>60){
+      const pulse=abs(sin(now()*3));
+      drawText('SPACE = try again   ESC = menu',W/2,530,`rgba(200,200,200,${0.6+pulse*0.4})`,20,'center','monospace');
+    }
+    ctx.globalAlpha=1;
+  }
+
+  drawWin() {
+    drawGradientBg(10,20,40,20,40,80);
+    drawTextShadow('🎉 YOU WIN! 🎉',W/2,280,C.YELLOW,64,'center');
+    drawText(`Levels beaten: ${this.levelsBeaten.size} / 30   Stickers: ${this.stickersFound.size} / 30`,W/2,360,C.WHITE,26,'center','monospace');
+    drawText('Press ESC to return to menu',W/2,430,C.GRAY,22,'center','monospace');
+  }
+
+  drawMenu() {
+    this.menuGrad+=0.01;
+    for(let y=0;y<H;y++){
+      const wave=sin(this.menuGrad+y*0.004)*0.5+0.5;
+      ctx.fillStyle=`rgb(${Math.round(8+wave*18)},${Math.round(8+wave*22)},${Math.round(25+wave*45)})`;
+      ctx.fillRect(0,y,W,1);
+    }
+    // Stars
+    for(let i=0;i<50;i++){
+      const sx=(i*193)%W, sy=(i*137)%(H/2);
+      const br=Math.round(abs(sin(now()*0.7+i))*180+60);
+      fillCircle(sx,sy,1,`rgb(${br},${br},${br})`);
+    }
+    // Platform silhouettes
+    for(let i=0;i<8;i++){
+      const px=((i*160-_t*0.33)%W+W)%W;
+      fillRect(px,H-80,140,80,'rgba(20,25,40,0.8)');
+      fillRect(px+160,H-50,120,50,'rgba(20,25,40,0.8)');
+    }
+    // Particles
+    if(rand()<0.15){
+      const col=rand()>0.5?C.YELLOW:C.BLUE;
+      this.menuParticles.push(new Particle(rndi(0,W),H,rnd(-0.8,0.8),rnd(-2.5,-1),col,140));
+    }
+    for(let i=this.menuParticles.length-1;i>=0;i--){
+      const p=this.menuParticles[i];
+      p.update(); p.draw();
+      if(p.life<=0) this.menuParticles.splice(i,1);
+    }
+
+    // Animated Blue Guy
+    const bounce=sin(now()*2.5)*8;
+    const bx=W/2-15, by=290+bounce;
+    fillPoly([[bx-8,by+5],[bx-22,by+32],[bx+5,by+28]],'rgba(30,60,160,0.8)');
+    fillRect(bx,by,30,30,this.colorEquipped,4);
+    fillCircle(bx+21,by+10,4,'#ffffff');
+    fillCircle(bx+22,by+11,2,'#111111');
+    if(this.hatEquipped) this.drawHat(this.hatEquipped,bx+2,by-2);
+
+    // Title
+    for(const size of [76,74,72]){
+      ctx.font=`bold ${size}px monospace`; ctx.textAlign='center';
+      ctx.fillStyle=`rgba(0,0,${Math.round(60+sin(now())*40)},0.5)`;
+      const off=(76-size)/2;
+      ctx.fillText('MINIMAL PLATFORMER 4',W/2+off,110+off);
+    }
+    drawTextShadow('MINIMAL PLATFORMER 4',W/2,110,'#ffffff',72,'center');
+    const rPulse=Math.round(200+sin(now()*1.5)*55);
+    drawTextShadow('T H E   R E D   U P R I S I N G',W/2,180,`rgb(${rPulse},40,40)`,36,'center');
+
+    // Menu options
+    const opts=['▶  START GAME',`◀  LEVEL: ${this.startLevel}  ▶`,'✕   QUIT'];
+    for(let i=0;i<opts.length;i++){
+      const sel=i===this.menuOption;
+      const y=360+i*80;
+      if(sel){
+        const bw=420,bh=52,bx2=W/2-bw/2;
+        const ga=abs(sin(now()*3))*60+40;
+        ctx.fillStyle=`rgba(60,80,180,${ga/255*0.8})`;
+        ctx.beginPath();ctx.roundRect(bx2,y-8,bw,bh,6);ctx.fill();
+        ctx.strokeStyle='rgba(100,130,255,0.9)';ctx.lineWidth=2;
+        ctx.beginPath();ctx.roundRect(bx2,y-8,bw,bh,6);ctx.stroke();
+      }
+      drawTextShadow(opts[i],W/2,y+28,sel?C.YELLOW:'rgba(160,160,180,0.9)',sel?40:32,'center');
+    }
+
+    // Stats sidebar
+    fillRect(34,220,230,280,'rgba(10,10,30,0.7)',8);
+    strokeRect(34,220,230,280,'rgba(50,50,80,0.8)',1,8);
+    const stats=[['📊 YOUR STATS',C.CYAN],[`Levels: ${this.levelsBeaten.size}/30`,C.WHITE],[`Stickers: ${this.stickersFound.size}/30`,C.YELLOW],[`Coins: ${this.bankCoins}`,C.YELLOW],[`Deaths: ${this.totalDeaths}`,'rgba(200,100,100,0.9)'],[`Max combo: x${this.maxCombo}`,C.ORANGE],[`Achievements: ${this.achievementsEarned.size}/${Object.keys(ACHIEVEMENTS).length}`,C.GREEN],[`Best score: ${this.highScore}c`,'rgba(200,200,100,0.9)']];
+    for(let i=0;i<stats.length;i++) drawText(stats[i][0],40,243+i*30,stats[i][1],14,'left','monospace');
+
+    // Controls
+    drawText('UP/DOWN: Select   ENTER: Confirm   LEFT/RIGHT: Change Level',W/2,H-38,'rgba(100,100,120,0.9)',14,'center','monospace');
+    drawText('By Kyle  |  F5=Save  A=Achievements  ESC=Quit',W/2,H-18,'rgba(70,70,90,0.9)',12,'center','monospace');
+
+    // Daily challenge
+    const bx3=W/2-200, by3=640;
+    const pulse=Math.round(abs(sin(now()*2))*20);
+    fillRect(bx3,by3,400,52,`rgb(${50+pulse},30,${80+pulse})`,10);
+    strokeRect(bx3,by3,400,52,C.PURPLE,2,10);
+    const goalText={no_damage:'No deaths!',speed_run:'Beat in 15 sec!',all_coins:'Collect ALL coins!'};
+    drawText(`📅 DAILY: Level ${this.dailyLevel+1} — ${goalText[this.dailyGoal]}`,bx3+10,by3+20,C.WHITE,13,'left','monospace');
+    const status=this.dailyCompleted?'✅ COMPLETED!':` Reward: ${this.dailyReward}🪙`;
+    drawText(status,bx3+10,by3+40,this.dailyCompleted?C.GREEN:C.YELLOW,13,'left','monospace');
+
+    // Shop panel shortcut
+    fillRect(W-220,150,210,60,'rgba(15,18,40,0.8)',10);
+    strokeRect(W-220,150,210,60,'rgba(50,70,160,0.8)',1,10);
+    drawText('S=Shop   A=Achievements',W-110,180,'rgba(180,200,255,0.8)',13,'center','monospace');
+
+    this.drawAchievementPopups();
+    this.checkAchievements();
+  }
+
+  drawShop() {
+    ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,0,W,H);
+    fillRect(100,60,824,648,'rgba(20,25,50,0.95)',16);
+    strokeRect(100,60,824,648,'rgba(80,100,200,0.9)',3,16);
+    drawTextShadow('SHOP',W/2,110,C.YELLOW,44,'center');
+    drawText(`💰 ${this.shopCoins} coins`,W-130,90,C.YELLOW,18,'right','monospace');
+    const tabs=['Clicker Upgrades','Hats','Colors'];
+    for(let i=0;i<3;i++){
+      const tx=120+i*275, ty=122;
+      fillRect(tx,ty,260,38,i===this.shopTab?'rgba(60,80,180,0.9)':'rgba(30,35,65,0.9)',8);
+      strokeRect(tx,ty,260,38,'rgba(80,100,200,0.7)',2,8);
+      drawText(tabs[i],tx+130,ty+24,C.WHITE,16,'center','monospace');
+    }
+    const cy2=175;
+    if(this.shopTab===0){
+      const upgs=[['Auto Clicker','auto',20,'Earns 1 coin/sec'],['Better Eyes','eyes',15,'Look cooler'],['Cape','cape',25,'+1 auto/sec'],['Rocket Shoes','shoes',40,'+2 auto/sec'],['Mega Multiplier','hat',60,'x2 coins/click']];
+      for(let i=0;i<upgs.length;i++){
+        const [name,key,cost,desc]=upgs[i];
+        const uy=cy2+i*90, own=this.clickerUpgrades[key]||0, can=this.shopCoins>=cost;
+        fillRect(120,uy,784,82,can?'rgba(30,50,30,0.8)':'rgba(40,30,30,0.8)',8);
+        strokeRect(120,uy,784,82,can?'rgba(70,100,70,0.8)':'rgba(80,50,50,0.8)',2,8);
+        drawText(`${name}  (owned: ${own})`,136,uy+22,C.WHITE,18,'left','monospace');
+        drawText(desc,136,uy+44,'rgba(160,180,160,0.9)',14,'left','monospace');
+        drawText(`Buy: ${cost} coins  [${i+1}]`,136,uy+66,can?C.YELLOW:C.GRAY,14,'left','monospace');
+      }
+    } else if(this.shopTab===1){
+      for(let i=0;i<HATS.length;i++){
+        const hat=HATS[i];
+        const col=i%3, row=Math.floor(i/3);
+        const hx=130+col*270, hy=cy2+row*160;
+        const own=this.hatsOwned.has(hat.key), eq=this.hatEquipped===hat.key;
+        fillRect(hx,hy,250,145,own?'rgba(30,50,30,0.8)':'rgba(35,30,50,0.8)',10);
+        strokeRect(hx,hy,250,145,eq?C.GREEN:(own?'rgba(100,100,200,0.8)':'rgba(60,60,90,0.8)'),2,10);
+        // Preview
+        fillRect(hx+115,hy+50,22,22,this.colorEquipped,4);
+        this.drawHat(hat.key,hx+110,hy+44);
+        drawText(hat.name,hx+125,hy+90,C.WHITE,14,'center','monospace');
+        const btn=own?(eq?'EQUIPPED':`Equip [${i+1}]`):`Buy: ${hat.cost}c [${i+1}]`;
+        drawText(btn,hx+125,hy+112,own?(eq?C.GREEN:C.CYAN):(this.shopCoins>=hat.cost?C.YELLOW:C.GRAY),12,'center','monospace');
+      }
+    } else {
+      const COLORS=[{name:'Blue',cost:0,col:'#5096dc'},{name:'Red',cost:40,col:'#dc5050'},{name:'Green',cost:40,col:'#64c864'},{name:'Purple',cost:60,col:'#9664c8'},{name:'Orange',cost:60,col:'#f08c28'},{name:'Cyan',cost:80,col:'#64dcdc'},{name:'Gold',cost:120,col:'#ffdc64'}];
+      for(let i=0;i<COLORS.length;i++){
+        const skin=COLORS[i];
+        const col=i%4, row=Math.floor(i/4);
+        const cx3=130+col*200, cy3=cy2+row*160;
+        const own=this.hatsOwned.has('color_'+skin.col)||skin.cost===0||this.colorEquipped===skin.col;
+        const eq=this.colorEquipped===skin.col;
+        fillRect(cx3,cy3,185,145,own?'rgba(30,50,30,0.8)':'rgba(35,30,50,0.8)',10);
+        strokeRect(cx3,cy3,185,145,eq?C.GREEN:(own?'rgba(100,200,100,0.8)':'rgba(60,60,90,0.8)'),2,10);
+        fillRect(cx3+75,cy3+20,35,35,skin.col,4);
+        fillCircle(cx3+89,cy3+29,4,'#ffffff');
+        drawText(skin.name,cx3+92,cy3+76,C.WHITE,13,'center','monospace');
+        const btn=own?(eq?'EQUIPPED':`Equip [${i+1}]`):`${skin.cost}c [${i+1}]`;
+        drawText(btn,cx3+92,cy3+100,eq?C.GREEN:(own?C.CYAN:(this.shopCoins>=skin.cost?C.YELLOW:C.GRAY)),12,'center','monospace');
+      }
+    }
+    drawText('TAB=Switch   ESC=Close',W/2,694,'rgba(100,100,130,0.9)',14,'center','monospace');
+  }
+
+  drawAchievementsScreen() {
+    ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(0,0,W,H);
+    drawTextShadow(`ACHIEVEMENTS  ${this.achievementsEarned.size}/${Object.keys(ACHIEVEMENTS).length}`,W/2,38,C.YELLOW,42,'center');
+    let i=0;
+    for(const [aid,[name,desc,icon]] of Object.entries(ACHIEVEMENTS)){
+      const col=i%2, row=Math.floor(i/2);
+      const ax=30+col*(W/2), ay=76+row*64;
+      const earned=this.achievementsEarned.has(aid);
+      fillRect(ax,ay,W/2-20,56,earned?'rgba(20,40,20,0.8)':'rgba(25,25,35,0.8)',8);
+      strokeRect(ax,ay,W/2-20,56,earned?'rgba(80,180,80,0.8)':'rgba(50,50,70,0.8)',2,8);
+      ctx.font='18px serif'; ctx.textAlign='left';
+      ctx.fillStyle='#ffffff'; ctx.fillText(earned?icon:'🔒',ax+8,ay+28);
+      drawText(earned?name:'???',ax+36,ay+20,earned?C.WHITE:C.GRAY,15,'left','monospace');
+      drawText(earned?desc:'Keep playing to unlock',ax+36,ay+38,earned?'rgba(160,180,160,0.9)':'rgba(100,100,100,0.9)',11,'left','monospace');
+      if(earned) drawText('+10🪙',ax+W/2-70,ay+20,C.YELLOW,12,'left','monospace');
+      i++;
+    }
+    drawText('Press A or ESC to close',W/2,H-20,'rgba(80,80,100,0.9)',16,'center','monospace');
+  }
+
+  drawIntro() {
+    const t=this.introTimer;
+    for(let y=0;y<H;y++){
+      const p=y/H;
+      const wave=sin(_t*0.02+y*0.005)*5;
+      ctx.fillStyle=`rgb(${Math.round(5+p*15+wave)},${Math.round(5+p*10)},${Math.round(20+p*40)})`;
+      ctx.fillRect(0,y,W,1);
+    }
+
+    if(t<120){
+      const drop=Math.max(0,(80-t)*3);
+      const a=Math.min(255,t*4)/255;
+      ctx.globalAlpha=a;
+      drawTextShadow('MINIMAL PLATFORMER 4',W/2,180-drop,'rgba(80,80,255,0.8)',72,'center');
+      ctx.globalAlpha=a;
+      drawTextShadow('MINIMAL PLATFORMER 4',W/2,180-drop,C.WHITE,70,'center');
+      if(t>30){
+        ctx.globalAlpha=Math.min(1,(t-30)*0.04);
+        drawTextShadow('T H E   R E D   U P R I S I N G',W/2,270,`rgb(${Math.round(a*200)},40,40)`,40,'center');
+      }
+      if(t>60){
+        ctx.globalAlpha=Math.min(1,(t-60)*0.04)*0.4;
+        drawText('press SPACE to skip',W/2,H-40,'rgba(100,100,100,0.8)',18,'center','monospace');
+      }
+      ctx.globalAlpha=1;
+    } else if(t<240){
+      const lt=t-120;
+      const storyLines=[['Long ago, the world was full of color...',C.WHITE,0],['Blue Guy and his friends lived in peace.','#64b4ff',20],['Then one day...','rgba(200,200,200,0.9)',55],['RED GUY appeared.',C.RED,70],['He STOLE every color from the world.','#dc3c3c',85],['Leaving nothing but darkness.','rgba(150,150,150,0.9)',100]];
+      for(let i=0;i<storyLines.length;i++){
+        const [line,col,start]=storyLines[i];
+        if(lt>start){
+          ctx.globalAlpha=Math.min(1,(lt-start)*0.04);
+          drawText(line,W/2,100+i*52,col,24,'center','monospace');
+        }
+      }
+      ctx.globalAlpha=1;
+      // Blue Guy
+      if(lt>50){
+        const bx=W/4-Math.round(lt*0.5)%200;
+        const by=H-160;
+        fillRect(bx,by,30,30,'rgba(60,120,220,0.9)',4);
+        fillCircle(bx+8,by+10,3,'#ffffff');
+      }
+      // Red Guy
+      if(lt>70){
+        const rx=3*W/4;
+        const ry=H-200+sin(lt*0.08)*15;
+        fillRect(rx,ry,40,40,C.RED,4);
+        fillCircle(rx+12,ry+14,4,C.YELLOW);
+        fillCircle(rx+28,ry+14,4,C.YELLOW);
+      }
+    } else {
+      const lt=t-240;
+      ctx.globalAlpha=Math.min(1,lt*0.025);
+      drawTextShadow('Only BLUE GUY can save the world!',W/2,200,'rgba(80,80,255,0.9)',48,'center');
+      if(lt>30){
+        ctx.globalAlpha=Math.min(1,(lt-30)*0.025);
+        drawTextShadow('Defeat Red Guy! Restore the colors!',W/2,280,'rgba(220,60,60,0.9)',34,'center');
+      }
+      if(lt>60){
+        ctx.globalAlpha=Math.min(1,(lt-60)*0.04);
+        drawTextShadow('YOUR ADVENTURE BEGINS!',W/2,400,C.YELLOW,60,'center');
+      }
+      ctx.globalAlpha=1;
+    }
+
+    // Falling particles
+    if(_t%4===0){
+      this.particles.push(new Particle(rndi(0,W),-10,rnd(-0.5,0.5),rnd(1.5,3.5),rand()>0.4?'#6496ff':'#ff5050',80));
+    }
+    for(let i=this.particles.length-1;i>=0;i--){
+      const p=this.particles[i]; p.update(); p.draw();
+      if(p.life<=0) this.particles.splice(i,1);
+    }
+  }
+
+  // ── UPDATE ───────────────────────────────────────────────────────
+  handlePlayingInput() {
+    // Jump
+    if(keysDown['Space']) {
+      if(this.gameOver){
+        this.gameOver=false; this.gameOverTimer=0;
+        this.playerHealth=this.playerMaxHealth;
+        this.loadLevel(this.currentLevel);
+      } else if(!this.paused) {
+        this.player.jump();
+      }
+    }
+
+    // Pause
+    if(keysDown['KeyP']&&!this.gameOver) this.paused=!this.paused;
+
+    if(this.paused){
+      if(keysDown['ArrowUp']) this.pauseOption=(this.pauseOption+2)%3;
+      if(keysDown['ArrowDown']) this.pauseOption=(this.pauseOption+1)%3;
+      if(keysDown['Enter']){
+        if(this.pauseOption===0) this.paused=false;
+        else if(this.pauseOption===1){this.paused=false;this.state='menu';}
+        else if(this.pauseOption===2){if(saveGame(this))this.saveNotif=120;}
+      }
+      return;
+    }
+    if(this.gameOver) return;
+
+    // Dash
+    if((keysDown['ShiftLeft']||keysDown['ShiftRight'])&&this.dashCd===0){
+      this.dashCd=40; this.dashTimer=8;
+      this.dashCount++;
+      const dx=(keys['ArrowLeft']||keys['KeyA'])?-1:1;
+      this.player.vx=dx*16;
+      this.player.invincible=Math.max(this.player.invincible,8);
+      for(let i=0;i<6;i++){
+        this.particles.push(new Particle(this.player.x+10,this.player.y+10,-dx*rnd(2,5),rnd(-1,1),C.CYAN,15));
+      }
+    }
+
+    // F5 save
+    if(keysDown['F5']){if(saveGame(this))this.saveNotif=120;}
+
+    // Journal / achievements
+    if(keysDown['KeyA']) this.achievementsOpen=!this.achievementsOpen;
+    if(keysDown['Escape']){
+      if(this.achievementsOpen){this.achievementsOpen=false;}
+      else{this.paused=false;this.state='menu';}
+    }
+  }
+
+  updatePlaying() {
+    if(this.gameOver||this.paused) return;
+
+    this.levelTimer++;
+    this.dashCd=Math.max(0,this.dashCd-1);
+    this.dashTimer=Math.max(0,this.dashTimer-1);
+    if(this.invincibilityFrames>0){
+      this.invincibilityFrames--;
+      if(this.invincibilityFrames%8<4) this.player.invincible=4;
+    }
+    this.shakeTimer=Math.max(0,this.shakeTimer-1);
+    this.comboTimer=Math.max(0,this.comboTimer-1);
+    if(this.comboTimer===0) this.combo=0;
+    this.coinMagnet=Math.max(0,this.coinMagnet-1);
+    if(this.levelBannerTimer>0) this.levelBannerTimer--;
+
+    // Update moving platforms and rebuild platform list
+    for(const mp of this.movingPlatforms) mp.update();
+    const lvData=this.levels[this.currentLevel];
+    this.platforms=[...lvData.platforms,...this.movingPlatforms];
+
+    // Player
+    this.player.update(this.platforms, this.projectiles);
+
+    // Enemies
+    for(const e of this.enemies) e.update(this.platforms);
+    if(this.boss) this.boss.update(this.platforms,this.player,this.projectiles);
+    if(this.flyingBoss) this.flyingBoss.update(this.player);
+    for(const n of this.npcs) n.update(this.player);
+
+    // Projectiles
+    for(let i=this.projectiles.length-1;i>=0;i--){
+      const pr=this.projectiles[i];
+      pr.update();
+      if(pr.x<-100||pr.x>4000||pr.y<-100||pr.y>2000){this.projectiles.splice(i,1);continue;}
+
+      if(pr.isPlayer){
+        // Check enemies
+        let hit=false;
+        for(let j=this.enemies.length-1;j>=0;j--){
+          const e=this.enemies[j];
+          if(pr.x<e.right&&pr.right>e.left&&pr.y<e.bottom&&pr.bottom>e.top){
+            if(e instanceof ShieldEnemy){
+              e.health--; e.hitFlash=10;
+              if(e.health<=0) this.enemies.splice(j,1);
+            } else { this.enemies.splice(j,1); }
+            this.projectiles.splice(i,1); hit=true;
+            this.sessionKills++;
+            this.unlockAchievement('first_blood');
+            this.combo++;
+            this.comboTimer=120;
+            this.maxCombo=Math.max(this.maxCombo,this.combo);
+            const bonus=this.combo*2;
+            this.shopCoins+=bonus; this.bankCoins+=bonus;
+            const lbl=this.combo<3?`+${bonus}`:`x${this.combo} COMBO! +${bonus}`;
+            const col=this.combo<3?C.YELLOW:(this.combo<6?C.ORANGE:C.RED);
+            this.floatyTexts.push(new FloatyText(e.x,e.y,lbl,col,50));
+            if(this.combo>=3){this.shakeTimer=8;this.shakeIntensity=Math.min(this.combo,8);}
+            for(let k=0;k<8;k++) this.particles.push(new Particle(e.x+8,e.y+8,rnd(-4,4),rnd(-4,4),C.RED,25));
+            break;
+          }
+        }
+        if(!hit&&this.boss&&pr.x<this.boss.right&&pr.right>this.boss.left&&pr.y<this.boss.bottom&&pr.bottom>this.boss.top){
+          this.boss.health--;
+          this.shakeTimer=6; this.shakeIntensity=4;
+          this.floatyTexts.push(new FloatyText(this.boss.x+25,this.boss.y,`-1 HP (${this.boss.health} left)`,C.RED,45));
+          this.projectiles.splice(i,1);
+          if(this.boss.health<=0){
+            this.boss=null; this.bossDefeated=true;
+            this.shakeTimer=25; this.shakeIntensity=10;
+            this.floatyTexts.push(new FloatyText(W/2-60,300,'BOSS DOWN!!!',C.GREEN,120));
+            for(let k=0;k<20;k++) this.particles.push(new Particle(this.player.x+10,this.player.y+10,rnd(-4,4),rnd(-4,4),rand()>0.5?C.RED:C.YELLOW,50));
+          }
+        }
+        if(!hit&&this.flyingBoss&&pr.x<this.flyingBoss.right&&pr.right>this.flyingBoss.left&&pr.y<this.flyingBoss.bottom&&pr.bottom>this.flyingBoss.top){
+          this.flyingBoss.health--;
+          this.projectiles.splice(i,1);
+          for(let k=0;k<5;k++) this.particles.push(new Particle(this.flyingBoss.x+30,this.flyingBoss.y+30,rnd(-2,2),rnd(-2,2),C.RED,20));
+          if(this.flyingBoss.health<=0){
+            this.flyingBoss=null; this.bossDefeated=true;
+            if(this.currentLevel===29) this.unlockAchievement('wowy');
+            for(let k=0;k<30;k++) this.particles.push(new Particle(this.player.x+10,this.player.y+10,rnd(-5,5),rnd(-5,5),rand()>0.5?C.RED:C.YELLOW,60));
+          }
+        }
+      } else {
+        // Enemy bullet hits player
+        if(pr.x<this.player.right&&pr.right>this.player.left&&pr.y<this.player.bottom&&pr.bottom>this.player.top){
+          if(!this.player.invincible&&this.invincibilityFrames<=0){
+            this.playerHealth--;
+            this.levelNoDeath=false;
+            this.invincibilityFrames=90;
+            this.shakeTimer=12; this.shakeIntensity=5;
+            if(this.playerHealth<=0){
+              this.playerHealth=0; this.totalDeaths++;
+              this.gameOver=true; this.gameOverTimer=0;
+            } else {
+              this.totalDeaths++;
+              const sp=this.levels[this.currentLevel].spawn;
+              this.player.x=sp[0]; this.player.y=sp[1];
+              this.player.vx=0; this.player.vy=0;
+            }
+          }
+          this.projectiles.splice(i,1);
+        }
+      }
+    }
+
+    // Coin magnet
+    if(this.coinMagnet>0){
+      for(const c of this.coins){
+        if(c.collected) continue;
+        const dx=this.player.x-c.x, dy=this.player.y-c.y;
+        const d=Math.max(1,sqrt(dx*dx+dy*dy));
+        if(d<250){c.x+=dx/d*8;c.y+=dy/d*8;c.rect={x:c.x,y:c.y};}
+      }
+    }
+
+    // Coins
+    for(const c of this.coins){
+      if(!c.collected&&this.player.x<c.x+c.w&&this.player.right>c.x&&this.player.y<c.y+c.h&&this.player.bottom>c.y){
+        c.collected=true; this.coinsCollected++;
+        this.bankCoins++; this.shopCoins++; this.runCoins++;
+      }
+    }
+
+    // Gems
+    for(const g of this.gems){
+      if(!g.collected&&this.player.x<g.x+g.w&&this.player.right>g.x&&this.player.y<g.y+g.h&&this.player.bottom>g.y){
+        g.collected=true;
+        this.shopCoins+=5; this.bankCoins+=5; this.runCoins+=5;
+        this.floatyTexts.push(new FloatyText(g.x,g.y,'💎 +5','#96c8ff',55));
+      }
+    }
+
+    // Sticker
+    if(!this.stickersFound.has(this.currentLevel)&&this.stickerRect){
+      const sr=this.stickerRect;
+      if(this.player.x<sr.right&&this.player.right>sr.left&&this.player.y<sr.bottom&&this.player.bottom>sr.top){
+        this.stickersFound.add(this.currentLevel);
+        this.shopCoins+=5;
+        this.floatyTexts.push(new FloatyText(sr.x,sr.y,'⭐ STICKER!',C.YELLOW,80));
+      }
+    }
+
+    // Power-ups
+    for(const pu of this.powerUps){
+      if(!pu.collected&&this.player.x<pu.x+pu.w&&this.player.right>pu.x&&this.player.y<pu.y+pu.h&&this.player.bottom>pu.y){
+        pu.collected=true;
+        if(pu.type==='speed') this.player.speedBoost=300;
+        else if(pu.type==='invincible') this.player.invincible=300;
+        else if(pu.type==='mega_jump') this.player.megaJump=300;
+        else if(pu.type==='magnet') this.coinMagnet=300;
+        for(let k=0;k<20;k++) this.particles.push(new Particle(pu.x+12,pu.y+12,rnd(-4,4),rnd(-4,4),pu.col,40));
+      }
+    }
+
+    // Spikes
+    for(const s of this.spikes){
+      if(this.player.x<s.x+s.w&&this.player.right>s.x&&this.player.y<s.y+s.h&&this.player.bottom>s.y){
+        this._respawnPlayer();
+      }
+    }
+
+    // Enemy contact
+    for(const e of this.enemies){
+      if(this.player.x<e.right&&this.player.right>e.left&&this.player.y<e.bottom&&this.player.bottom>e.top){
+        if(this.player.vy>0&&this.player.bottom<=e.top+15){
+          // Stomp!
+          if(e instanceof ShieldEnemy){e.health--;e.hitFlash=10;if(e.health<=0)this.enemies.splice(this.enemies.indexOf(e),1);}
+          else this.enemies.splice(this.enemies.indexOf(e),1);
+          this.player.vy=JUMP;
+          this.combo++;this.comboTimer=120;this.maxCombo=Math.max(this.maxCombo,this.combo);
+          this.unlockAchievement('first_blood');
+        } else if(this.invincibilityFrames<=0&&!this.player.invincible){
+          this._damagePlayer();
+        }
+      }
+    }
+
+    // Boss contact (stomp)
+    if(this.boss&&this.player.x<this.boss.right&&this.player.right>this.boss.left&&this.player.y<this.boss.bottom&&this.player.bottom>this.boss.top){
+      if(this.player.vy>0&&this.player.bottom<=this.boss.top+10){
+        this.boss.health--;this.player.vy=JUMP;
+        if(this.boss.health<=0){this.boss=null;this.bossDefeated=true;this.unlockAchievement('boss1');}
+      }
+    }
+
+    // Flying boss (stomp or side = die)
+    if(this.flyingBoss&&this.player.x<this.flyingBoss.right&&this.player.right>this.flyingBoss.left&&this.player.y<this.flyingBoss.bottom&&this.player.bottom>this.flyingBoss.top){
+      if(this.player.vy>0&&this.player.bottom<=this.flyingBoss.top+15){
+        this.flyingBoss.health--;this.player.vy=JUMP;
+        for(let k=0;k<10;k++) this.particles.push(new Particle(this.flyingBoss.x+30,this.flyingBoss.y+30,rnd(-3,3),rnd(-3,3),C.RED,30));
+        if(this.flyingBoss.health<=0){
+          this.flyingBoss=null;this.bossDefeated=true;
+          if(this.currentLevel===29) this.unlockAchievement('wowy');
+        }
+      } else if(this.invincibilityFrames<=0&&!this.player.invincible){
+        this._respawnPlayer();
+      }
+    }
+
+    // Exit
+    const ex=this.exitRect;
+    if(this.player.x<ex.right&&this.player.right>ex.left&&this.player.y<ex.bottom&&this.player.bottom>ex.top){
+      const canExit=!this.boss&&!this.flyingBoss;
+      if(canExit){
+        // Save best time
+        if(!this.bestTimes.has(this.currentLevel)||this.levelTimer<this.bestTimes.get(this.currentLevel)){
+          this.bestTimes.set(this.currentLevel,this.levelTimer);
+        }
+        if(this.levelTimer<900) this.unlockAchievement('speed_run');
+        if(this.levelNoDeath) this.unlockAchievement('no_damage');
+        if(this.coinsCollected===this.totalCoins&&this.totalCoins>0) this.unlockAchievement('all_coins_1');
+        this.levelsBeaten.add(this.currentLevel);
+        if(this.runCoins>this.highScore) this.highScore=this.runCoins;
+        saveGame(this); this.saveNotif=120;
+        const next=this.currentLevel+1;
+        if(next<this.levels.length){ this.loadLevel(next); }
+        else { this.state='win'; }
+      }
+    }
+
+    // Fall off screen
+    if(this.player.y>1200&&!this.gameOver){
+      this.totalDeaths++;
+      this.levelNoDeath=false;
+      this.playerHealth--;
+      this.invincibilityFrames=60;
+      this.shakeTimer=10; this.shakeIntensity=6;
+      if(this.playerHealth<=0){this.playerHealth=0;this.gameOver=true;this.gameOverTimer=0;}
+      else this._respawnPlayer();
+    }
+
+    // Particles & floaty texts
+    for(let i=this.particles.length-1;i>=0;i--){
+      this.particles[i].update();
+      if(this.particles[i].life<=0) this.particles.splice(i,1);
+    }
+    for(let i=this.floatyTexts.length-1;i>=0;i--){
+      this.floatyTexts[i].update();
+      if(this.floatyTexts[i].life<=0) this.floatyTexts.splice(i,1);
+    }
+
+    // Camera
+    const tx=this.player.x-W/2, ty=this.player.y-H/2;
+    this.camX+=(tx-this.camX)*0.1;
+    this.camY+=(ty-this.camY)*0.1;
+    this.camY=Math.max(this.camY,-200);
+
+    this.stickerAnim+=0.06;
+    this.checkAchievements();
+  }
+
+  _damagePlayer() {
+    this.playerHealth--;
+    this.levelNoDeath=false;
+    this.invincibilityFrames=90;
+    this.shakeTimer=12; this.shakeIntensity=5;
+    this.totalDeaths++;
+    if(this.playerHealth<=0){this.playerHealth=0;this.gameOver=true;this.gameOverTimer=0;}
+    else this._respawnPlayer();
+  }
+
+  _respawnPlayer() {
+    const sp=this.levels[this.currentLevel].spawn;
+    this.player.x=sp[0]; this.player.y=sp[1];
+    this.player.vx=0; this.player.vy=0;
+    this.invincibilityFrames=60;
+  }
+
+  drawPlaying() {
+    let sx=0,sy=0;
+    if(this.shakeTimer>0){sx=rndi(-this.shakeIntensity,this.shakeIntensity);sy=rndi(-this.shakeIntensity,this.shakeIntensity);}
+    const cx=this.camX+sx, cy=this.camY+sy;
+
+    this.drawBackground();
+
+    // Platforms
+    for(const p of this.platforms){
+      if(p instanceof MovingPlatform){p.draw(cx,cy);continue;}
+      fillRect(p.x-cx,p.y-cy,p.w,p.h,C.PLATFORM,2);
+      strokeRect(p.x-cx,p.y-cy,p.w,p.h,C.GRAY,2,2);
+    }
+
+    // Enemies
+    for(const e of this.enemies) e.draw(cx,cy);
+    if(this.boss) this.boss.draw(cx,cy);
+    if(this.flyingBoss) this.flyingBoss.draw(cx,cy);
+    for(const n of this.npcs) n.draw(cx,cy);
+
+    // Collectibles
+    for(const c of this.coins) c.draw(cx,cy);
+    for(const g of this.gems) g.draw(cx,cy);
+    for(const pu of this.powerUps) pu.draw(cx,cy);
+    for(const s of this.spikes) s.draw(cx,cy);
+    for(const pr of this.projectiles) pr.draw(cx,cy);
+
+    // Sticker
+    if(!this.stickersFound.has(this.currentLevel)&&this.stickerRect){
+      const sr=this.stickerRect;
+      const cxx2=sr.x-cx+12, cyy2=sr.y-cy+12+sin(this.stickerAnim*2)*6;
+      // Glow
+      const grd2=ctx.createRadialGradient(cxx2,cyy2,0,cxx2,cyy2,20);
+      grd2.addColorStop(0,'rgba(255,220,0,0.4)');grd2.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=grd2;ctx.beginPath();ctx.arc(cxx2,cyy2,20,0,PI*2);ctx.fill();
+      const spin=this.stickerAnim*60*PI/180;
+      for(let a=0;a<360;a+=45){
+        const ra=a*PI/180+spin;
+        const rl=a%90===0?18:11;
+        ctx.strokeStyle=C.YELLOW;ctx.lineWidth=3;
+        ctx.beginPath();ctx.moveTo(cxx2,cyy2);ctx.lineTo(cxx2+cos(ra)*rl,cyy2+sin(ra)*rl);ctx.stroke();
+      }
+      fillCircle(cxx2,cyy2,7,'#ffffff');
+      fillCircle(cxx2,cyy2,5,C.YELLOW);
+      drawText('STICKER!',cxx2,sr.y-cy-20,C.YELLOW,14,'center','monospace');
+      // Arrow
+      const ay2=sr.y-cy-42+sin(this.stickerAnim*3)*5;
+      fillPoly([[cxx2,ay2+14],[cxx2-7,ay2],[cxx2+7,ay2]],C.YELLOW);
+    }
+
+    // Player
+    this.drawPlayer(cx,cy);
+
+    // Particles
+    ctx.save(); ctx.translate(-cx,-cy);
+    for(const p of this.particles) p.draw();
+    ctx.restore();
+
+    // Floaty texts (world space)
+    for(const ft of this.floatyTexts) ft.draw(cx,cy);
+
+    // Exit portal
+    this.drawExitPortal(cx,cy);
+
+    // UI
+    this.drawUI();
+    this.drawBossHealthBar();
+    this.drawMiniMap();
+    this.drawLevelBanner();
+    this.drawCombo();
+    this.drawAchievementPopups();
+
+    // Gems left
+    const gemsLeft=this.gems.filter(g=>!g.collected).length;
+    if(gemsLeft>0) drawText(`💎 ${gemsLeft} gem${gemsLeft>1?'s':''} left`,W-gemsLeft*20-60,H-70,C.CYAN,14,'left','monospace');
+
+    if(this.paused) this.drawPause();
+    if(this.gameOver) this.drawGameOver();
+    if(this.achievementsOpen) this.drawAchievementsScreen();
+  }
+
+  // ── MAIN LOOP ────────────────────────────────────────────────────
+  handleMenuInput() {
+    if(this.shopOpen){
+      if(keysDown['Tab']) this.shopTab=(this.shopTab+1)%3;
+      if(keysDown['Escape']) this.shopOpen=false;
+      // Number keys for shop
+      const COLORS=[{col:'#5096dc',cost:0},{col:'#dc5050',cost:40},{col:'#64c864',cost:40},{col:'#9664c8',cost:60},{col:'#f08c28',cost:60},{col:'#64dcdc',cost:80},{col:'#ffdc64',cost:120}];
+      for(let n=0;n<7;n++){
+        const kk=['Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7'][n];
+        if(keysDown[kk]){
+          if(this.shopTab===0){
+            const upgs=[['auto',20],['eyes',15],['cape',25],['shoes',40],['hat',60]];
+            if(n<upgs.length){
+              const [key,cost]=upgs[n];
+              if(this.shopCoins>=cost){
+                this.shopCoins-=cost;this.shopSpent+=cost;
+                this.clickerUpgrades[key]=(this.clickerUpgrades[key]||0)+1;
+                if(key==='auto'||key==='cape') this.clickerCps++;
+                else if(key==='shoes') this.clickerCps+=2;
+              }
+            }
+          } else if(this.shopTab===1){
+            if(n<HATS.length){
+              const hat=HATS[n];
+              if(this.hatsOwned.has(hat.key)){this.hatEquipped=this.hatEquipped===hat.key?null:hat.key;}
+              else if(this.shopCoins>=hat.cost){this.shopCoins-=hat.cost;this.hatsOwned.add(hat.key);this.hatEquipped=hat.key;}
+            }
+          } else {
+            if(n<COLORS.length){
+              const skin=COLORS[n];
+              if(this.colorEquipped===skin.col||skin.cost===0){this.colorEquipped=skin.col;}
+              else if(this.shopCoins>=skin.cost){this.shopCoins-=skin.cost;this.colorEquipped=skin.col;}
+            }
+          }
+        }
+      }
+      return;
+    }
+    if(this.achievementsOpen){
+      if(keysDown['KeyA']||keysDown['Escape']) this.achievementsOpen=false;
+      return;
+    }
+    if(keysDown['ArrowUp']||keysDown['KeyW']) this.menuOption=(this.menuOption+2)%3;
+    if(keysDown['ArrowDown']||keysDown['KeyS']) this.menuOption=(this.menuOption+1)%3;
+    if((keysDown['ArrowLeft'])&&this.menuOption===1){
+      this.startLevel=this.startLevel<=1?30:this.startLevel-1;
+    }
+    if((keysDown['ArrowRight'])&&this.menuOption===1){
+      this.startLevel=this.startLevel>=30?1:this.startLevel+1;
+    }
+    if(keysDown['Enter']||keysDown['Space']){
+      if(this.menuOption===0){
+        this.currentLevel=0; this.playerHealth=3; this.runCoins=0;
+        this.loadLevel(0); this.state='playing';
+      } else if(this.menuOption===1){
+        this.currentLevel=this.startLevel-1; this.playerHealth=3; this.runCoins=0;
+        this.loadLevel(this.currentLevel); this.state='playing';
+      } else {
+        // Quit = show win screen or intro
+        this.state='intro'; this.introTimer=0;
+      }
+    }
+    if(keysDown['KeyS']) this.shopOpen=true;
+    if(keysDown['KeyA']) this.achievementsOpen=!this.achievementsOpen;
+    if(keysDown['F5']){if(saveGame(this))this.saveNotif=120;}
+    if(keysDown['Escape']){this.state='intro';this.introTimer=0;}
+
+    // Clicker!
+    if(mouseClick){
+      // Big blue guy click area (approx)
+      const bgX=W-130, bgY=200, bgW=60, bgH=60;
+      if(mouseX>=bgX&&mouseX<=bgX+bgW&&mouseY>=bgY&&mouseY<=bgY+bgH){
+        const mult=this.clickerUpgrades.hat>0?2:1;
+        this.shopCoins+=mult; this.bankCoins+=mult; this.clickerClicks++;
+        this.floatyTexts.push(new FloatyText(bgX+30,bgY,`+${mult}`,C.YELLOW,30));
+      }
+      // Shop button
+      if(mouseX>=W-220&&mouseX<=W-30&&mouseY>=160&&mouseY<=190) this.shopOpen=true;
+    }
+  }
+
+  tick() {
+    _t++;
+    // Clear keysDown/Up each frame
+    const kd={...keysDown}, ku={...keysUp};
+    for(const k in keysDown) delete keysDown[k];
+    for(const k in keysUp) delete keysUp[k];
+
+    if(this.state==='intro'){
+      this.introTimer++;
+      this.drawIntro();
+      if(kd['Space']||this.introTimer>360){
+        this.state='menu'; this.introTimer=0; this.particles=[];
+      }
+    } else if(this.state==='menu'){
+      Object.assign(keysDown,kd);
+      this.handleMenuInput();
+      for(const k in kd) delete keysDown[k];
+      this.drawMenu();
+      if(this.shopOpen) this.drawShop();
+      if(this.achievementsOpen) this.drawAchievementsScreen();
+      // Clicker auto-coins
+      if(_t%60===0&&this.clickerCps>0) this.shopCoins+=this.clickerCps;
+      // Miniature clicker Blue Guy on menu
+      this.drawClickerGuy();
+      if(this.saveNotif>0){this.saveNotif--;drawTextShadow('💾 SAVED!',W/2,H-100,C.GREEN,28,'center');}
+      mouseClick=false;
+    } else if(this.state==='playing'){
+      Object.assign(keysDown,kd);
+      this.handlePlayingInput();
+      for(const k in kd) delete keysDown[k];
+      this.updatePlaying();
+      this.drawPlaying();
+      mouseClick=false;
+    } else if(this.state==='win'){
+      this.drawWin();
+      if(kd['Escape']){this.state='menu';}
+    }
+  }
+
+  drawClickerGuy() {
+    // Small clickable Blue Guy panel on right side of menu
+    const cx=W-130, cy=185;
+    const t=now();
+    fillRect(cx-10,cy-10,100,80,'rgba(15,18,40,0.75)',8);
+    strokeRect(cx-10,cy-10,100,80,'rgba(50,70,160,0.8)',1,8);
+    // Guy
+    fillRect(cx+10,cy+5,40,40,this.colorEquipped,6);
+    fillCircle(cx+38,cy+16,5,'#ffffff');
+    fillCircle(cx+39,cy+17,2,'#111111');
+    ctx.beginPath();ctx.arc(cx+30,cy+35,8,0,PI,true);ctx.strokeStyle='rgba(200,150,150,0.8)';ctx.lineWidth=2;ctx.stroke();
+    if(this.hatEquipped) this.drawHat(this.hatEquipped,cx+10,cy+3);
+    // Arms wave
+    const aw=sin(t*3)*0.4;
+    fillCircle(cx+8,cy+18+sin(aw)*8,4,this.colorEquipped);
+    fillCircle(cx+52,cy+18+sin(aw+1)*8,4,this.colorEquipped);
+    // Stats
+    drawText(`Clicks: ${this.clickerClicks}`,cx-8,cy+52,'rgba(200,200,255,0.9)',11,'left','monospace');
+    drawText(`💰 ${this.shopCoins}`,cx-8,cy+65,'rgba(255,220,80,0.9)',12,'left','monospace');
+    drawText('👆 Click me!',cx-8,cy-4,'rgba(100,150,255,0.8)',11,'left','monospace');
+  }
+}
+
+// ── MAIN ─────────────────────────────────────────────────────────
+const game = new Game();
+
+function loop() {
+  game.tick();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
