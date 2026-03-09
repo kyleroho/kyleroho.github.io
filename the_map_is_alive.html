@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Map Is Alive</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;700;900&family=Space+Mono&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#050c14;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;font-family:'Raleway',sans-serif;color:#c0e8ff;}
+#wrap{position:relative;}
+canvas{display:block;}
+#hud{position:absolute;top:0;left:0;right:0;height:42px;background:#06090fdd;border-bottom:1px solid #1a3a5a;display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:5;pointer-events:none;}
+.hi{display:flex;flex-direction:column;align-items:center;}
+.hl{font-size:8px;letter-spacing:3px;color:#1a4060;text-transform:uppercase;}
+.hv{font-size:15px;font-weight:900;color:#88ccff;}
+#timerBar{position:absolute;bottom:0;left:0;right:0;height:3px;background:#0a1a2a;}
+#timerFill{height:100%;background:linear-gradient(90deg,#00ffaa,#ffcc00,#ff4422);width:100%;transition:width .1s linear;}
+#exitInfo{position:absolute;top:46px;right:8px;background:#06090fee;border:1px solid #1a3a5a;padding:5px 10px;font-family:'Space Mono',monospace;font-size:10px;color:#ff8844;min-width:110px;z-index:5;pointer-events:none;}
+#msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#050c14ee;z-index:20;}
+#msg h1{font-size:50px;font-weight:900;letter-spacing:2px;line-height:1.1;margin-bottom:10px;text-align:center;}
+#msg p{color:#2a5a7a;margin-bottom:22px;font-size:13px;text-align:center;line-height:2.2;}
+.sbtn{background:#081420;border:2px solid #1a5080;color:#66aadd;padding:11px 34px;font-family:'Raleway',sans-serif;font-weight:900;font-size:15px;letter-spacing:2px;cursor:pointer;transition:all .2s;}
+.sbtn:hover{background:#0d2030;border-color:#44aaff;box-shadow:0 0 16px #2266aa66;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <div class="hi"><div class="hl">LEVEL</div><div class="hv" id="hLvl">-</div></div>
+    <div class="hi"><div class="hl">TIME</div><div class="hv" id="hTime">-</div></div>
+    <div class="hi"><div class="hl">MOVES</div><div class="hv" id="hMoves">0</div></div>
+    <div class="hi"><div class="hl">EXITS FOUND</div><div class="hv" id="hFound">0</div></div>
+    <div id="timerBar"><div id="timerFill"></div></div>
+  </div>
+  <div id="exitInfo">EXIT<br><span id="eiTxt" style="color:#ffcc44">-</span></div>
+  <div id="msg">
+    <h1 style="color:#3388cc">THE MAP<br>IS ALIVE</h1>
+    <p>Walls slide. Doors open and close.<br>Reach the exit — <span style="color:#ffcc00">before it escapes.</span><br><br>WASD or Arrow Keys</p>
+    <button class="sbtn" onclick="startGame()">ENTER THE MAP</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const T=34, COLS=20, ROWS=13;
+const CW=COLS*T, CH=ROWS*T;
+
+// ============================================================
+// CANVAS + HUD LAYOUT
+// ============================================================
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+cv.width=CW; cv.height=CH;
+document.getElementById('wrap').style.cssText=
+  'position:relative;width:'+CW+'px;height:'+(CH+42)+'px;';
+cv.style.marginTop='42px';
+
+// ============================================================
+// GAME STATE — all declared, all safe defaults
+// ============================================================
+const K={};
+let gameState = 'menu';
+let level=1, found=0, moves=0;
+let timeLeft=30, maxTime=30, gameFrame=0;
+let px=2, py=2;        // player grid coords
+let grid=null;         // ROWS×COLS array, 1=solid
+let sliders=[];        // moving wall groups
+let doors=[];          // toggling walls
+let exitX=COLS-3, exitY=ROWS-3;
+let exitCd=0;          // frames until exit reappears (0 = visible)
+let exitTtl=80;        // frames until exit moves
+let parts=[];          // particles
+let moveCd=0;
+const MOVE_FRAMES=8;
+
+// ============================================================
+// START / LOAD LEVEL
+// ============================================================
+function startGame(){
+  document.getElementById('msg').style.display='none';
+  level=1; found=0;
+  document.getElementById('hFound').textContent=0;
+  loadLevel();
+}
+
+function loadLevel(){
+  gameState='play'; gameFrame=0; moves=0; parts=[];
+  document.getElementById('hMoves').textContent=0;
+  document.getElementById('hLvl').textContent=level;
+  maxTime=Math.max(20,42-level*1.6)|0;
+  timeLeft=maxTime;
+  moveCd=0;
+  buildGrid();
+  px=2; py=2;
+  placeExit();
+}
+
+// ============================================================
+// GRID BUILDER
+// ============================================================
+function buildGrid(){
+  // empty grid
+  grid=Array.from({length:ROWS},()=>new Array(COLS).fill(0));
+  // border
+  for(let c=0;c<COLS;c++){grid[0][c]=1;grid[ROWS-1][c]=1;}
+  for(let r=0;r<ROWS;r++){grid[r][0]=1;grid[r][COLS-1]=1;}
+  // random interior walls
+  const density=0.13+level*.013;
+  for(let r=1;r<ROWS-1;r++)
+    for(let c=1;c<COLS-1;c++)
+      if(Math.random()<density) grid[r][c]=1;
+  // carve start area
+  for(let c=1;c<COLS-1;c++) grid[1][c]=0;
+  for(let r=1;r<ROWS-1;r++) grid[r][1]=0;
+  grid[2][2]=0; grid[2][3]=0; grid[3][2]=0;
+  // carve exit area
+  grid[ROWS-2][COLS-2]=0; grid[ROWS-2][COLS-3]=0; grid[ROWS-3][COLS-2]=0;
+  // rebuild border
+  for(let c=0;c<COLS;c++){grid[0][c]=1;grid[ROWS-1][c]=1;}
+  for(let r=0;r<ROWS;r++){grid[r][0]=1;grid[r][COLS-1]=1;}
+
+  // sliders: segments that oscillate
+  sliders=[];
+  const ns=1+Math.floor(level/2);
+  for(let i=0;i<ns;i++){
+    const horiz=Math.random()<.5;
+    if(horiz){
+      const r=2+Math.floor(Math.random()*(ROWS-4));
+      const c=3+Math.floor(Math.random()*(COLS-8));
+      sliders.push({c,r,len:2+Math.floor(Math.random()*2),horiz:true,
+        spd:.016+level*.002, phase:Math.random()*Math.PI*2, range:2+Math.floor(Math.random()*2)});
+    } else {
+      const c=2+Math.floor(Math.random()*(COLS-4));
+      const r=3+Math.floor(Math.random()*(ROWS-8));
+      sliders.push({c,r,len:2+Math.floor(Math.random()*2),horiz:false,
+        spd:.016+level*.002, phase:Math.random()*Math.PI*2, range:2+Math.floor(Math.random()*2)});
+    }
+  }
+
+  // doors
+  doors=[];
+  const nd=Math.floor(level/2);
+  for(let i=0;i<nd;i++){
+    let c,r,t=0;
+    do{c=3+Math.floor(Math.random()*(COLS-6));r=3+Math.floor(Math.random()*(ROWS-6));t++;}
+    while(t<30&&grid[r][c]===1);
+    doors.push({c,r,open:true,timer:0,period:85+Math.floor(Math.random()*80)});
+  }
+}
+
+// ============================================================
+// SLIDER / DOOR SETS
+// ============================================================
+function getSliderSet(){
+  const s=new Set();
+  for(const sl of sliders){
+    const off=Math.round(Math.sin(gameFrame*sl.spd+sl.phase)*sl.range);
+    for(let i=0;i<sl.len;i++){
+      const sc=sl.horiz ? sl.c+i : sl.c+off;
+      const sr=sl.horiz ? sl.r+off : sl.r+i;
+      if(sr>=0&&sr<ROWS&&sc>=0&&sc<COLS) s.add(sr*COLS+sc);
+    }
+  }
+  return s;
+}
+
+function getDoorSet(){
+  const s=new Set();
+  for(const d of doors) if(!d.open) s.add(d.r*COLS+d.c);
+  return s;
+}
+
+function isSolid(c,r,ss,ds){
+  if(c<0||c>=COLS||r<0||r>=ROWS) return true;
+  if(grid[r][c]===1) return true;
+  if(ss&&ss.has(r*COLS+c)) return true;
+  if(ds&&ds.has(r*COLS+c)) return true;
+  return false;
+}
+
+// ============================================================
+// EXIT PLACEMENT
+// ============================================================
+function placeExit(){
+  let ec,er,t=0;
+  const ss=getSliderSet(), ds=getDoorSet();
+  do{
+    ec=COLS-2-Math.floor(Math.random()*4);
+    er=ROWS-2-Math.floor(Math.random()*4);
+    t++;
+  } while(t<80&&(isSolid(ec,er,ss,ds)||(ec===px&&er===py)));
+  exitX=ec; exitY=er;
+  exitTtl=90+Math.floor(Math.random()*50);
+  exitCd=0;
+}
+
+// ============================================================
+// UPDATE
+// ============================================================
+function update(){
+  if(gameState!=='play'||!grid) return;
+  gameFrame++;
+
+  // time
+  timeLeft-=1/60;
+  if(timeLeft<=0){timeLeft=0;gameDead("TIME'S UP");return;}
+  document.getElementById('hTime').textContent=Math.ceil(timeLeft);
+  document.getElementById('timerFill').style.width=(timeLeft/maxTime*100)+'%';
+
+  // doors
+  for(const d of doors){
+    d.timer++;
+    if(d.timer>=d.period){d.timer=0;d.open=!d.open;}
+  }
+
+  const ss=getSliderSet(), ds=getDoorSet();
+
+  // exit logic
+  if(exitCd>0){
+    exitCd--;
+    if(exitCd===0) placeExit();
+    document.getElementById('eiTxt').textContent='MOVING...';
+  } else {
+    exitTtl--;
+    if(exitTtl<=0){
+      burst(exitX*T+T/2, exitY*T+T/2, 14, '#ffcc00');
+      exitCd=28;
+      document.getElementById('eiTxt').textContent='MOVING...';
+    } else {
+      document.getElementById('eiTxt').textContent='Moves in '+Math.ceil(exitTtl/60)+'s';
+    }
+    // win check
+    if(exitCd===0&&px===exitX&&py===exitY){ gameWin(); return; }
+  }
+
+  // player movement
+  if(moveCd>0){ moveCd--; return; }
+  let dc=0,dr=0;
+  if(K['ArrowLeft']||K['a'])dc=-1;
+  else if(K['ArrowRight']||K['d'])dc=1;
+  else if(K['ArrowUp']||K['w'])dr=-1;
+  else if(K['ArrowDown']||K['s'])dr=1;
+
+  if(dc||dr){
+    const nc=px+dc, nr=py+dr;
+    if(!isSolid(nc,nr,ss,ds)){
+      px=nc; py=nr; moves++;
+      document.getElementById('hMoves').textContent=moves;
+      moveCd=MOVE_FRAMES;
+    }
+  }
+
+  // particles
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.14;p.life--;p.a=p.life/p.ml;
+    if(p.life<=0)parts.splice(i,1);
+  }
+}
+
+function gameWin(){
+  found++;
+  document.getElementById('hFound').textContent=found;
+  burst(exitX*T+T/2, exitY*T+T/2, 30, '#ffcc00');
+  level++;
+  if(level>12){
+    gameState='over';
+    document.getElementById('msg').style.display='flex';
+    document.getElementById('msg').innerHTML=
+      '<h1 style="color:#44ffcc;font-size:42px;font-weight:900;margin-bottom:10px;">MAP ESCAPED!</h1>'+
+      '<p style="color:#2a5a7a">All 12 levels cleared!<br>Exits Found: '+found+'</p>'+
+      '<button class="sbtn" onclick="level=1;found=0;startGame()">PLAY AGAIN</button>';
+    return;
+  }
+  setTimeout(loadLevel,500);
+}
+
+function gameDead(reason){
+  gameState='over';
+  document.getElementById('msg').style.display='flex';
+  document.getElementById('msg').innerHTML=
+    '<h1 style="color:#ff4422;font-size:46px;font-weight:900;margin-bottom:10px;">'+reason+'</h1>'+
+    '<p style="color:#2a5a7a">Level '+level+' | Moves: '+moves+'<br>Exits Found: '+found+'</p>'+
+    '<button class="sbtn" onclick="level=1;found=0;startGame()">TRY AGAIN</button>';
+}
+
+function burst(x,y,n,col){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2,s=Math.random()*4+1;
+    parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1,life:25+Math.random()*20,ml:45,col,a:1,r:Math.random()*2.5+1});
+  }
+}
+
+// ============================================================
+// DRAW
+// ============================================================
+function draw(){
+  ctx.clearRect(0,0,CW,CH);
+
+  // always draw bg
+  ctx.fillStyle='#060e18'; ctx.fillRect(0,0,CW,CH);
+
+  if(gameState==='menu'||!grid) return;
+
+  const ss=getSliderSet(), ds=getDoorSet();
+
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const wx=c*T, wy=r*T;
+      const key=r*COLS+c;
+      const isSlider=ss.has(key);
+      const isDoor=ds.has(key);
+      const solid=isSolid(c,r,ss,ds);
+
+      if(solid){
+        if(isSlider){
+          const pulse=.25+Math.sin(gameFrame*.13+c*.3+r*.2)*.18;
+          ctx.fillStyle=`rgba(18,65,105,${.7+pulse})`; ctx.fillRect(wx,wy,T,T);
+          ctx.strokeStyle=`rgba(36,130,210,${.5+pulse})`; ctx.lineWidth=1.5;
+          ctx.strokeRect(wx+1,wy+1,T-2,T-2);
+          // direction arrows
+          ctx.fillStyle=`rgba(80,180,255,${.3+pulse})`;
+          ctx.font='11px sans-serif'; ctx.textAlign='center';
+          ctx.fillText('↔',wx+T/2,wy+T/2+4);
+        } else if(isDoor){
+          ctx.fillStyle='#2a0e04'; ctx.fillRect(wx,wy,T,T);
+          ctx.strokeStyle='#aa3300'; ctx.lineWidth=1.5;
+          ctx.strokeRect(wx+.5,wy+.5,T-1,T-1);
+          ctx.fillStyle='#ff5500'; ctx.font='13px sans-serif'; ctx.textAlign='center';
+          ctx.fillText('✖',wx+T/2,wy+T/2+5);
+        } else {
+          ctx.fillStyle='#0a1824'; ctx.fillRect(wx,wy,T,T);
+          ctx.strokeStyle='#122030'; ctx.lineWidth=.7;
+          ctx.strokeRect(wx,wy,T,T);
+        }
+      } else {
+        ctx.fillStyle='#040c14'; ctx.fillRect(wx,wy,T,T);
+        ctx.strokeStyle='#08121e'; ctx.lineWidth=.3;
+        ctx.strokeRect(wx,wy,T,T);
+      }
+    }
+  }
+  ctx.textAlign='left';
+
+  // exit
+  if(exitCd===0){
+    const ex=exitX*T, ey=exitY*T;
+    const urgency=Math.max(0, 1-exitTtl/60);
+    const pulse=.5+Math.sin(gameFrame*.13)*.5;
+    const ecol=urgency>.5
+      ? `rgb(255,${Math.round(80*(1-urgency))},0)`
+      : '#ffcc00';
+    ctx.shadowColor=ecol; ctx.shadowBlur=18*pulse;
+    ctx.fillStyle=ecol+'22'; ctx.fillRect(ex,ey,T,T);
+    ctx.strokeStyle=ecol; ctx.lineWidth=2;
+    ctx.strokeRect(ex+1,ey+1,T-2,T-2);
+    ctx.fillStyle=ecol; ctx.font='18px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('◈',ex+T/2,ey+T/2+7);
+    // countdown arc
+    if(exitTtl>0){
+      ctx.beginPath();
+      ctx.arc(ex+T/2,ey+T/2,T*.52,-Math.PI/2,-Math.PI/2+Math.PI*2*(exitTtl/90));
+      ctx.strokeStyle=ecol+'88'; ctx.lineWidth=2.5; ctx.stroke();
+    }
+    ctx.shadowBlur=0; ctx.textAlign='left';
+  }
+
+  // particles
+  for(const p of parts){
+    ctx.globalAlpha=p.a; ctx.fillStyle=p.col;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // player
+  const plx=px*T, ply=py*T;
+  ctx.shadowColor='#3399ff'; ctx.shadowBlur=14;
+  ctx.fillStyle='#1144aa'; ctx.fillRect(plx+2,ply+2,T-4,T-4);
+  ctx.fillStyle='#4488dd'; ctx.fillRect(plx+5,ply+5,T-10,T-10);
+  ctx.fillStyle='#aaddff'; ctx.beginPath();
+  ctx.arc(plx+T/2,ply+T/2,3.5,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+}
+
+// ============================================================
+// INPUT + LOOP
+// ============================================================
+document.addEventListener('keydown',e=>{
+  K[e.key]=true;
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
+});
+document.addEventListener('keyup',e=>{K[e.key]=false;});
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
