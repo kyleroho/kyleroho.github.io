@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pixel Tanks</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a0a;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;}
+canvas{display:block;border:2px solid #333;}
+#hud{width:700px;height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#111;border:2px solid #333;border-bottom:none;}
+#hud .bar{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:2px;}
+.hpbar{width:100px;height:8px;background:#300;}
+.hpfill{height:100%;background:#ff4444;transition:width .1s;}
+.hpfill.p2{background:#4488ff;}
+#msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a0aee;z-index:20;}
+#msg h1{font-size:52px;font-weight:900;letter-spacing:4px;color:#ffdd44;margin-bottom:8px;text-align:center;}
+#msg p{color:#444;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.2;}
+.btn{background:transparent;border:2px solid #ffdd44;color:#ffdd44;padding:12px 36px;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .2s;}
+.btn:hover{background:#ffdd4422;}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div class="bar" style="color:#ff8888;">P1 <div class="hpbar"><div class="hpfill" id="hp1" style="width:100%"></div></div> <span id="s1">0</span></div>
+  <div style="color:#666;font-size:10px;letter-spacing:3px;">PIXEL TANKS</div>
+  <div class="bar" style="color:#8888ff;flex-direction:row-reverse;">P2 <div class="hpbar"><div class="hpfill p2" id="hp2" style="width:100%"></div></div> <span id="s2">0</span></div>
+</div>
+<canvas id="cv" width="700" height="504"></canvas>
+<div id="msg">
+  <h1>PIXEL TANKS</h1>
+  <p><b style="color:#ff8888">P1</b> WASD + F to shoot &nbsp;·&nbsp; <b style="color:#8888ff">P2</b> Arrows + L to shoot<br>Bounce shots off walls. First to 5 kills wins!</p>
+  <button class="btn" onclick="startGame()">▶ BATTLE</button>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var W=700,H=504,T=28;
+var COLS=W/T|0, ROWS=H/T|0;
+var keys={};
+var tanks=[],bullets=[],parts=[];
+var walls=[];
+var score=[0,0];
+var gameState='menu';
+var frame=0;
+
+var MAPS=[
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+   1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,
+   1,0,1,1,0,0,0,1,1,0,0,0,0,0,1,1,0,0,0,1,1,0,0,0,1,
+   1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,
+   1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,
+   1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,
+   1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,
+   1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,1,
+   1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,
+   1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,
+   1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,
+   1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,
+   1,0,1,1,0,0,0,1,1,0,0,0,0,0,1,1,0,0,0,1,1,0,0,0,1,
+   1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,
+   1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+   1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+   1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+function getMap(){return MAPS[0];}
+
+function makeTank(pid,x,y,col,keys_){
+  return{pid,x:x*T+T/2,y:y*T+T/2,w:T-6,h:T-6,angle:pid===0?0:Math.PI,
+    vx:0,vy:0,hp:100,maxHp:100,shootCd:0,col,keys:keys_,
+    moveCd:0, trackOff:0};
+}
+
+function buildWalls(){
+  walls=[];
+  var m=getMap();
+  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++)
+    if(m[r*COLS+c])walls.push({x:c*T,y:r*T,w:T,h:T,r,c});
+}
+
+function startGame(){
+  document.getElementById('msg').style.display='none';
+  score=[0,0];
+  buildWalls();
+  initRound();
+}
+
+function initRound(){
+  gameState='play';frame=0;bullets=[];parts=[];
+  tanks=[
+    makeTank(0,2,2,'#ff6644',{up:'w',dn:'s',lt:'a',rt:'d',shoot:'f'}),
+    makeTank(1,COLS-3,ROWS-3,'#4488ff',{up:'ArrowUp',dn:'ArrowDown',lt:'ArrowLeft',rt:'ArrowRight',shoot:'l'}),
+  ];
+  updateHUD();
+}
+
+function isSolid(x,y){
+  var c=Math.floor(x/T),r=Math.floor(y/T);
+  if(c<0||c>=COLS||r<0||r>=ROWS) return true;
+  return getMap()[r*COLS+c]===1;
+}
+
+function rectSolid(x,y,w,h){
+  return isSolid(x,y)||isSolid(x+w,y)||isSolid(x,y+h)||isSolid(x+w,y+h);
+}
+
+function update(){
+  if(gameState!=='play') return;
+  frame++;
+  tanks.forEach(function(t){
+    if(t.hp<=0)return;
+    var K=t.keys;
+    var spd=1.8,rot=0.055;
+    var moved=false;
+    // rotate
+    if(keys[K.lt])t.angle-=rot;
+    if(keys[K.rt])t.angle+=rot;
+    // move forward/back
+    var dx=0,dy=0;
+    if(keys[K.up]){dx=Math.cos(t.angle)*spd;dy=Math.sin(t.angle)*spd;moved=true;}
+    if(keys[K.dn]){dx=-Math.cos(t.angle)*spd*.6;dy=-Math.sin(t.angle)*spd*.6;moved=true;}
+    if(moved)t.trackOff=(t.trackOff+1)%6;
+    // collide
+    var nx=t.x+dx,ny=t.y;
+    var hw=t.w/2,hh=t.h/2;
+    if(!rectSolid(nx-hw,ny-hh,t.w,t.h))t.x=nx; else dx=0;
+    nx=t.x; ny=t.y+dy;
+    if(!rectSolid(nx-hw,ny-hh,t.w,t.h))t.y=ny;
+    // shoot
+    if(t.shootCd>0)t.shootCd--;
+    if(keys[K.shoot]&&t.shootCd<=0){
+      t.shootCd=30;
+      bullets.push({x:t.x+Math.cos(t.angle)*20,y:t.y+Math.sin(t.angle)*20,
+        vx:Math.cos(t.angle)*7,vy:Math.sin(t.angle)*7,
+        owner:t.pid,life:160,bounces:3,w:6,h:6});
+    }
+  });
+  // bullets
+  for(var i=bullets.length-1;i>=0;i--){
+    var b=bullets[i];
+    b.life--;
+    if(b.life<=0){bullets.splice(i,1);continue;}
+    var nx=b.x+b.vx,ny=b.y;
+    if(isSolid(nx,ny)||isSolid(nx+b.w,ny)||isSolid(nx,ny+b.h)||isSolid(nx+b.w,ny+b.h)){
+      b.vx*=-1;if(--b.bounces<=0){bullets.splice(i,1);continue;} nx=b.x+b.vx;
+    }
+    b.x=nx; ny=b.y+b.vy;
+    if(isSolid(b.x,ny)||isSolid(b.x+b.w,ny)||isSolid(b.x,ny+b.h)||isSolid(b.x+b.w,ny+b.h)){
+      b.vy*=-1;if(--b.bounces<=0){bullets.splice(i,1);continue;} ny=b.y+b.vy;
+    }
+    b.y=ny;
+    // hit tanks
+    tanks.forEach(function(t){
+      if(t.hp<=0||b.owner===t.pid)return;
+      if(Math.abs(b.x-t.x)<t.w/2+3&&Math.abs(b.y-t.y)<t.h/2+3){
+        t.hp=Math.max(0,t.hp-34);
+        explode(b.x,b.y,t.col);
+        bullets.splice(bullets.indexOf(b),1);
+        updateHUD();
+        if(t.hp<=0){
+          explode(t.x,t.y,t.col,30);
+          score[b.owner]++;
+          updateHUD();
+          setTimeout(function(){if(score[0]>=5||score[1]>=5)gameOver();else initRound();},1200);
+        }
+      }
+    });
+  }
+  // particles
+  for(var i2=parts.length-1;i2>=0;i2--){
+    var p=parts[i2];p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life--;
+    if(p.life<=0)parts.splice(i2,1);
+  }
+}
+
+function explode(x,y,col,n){
+  n=n||12;
+  for(var i=0;i<n;i++){var a=Math.random()*Math.PI*2,s=2+Math.random()*4;
+    parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,col,life:20+Math.random()*20,r:2+Math.random()*3});}
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#111';ctx.fillRect(0,0,W,H);
+  // floor tiles
+  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){
+    ctx.fillStyle=(r+c)%2?'#161616':'#121212';ctx.fillRect(c*T,r*T,T,T);
+  }
+  // walls
+  walls.forEach(function(w){
+    var g=ctx.createLinearGradient(w.x,w.y,w.x,w.y+T);
+    g.addColorStop(0,'#2a2a2a');g.addColorStop(1,'#1a1a1a');
+    ctx.fillStyle=g;ctx.fillRect(w.x,w.y,w.w,w.h);
+    ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.strokeRect(w.x+.5,w.y+.5,w.w-1,w.h-1);
+    ctx.fillStyle='#3a3a3a';ctx.fillRect(w.x+2,w.y+2,4,4);
+    ctx.fillRect(w.x+w.w-6,w.y+2,4,4);
+  });
+  // particles
+  parts.forEach(function(p){
+    ctx.globalAlpha=p.life/40;ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  });ctx.globalAlpha=1;
+  // bullets
+  bullets.forEach(function(b){
+    ctx.shadowColor='#ffff44';ctx.shadowBlur=8;
+    ctx.fillStyle='#ffff44';
+    ctx.beginPath();ctx.arc(b.x+b.w/2,b.y+b.h/2,4,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+  });
+  // tanks
+  tanks.forEach(function(t){
+    if(t.hp<=0)return;
+    ctx.save();ctx.translate(t.x,t.y);ctx.rotate(t.angle);
+    // tracks
+    ctx.fillStyle='#333';
+    ctx.fillRect(-t.w/2-3,-t.h/2,6,t.h);ctx.fillRect(t.w/2-3,-t.h/2,6,t.h);
+    ctx.fillStyle='#444';
+    for(var i=0;i<4;i++){
+      var ty=-t.h/2+i*(t.h/3.5)+((t.trackOff<3)?0:t.h/7);
+      ctx.fillRect(-t.w/2-3,ty,6,3);ctx.fillRect(t.w/2-3,ty,6,3);
+    }
+    // body
+    ctx.shadowColor=t.col;ctx.shadowBlur=10;
+    ctx.fillStyle=t.col+'66';ctx.fillRect(-t.w/2,-t.h/2,t.w,t.h);
+    ctx.strokeStyle=t.col;ctx.lineWidth=2;ctx.strokeRect(-t.w/2,-t.h/2,t.w,t.h);
+    // turret
+    ctx.fillStyle=t.col;ctx.fillRect(-6,-6,12,12);
+    ctx.fillRect(0,-3,t.w/2+4,6);
+    ctx.shadowBlur=0;
+    ctx.restore();
+    // hp mini bar
+    ctx.fillStyle='#300';ctx.fillRect(t.x-14,t.y-t.h/2-8,28,4);
+    ctx.fillStyle=t.col;ctx.fillRect(t.x-14,t.y-t.h/2-8,28*(t.hp/t.maxHp),4);
+  });
+}
+
+function updateHUD(){
+  document.getElementById('hp1').style.width=(tanks[0]?tanks[0].hp:0)+'%';
+  document.getElementById('hp2').style.width=(tanks[1]?tanks[1].hp:0)+'%';
+  document.getElementById('s1').textContent=score[0];
+  document.getElementById('s2').textContent=score[1];
+}
+
+function gameOver(){
+  gameState='over';
+  var w=score[0]>=5?1:2;
+  document.getElementById('msg').style.display='flex';
+  document.getElementById('msg').innerHTML=
+    '<h1 style="color:'+(w===1?'#ff6644':'#4488ff')+'">P'+w+' WINS!</h1>'+
+    '<p style="color:#666">Score: '+score[0]+' — '+score[1]+'</p>'+
+    '<button class="btn" onclick="score=[0,0];startGame()">PLAY AGAIN</button>';
+}
+
+document.addEventListener('keydown',function(e){keys[e.key]=true;if(['ArrowUp','ArrowDown',' '].includes(e.key))e.preventDefault();});
+document.addEventListener('keyup',function(e){keys[e.key]=false;});
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
