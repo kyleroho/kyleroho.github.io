@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dungeon Crawler</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#080510;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;}
+#wrap{position:relative;}
+canvas{display:block;}
+#hud{position:absolute;top:0;left:0;right:0;height:44px;background:#06030cdd;border-bottom:1px solid #2a1a4a;display:flex;align-items:center;justify-content:space-between;padding:0 14px;pointer-events:none;}
+.hitem{display:flex;flex-direction:column;align-items:center;}
+.hl{font-size:8px;letter-spacing:2px;color:#2a1a4a;text-transform:uppercase;}
+.hv{font-size:15px;font-weight:700;color:#cc88ff;}
+#log{position:absolute;bottom:8px;left:8px;right:8px;height:36px;pointer-events:none;}
+#logTxt{font-size:11px;color:#6633aa;letter-spacing:1px;font-family:monospace;}
+#msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#060310ee;z-index:20;}
+#msg h1{font-size:48px;font-weight:900;letter-spacing:4px;color:#cc88ff;margin-bottom:8px;text-align:center;}
+#msg p{color:#2a1a4a;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.2;}
+.btn{background:transparent;border:2px solid #cc88ff;color:#cc88ff;padding:11px 34px;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .2s;}
+.btn:hover{background:#cc88ff22;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="560" height="560"></canvas>
+  <div id="hud">
+    <div class="hitem"><div class="hv" id="hHP">❤ 100</div><div class="hl">HP</div></div>
+    <div class="hitem"><div class="hv" id="hFloor">FLOOR 1</div><div class="hl">DEPTH</div></div>
+    <div class="hitem"><div class="hv" id="hGold">0 💰</div><div class="hl">GOLD</div></div>
+    <div class="hitem"><div class="hv" id="hKeys">0 🗝</div><div class="hl">KEYS</div></div>
+  </div>
+  <div id="log"><div id="logTxt"></div></div>
+  <div id="msg">
+    <h1>DUNGEON<br>CRAWLER</h1>
+    <p>WASD/Arrows to move.<br>Bump into enemies to attack.<br>Find the 🗝 key and reach the 🚪 exit!<br>Collect potions ♥ to heal.</p>
+    <button class="btn" onclick="startGame()">DESCEND ↓</button>
+  </div>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var CW=560,CH=560,T=28,COLS=CW/T|0,ROWS=(CH-44)/T|0; // ROWS=18 cols=20
+// Adjust: we'll use a fixed play area below hud
+var PY=44; // play starts at y=44
+
+var keys={};
+var player,enemies,items,tilemap,floor,gold,logQueue,frame;
+var gameState='menu';
+
+var TILES={WALL:1,FLOOR:0,DOOR:2,STAIR:3};
+
+function log(txt){
+  logQueue.unshift(txt);if(logQueue.length>3)logQueue.pop();
+  document.getElementById('logTxt').textContent=logQueue[0];
+}
+
+function startGame(){
+  document.getElementById('msg').style.display='none';
+  floor=1;gold=0;logQueue=[];frame=0;
+  player={x:2,y:2,hp:100,maxHp:100,atk:15,def:2,inv:0,hasKey:false,facing:1};
+  genFloor();
+  updateHUD();
+  gameState='play';
+}
+
+// Cellular automata cave gen
+function genFloor(){
+  var cols=COLS,rows=ROWS;
+  tilemap=[];
+  var noise=[];
+  for(var i=0;i<rows;i++){tilemap.push([]);noise.push([]);
+    for(var j=0;j<cols;j++){tilemap[i][j]=1;noise[i][j]=Math.random()<.45?1:0;}}
+  // smooth
+  for(var iter=0;iter<4;iter++){
+    var next=noise.map(function(r){return r.slice();});
+    for(var r=1;r<rows-1;r++)for(var c=1;c<cols-1;c++){
+      var walls=0;
+      for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++)if(noise[r+dr][c+dc])walls++;
+      next[r][c]=walls>=5?1:0;
+    }
+    noise=next;
+  }
+  for(var r2=0;r2<rows;r2++)for(var c2=0;c2<cols;c2++)tilemap[r2][c2]=noise[r2][c2];
+  // ensure corners solid
+  for(var r3=0;r3<rows;r3++){tilemap[r3][0]=1;tilemap[r3][cols-1]=1;}
+  for(var c3=0;c3<cols;c3++){tilemap[0][c3]=1;tilemap[rows-1][c3]=1;}
+  // place player in first open cell
+  outer:for(var r4=1;r4<rows-1;r4++)for(var c4=1;c4<cols-1;c4++){
+    if(!tilemap[r4][c4]){player.x=c4;player.y=r4;break outer;}
+  }
+  player.hasKey=false;
+  // gather open cells
+  var openCells=[];
+  for(var r5=1;r5<rows-1;r5++)for(var c5=1;c5<cols-1;c5++)
+    if(!tilemap[r5][c5]&&!(r5===player.y&&c5===player.x)) openCells.push({x:c5,y:r5});
+  shuffle(openCells);
+  // place key, stair
+  if(openCells.length>2){
+    var kp=openCells.pop();tilemap[kp.y][kp.x]=4; // key
+    var sp=openCells.pop();tilemap[sp.y][sp.x]=3; // stair
+  }
+  // enemies
+  enemies=[];
+  var ne=3+floor*2;
+  for(var i=0;i<ne&&openCells.length>0;i++){
+    var ep=openCells.pop();
+    var et=floor<3?'goblin':floor<5?'orc':'demon';
+    enemies.push({x:ep.x,y:ep.y,hp:10+floor*8,maxHp:10+floor*8,atk:5+floor*3,col:et==='goblin'?'#44bb44':et==='orc'?'#aa6622':'#aa2244',type:et,moveCd:0,dead:false});
+  }
+  // items
+  items=[];
+  var ni=2+Math.floor(floor/2);
+  for(var i2=0;i2<ni&&openCells.length>0;i2++){
+    var ip=openCells.pop();
+    var it=Math.random()<.6?'potion':'gold';
+    items.push({x:ip.x,y:ip.y,type:it,col:it==='potion'?'#ff4488':'#ffdd44',collected:false});
+  }
+  log('Floor '+floor+' — find the key and staircase!');
+}
+
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.random()*(i+1)|0;var t=a[i];a[i]=a[j];a[j]=t;}}
+
+function tryMove(dx,dy){
+  var nx=player.x+dx,ny=player.y+dy;
+  if(nx<0||nx>=COLS||ny<0||ny>=ROWS) return;
+  var tile=tilemap[ny][nx];
+  if(tile===1) return;
+  // attack enemy?
+  for(var i=0;i<enemies.length;i++){
+    var e=enemies[i];
+    if(!e.dead&&e.x===nx&&e.y===ny){
+      var dmg=Math.max(1,player.atk-e.def|0)+(Math.random()*5|0);
+      e.hp-=dmg;log('Hit '+e.type+' for '+dmg+'! ('+e.hp+' left)');
+      if(e.hp<=0){e.dead=true;gold+=5+floor*3;log(e.type.toUpperCase()+' defeated! +'+( 5+floor*3)+' gold');updateHUD();}
+      return;
+    }
+  }
+  // stair?
+  if(tile===3){
+    if(player.hasKey){floor++;log('Descended to floor '+floor+'!');genFloor();updateHUD();}
+    else{log('Need the key first!');}
+    return;
+  }
+  // key?
+  if(tile===4){player.hasKey=true;tilemap[ny][nx]=0;log('Found the KEY! Now reach the staircase.');updateHUD();}
+  player.x=nx;player.y=ny;
+  player.facing=dx>0?1:dx<0?-1:player.facing;
+  // pickup items
+  for(var i2=items.length-1;i2>=0;i2--){
+    var it=items[i2];
+    if(!it.collected&&it.x===player.x&&it.y===player.y){
+      it.collected=true;
+      if(it.type==='potion'){var h=20+floor*5;player.hp=Math.min(player.maxHp,player.hp+h);log('Potion! +'+h+' HP');updateHUD();}
+      else{var g=3+Math.random()*8|0;gold+=g;log('Found '+g+' gold!');updateHUD();}
+    }
+  }
+  updateHUD();
+}
+
+function updateHUD(){
+  document.getElementById('hHP').textContent='❤ '+player.hp;
+  document.getElementById('hFloor').textContent='FLOOR '+floor;
+  document.getElementById('hGold').textContent=gold+' 💰';
+  document.getElementById('hKeys').textContent=(player.hasKey?'1':'0')+' 🗝';
+}
+
+var lastMove=0;
+function update(){
+  if(gameState!=='play') return;
+  frame++;
+  var now=frame;
+  if(now-lastMove>8){
+    var dx=0,dy=0;
+    if(keys['ArrowLeft']||keys['a'])dx=-1;
+    else if(keys['ArrowRight']||keys['d'])dx=1;
+    else if(keys['ArrowUp']||keys['w'])dy=-1;
+    else if(keys['ArrowDown']||keys['s'])dy=1;
+    if(dx||dy){tryMove(dx,dy);lastMove=now;}
+  }
+  // enemy AI — move every 20 frames
+  if(frame%20===0){
+    enemies.forEach(function(e){
+      if(e.dead) return;
+      var dx=player.x-e.x,dy=player.y-e.y;
+      var dist=Math.abs(dx)+Math.abs(dy);
+      if(dist>8)return; // only chase when nearby
+      // simple: try to move 1 step toward player
+      var moves=[];
+      if(Math.abs(dx)>=Math.abs(dy)){moves.push([dx>0?1:-1,0],[0,dy>0?1:-1]);}
+      else{moves.push([0,dy>0?1:-1],[dx>0?1:-1,0]);}
+      for(var i=0;i<moves.length;i++){
+        var nx=e.x+moves[i][0],ny=e.y+moves[i][1];
+        if(nx<0||nx>=COLS||ny<0||ny>=ROWS||tilemap[ny][nx])continue;
+        if(enemies.some(function(o){return !o.dead&&o.x===nx&&o.y===ny;}))continue;
+        if(nx===player.x&&ny===player.y){
+          // attack player
+          if(player.inv<=0){
+            var dmg=Math.max(1,e.atk-player.def|0);
+            player.hp=Math.max(0,player.hp-dmg);
+            player.inv=20;
+            log(e.type+' hits you for '+dmg+'!');
+            updateHUD();
+            if(player.hp<=0){gameDead();return;}
+          }
+        } else {e.x=nx;e.y=ny;}
+        break;
+      }
+    });
+  }
+  if(player.inv>0)player.inv--;
+}
+
+function gameDead(){
+  gameState='over';
+  document.getElementById('msg').style.display='flex';
+  document.getElementById('msg').innerHTML=
+    '<h1 style="color:#ff4444">YOU DIED</h1>'+
+    '<p style="color:#2a1a4a">Floor '+floor+' | Gold: '+gold+'</p>'+
+    '<button class="btn" onclick="startGame()">DESCEND AGAIN</button>';
+}
+
+var TCOLS={0:'#0d0820',1:'#1a0e2e',3:'#224422',4:'#aa7700'};
+function draw(){
+  ctx.clearRect(0,0,CW,CH);
+  ctx.fillStyle='#06030c';ctx.fillRect(0,0,CW,CH);
+  if(gameState==='menu') return;
+  // tiles
+  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){
+    var t=tilemap[r][c];
+    var tx=c*T,ty=r*T+PY;
+    if(t===1){
+      ctx.fillStyle='#14082a';ctx.fillRect(tx,ty,T,T);
+      ctx.strokeStyle='#1e0e3a';ctx.lineWidth=.7;ctx.strokeRect(tx+.5,ty+.5,T-1,T-1);
+      // bevel
+      ctx.fillStyle='#1e0e3a';ctx.fillRect(tx,ty,T,2);ctx.fillRect(tx,ty,2,T);
+      ctx.fillStyle='#0e061e';ctx.fillRect(tx,ty+T-2,T,2);ctx.fillRect(tx+T-2,ty,2,T);
+    } else if(t===0){
+      ctx.fillStyle=(r+c)%2?'#0d0820':'#0a0618';ctx.fillRect(tx,ty,T,T);
+    } else if(t===3){
+      ctx.fillStyle='#162a12';ctx.fillRect(tx,ty,T,T);
+      ctx.fillStyle='#44ff44';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('▼',tx+T/2,ty+T/2+6);ctx.textAlign='left';
+    } else if(t===4){
+      ctx.fillStyle='#221800';ctx.fillRect(tx,ty,T,T);
+      ctx.fillStyle='#ffcc00';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('🗝',tx+T/2,ty+T/2+6);ctx.textAlign='left';
+    }
+  }
+  // items
+  items.forEach(function(it){
+    if(it.collected)return;
+    ctx.shadowColor=it.col;ctx.shadowBlur=10;
+    ctx.font='14px sans-serif';ctx.textAlign='center';
+    ctx.fillText(it.type==='potion'?'♥':'💰',it.x*T+T/2,it.y*T+PY+T/2+5);
+    ctx.shadowBlur=0;ctx.textAlign='left';
+  });
+  // enemies
+  enemies.forEach(function(e){
+    if(e.dead)return;
+    var tx=e.x*T,ty=e.y*T+PY;
+    ctx.shadowColor=e.col;ctx.shadowBlur=8;
+    ctx.fillStyle=e.col;ctx.fillRect(tx+4,ty+4,T-8,T-8);
+    // eyes
+    ctx.fillStyle='#ff0000';ctx.fillRect(tx+6,ty+8,3,3);ctx.fillRect(tx+T-9,ty+8,3,3);
+    ctx.shadowBlur=0;
+    // hp bar
+    ctx.fillStyle='#300';ctx.fillRect(tx,ty-4,T,3);
+    ctx.fillStyle=e.col;ctx.fillRect(tx,ty-4,T*(e.hp/e.maxHp),3);
+  });
+  // player
+  var px=player.x*T,py2=player.y*T+PY;
+  var flash=player.inv>0&&Math.floor(frame/4)%2;
+  if(!flash){
+    ctx.shadowColor='#9966ff';ctx.shadowBlur=14;
+    ctx.fillStyle='#7744cc';ctx.fillRect(px+3,py2+3,T-6,T-6);
+    ctx.fillStyle='#cc88ff';ctx.fillRect(px+6,py2+4,T-12,8);
+    // eyes
+    var eyeX=player.facing>0?px+T-9:px+6;
+    ctx.fillStyle='#ffffff';ctx.fillRect(eyeX,py2+9,4,4);
+    ctx.fillStyle='#cc88ff';ctx.beginPath();ctx.arc(px+T/2,py2+T/2-2,4,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+  }
+}
+
+document.addEventListener('keydown',function(e){keys[e.key]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();});
+document.addEventListener('keyup',function(e){keys[e.key]=false;});
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
