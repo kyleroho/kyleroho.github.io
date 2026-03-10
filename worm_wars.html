@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Worm Wars</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#080808;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;}
+canvas{display:block;border:2px solid #222;}
+#hud{width:640px;height:40px;background:#0a0a0a;border:2px solid #222;border-bottom:none;display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
+.hp{font-size:12px;letter-spacing:1px;}
+#msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#080808ee;z-index:20;}
+#msg h1{font-size:50px;font-weight:900;letter-spacing:4px;color:#ffcc44;margin-bottom:8px;text-align:center;}
+#msg p{color:#444;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.4;}
+.btn{background:transparent;border:2px solid #ffcc44;color:#ffcc44;padding:12px 36px;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .2s;}
+.btn:hover{background:#ffcc4422;}
+</style>
+</head>
+<body>
+<div id="hud">
+  <span class="hp" style="color:#ff6644">P1 ●●●●● <span id="s1">0</span></span>
+  <span style="color:#555;font-size:10px;letter-spacing:3px;">WORM WARS</span>
+  <span class="hp" style="color:#4488ff"><span id="s2">0</span> ●●●●● P2</span>
+</div>
+<canvas id="cv" width="640" height="480"></canvas>
+<div id="msg">
+  <h1>WORM WARS</h1>
+  <p><b style="color:#ff6644">P1</b> WASD to slither<br><b style="color:#4488ff">P2</b> Arrow Keys<br><br>Crash into the other worm to kill them.<br>Eat food to grow. First to 5 wins!</p>
+  <button class="btn" onclick="startGame()">▶ BATTLE</button>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var W=640,H=480,T=10;
+var COLS=W/T,ROWS=H/T;
+var keys={};
+var worms=[],food=[],particles=[];
+var score=[0,0];
+var gameState='menu',frame=0;
+var SPEED=6; // frames per move
+
+var WORM_DEFS=[
+  {col:'#ff6644',headCol:'#ff8866',dir:{x:1,y:0},startX:5,startY:ROWS/2|0,keys:{up:'w',dn:'s',lt:'a',rt:'d'}},
+  {col:'#4488ff',headCol:'#66aaff',dir:{x:-1,y:0},startX:COLS-6,startY:ROWS/2|0,keys:{up:'ArrowUp',dn:'ArrowDown',lt:'ArrowLeft',rt:'ArrowRight'}},
+];
+
+function makeWorm(def,i){
+  var segs=[];
+  for(var j=0;j<6;j++) segs.push({x:def.startX-(def.dir.x*j),y:def.startY});
+  return{segs:segs,dir:{x:def.dir.x,y:def.dir.y},nextDir:{x:def.dir.x,y:def.dir.y},
+    col:def.col,headCol:def.headCol,keys:def.keys,alive:true,pid:i,growQ:0};
+}
+
+function startGame(){
+  document.getElementById('msg').style.display='none';
+  worms=WORM_DEFS.map(function(d,i){return makeWorm(d,i);});
+  food=[];particles=[];frame=0;
+  spawnFood();spawnFood();spawnFood();
+  gameState='play';
+}
+
+function spawnFood(){
+  var occ=new Set();
+  worms.forEach(function(w){w.segs.forEach(function(s){occ.add(s.x+','+s.y);});});
+  food.forEach(function(f){occ.add(f.x+','+f.y);});
+  var tries=0,x,y;
+  do{x=1+Math.floor(Math.random()*(COLS-2));y=1+Math.floor(Math.random()*(ROWS-2));tries++;}
+  while(occ.has(x+','+y)&&tries<100);
+  food.push({x,y,anim:Math.random()*Math.PI*2,type:Math.random()<.2?'mega':'normal'});
+}
+
+function update(){
+  if(gameState!=='play') return;
+  frame++;
+
+  // Direction input
+  worms.forEach(function(w){
+    var K=w.keys;
+    if((keys[K.up])&&w.dir.y!==1)w.nextDir={x:0,y:-1};
+    if((keys[K.dn])&&w.dir.y!==-1)w.nextDir={x:0,y:1};
+    if((keys[K.lt])&&w.dir.x!==1)w.nextDir={x:-1,y:0};
+    if((keys[K.rt])&&w.dir.x!==-1)w.nextDir={x:1,y:0};
+  });
+
+  if(frame%SPEED!==0) return;
+
+  worms.forEach(function(w){
+    if(!w.alive) return;
+    w.dir=w.nextDir;
+    var head=w.segs[0];
+    var nx=head.x+w.dir.x,ny=head.y+w.dir.y;
+    // wall collision
+    if(nx<0||nx>=COLS||ny<0||ny>=ROWS){killWorm(w);return;}
+    // self collision
+    if(w.segs.slice(1).some(function(s){return s.x===nx&&s.y===ny;})){killWorm(w);return;}
+    // other worm collision
+    var other=worms.filter(function(o){return o!==w&&o.alive;})[0];
+    if(other&&other.segs.some(function(s){return s.x===nx&&s.y===ny;})){killWorm(w);return;}
+
+    w.segs.unshift({x:nx,y:ny});
+    // eat food
+    var fi=food.findIndex(function(f){return f.x===nx&&f.y===ny;});
+    if(fi>=0){
+      var ff=food[fi];food.splice(fi,1);
+      w.growQ+=ff.type==='mega'?5:1;
+      spawnFood();
+      spawnParts(nx*T+T/2,ny*T+T/2,w.col,12);
+    }
+    if(w.growQ>0){w.growQ--;}
+    else{w.segs.pop();}
+  });
+
+  food.forEach(function(f){f.anim+=.06;});
+
+  for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1);}
+
+  // check if any dead
+  var dead=worms.filter(function(w){return!w.alive;});
+  if(dead.length>0){
+    dead.forEach(function(w){
+      var winner=1-w.pid;
+      score[winner]++;
+      document.getElementById('s'+[1,2][winner]).textContent=score[winner];
+    });
+    if(score[0]>=5||score[1]>=5){gameOver();}
+    else{setTimeout(initRound,1200);}
+  }
+}
+
+function initRound(){
+  worms=WORM_DEFS.map(function(d,i){return makeWorm(d,i);});
+  food=[];particles=[];frame=0;
+  spawnFood();spawnFood();spawnFood();
+}
+
+function killWorm(w){
+  w.alive=false;
+  w.segs.forEach(function(s){spawnParts(s.x*T+T/2,s.y*T+T/2,w.col,2);});
+}
+
+function spawnParts(x,y,col,n){
+  for(var i=0;i<n;i++){var a=Math.random()*Math.PI*2,s=2+Math.random()*3;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1,col,life:15+Math.random()*15,r:1.5+Math.random()*1.5});}
+}
+
+function gameOver(){
+  gameState='over';
+  var w=score[0]>=5?0:1;
+  document.getElementById('msg').style.display='flex';
+  document.getElementById('msg').innerHTML=
+    '<h1 style="color:'+(w===0?'#ff6644':'#4488ff')+'">P'+(w+1)+' WINS!</h1>'+
+    '<p style="color:#444">Score: '+score[0]+' — '+score[1]+'</p>'+
+    '<button class="btn" onclick="score=[0,0];document.getElementById(\'s1\').textContent=0;document.getElementById(\'s2\').textContent=0;startGame()">REMATCH</button>';
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0c0c0c';ctx.fillRect(0,0,W,H);
+  // subtle grid
+  ctx.strokeStyle='#111';ctx.lineWidth=.5;
+  for(var x=0;x<W;x+=T)ctx.strokeRect(x,0,T,H);
+
+  // particles
+  particles.forEach(function(p){ctx.globalAlpha=p.life/30;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
+
+  // food
+  food.forEach(function(f){
+    var fp=.6+Math.sin(f.anim)*.4;
+    ctx.shadowColor=f.type==='mega'?'#ffcc00':'#44ff44';ctx.shadowBlur=12*fp;
+    if(f.type==='mega'){ctx.fillStyle='#ffcc00';ctx.fillRect(f.x*T+1,f.y*T+1,T-2,T-2);}
+    else{ctx.fillStyle='#44ff44';ctx.beginPath();ctx.arc(f.x*T+T/2,f.y*T+T/2,T*.38,0,Math.PI*2);ctx.fill();}
+    ctx.shadowBlur=0;
+  });
+
+  // worms
+  worms.forEach(function(w){
+    w.segs.forEach(function(s,i){
+      var isHead=i===0;
+      ctx.shadowColor=w.col;ctx.shadowBlur=isHead?12:0;
+      var col=isHead?w.headCol:w.col;
+      // darken tail
+      var t=i/w.segs.length;
+      ctx.globalAlpha=w.alive?1-t*.3:.3;
+      ctx.fillStyle=col;
+      ctx.fillRect(s.x*T+1,s.y*T+1,T-2,T-2);
+      if(isHead){
+        // eyes
+        var ex=s.x*T+(w.dir.x>0?T-4:w.dir.x<0?1:T/2-2);
+        var ey=s.y*T+(w.dir.y>0?T-4:w.dir.y<0?1:T/2-2);
+        ctx.fillStyle='#fff';ctx.fillRect(ex,ey,3,3);
+        ctx.fillStyle='#000';ctx.fillRect(ex+1,ey+1,1,1);
+      }
+      ctx.shadowBlur=0;ctx.globalAlpha=1;
+    });
+  });
+}
+
+document.addEventListener('keydown',function(e){keys[e.key]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();});
+document.addEventListener('keyup',function(e){keys[e.key]=false;});
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
