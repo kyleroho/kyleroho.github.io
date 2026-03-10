@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Snake Evolved</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#050a05;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;}
+#wrap{position:relative;}
+canvas{display:block;border:2px solid #1a3a1a;}
+#hud{width:500px;height:42px;background:#030703;border:2px solid #1a3a1a;border-bottom:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px;}
+.hv{font-size:14px;color:#44ff44;}
+.hl{font-size:7px;letter-spacing:2px;color:#0a2a0a;margin-top:1px;}
+#powerInfo{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:2px;color:#1a4a1a;pointer-events:none;white-space:nowrap;}
+#msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#050a05ee;z-index:20;}
+#msg h1{font-size:48px;font-weight:900;letter-spacing:4px;color:#44ff44;margin-bottom:8px;text-align:center;text-shadow:0 0 30px #44ff4444;}
+#msg p{color:#0a2a0a;font-size:12px;margin-bottom:22px;text-align:center;line-height:2.4;}
+.btn{background:transparent;border:2px solid #44ff44;color:#44ff44;padding:11px 34px;font-family:'Orbitron',monospace;font-size:13px;letter-spacing:3px;cursor:pointer;transition:all .2s;margin:4px;}
+.btn:hover{background:#44ff4422;}
+.modebtn{font-size:11px;padding:8px 20px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <div><div class="hv" id="scoreV">0</div><div class="hl">SCORE</div></div>
+    <div><div class="hv" id="hiV">0</div><div class="hl">HI-SCORE</div></div>
+    <div><div class="hv" id="lenV">3</div><div class="hl">LENGTH</div></div>
+    <div><div class="hv" id="powerV">—</div><div class="hl">POWER-UP</div></div>
+  </div>
+  <canvas id="cv" width="500" height="500"></canvas>
+  <div id="powerInfo" id="powerInfo"></div>
+  <div id="msg">
+    <h1>SNAKE<br>EVOLVED</h1>
+    <p>Arrow keys / WASD to slither.<br>Eat food to grow. Avoid walls and yourself.<br>Power-ups change everything!</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      <button class="btn modebtn" onclick="startGame('classic')">CLASSIC</button>
+      <button class="btn modebtn" onclick="startGame('walls')">NO WALLS</button>
+      <button class="btn modebtn" onclick="startGame('speed')">SPEED RUN</button>
+    </div>
+  </div>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var T=20,COLS=25,ROWS=25,W=500,H=500;
+var keys={};
+var gameState='menu';
+var snake,dir,nextDir,food,powerUp,powerTimer,frame,score,hiScore=0,mode;
+var gameSpeed=8,speedTimer=0;
+var particles=[];
+
+var POWERS=[
+  {id:'ghost',  label:'GHOST',    col:'#aaaaff',desc:'Phase thru self',dur:150},
+  {id:'speed',  label:'SPEED',    col:'#ff8800',desc:'Ultra fast',dur:120},
+  {id:'slow',   label:'SLOW',     col:'#44ffff',desc:'Slow down',dur:180},
+  {id:'double', label:'x2 SCORE', col:'#ffdd00',desc:'Double points',dur:200},
+  {id:'short',  label:'SHRINK',   col:'#ff44ff',desc:'Cut length',dur:0},
+  {id:'big',    label:'MEGA FOOD',col:'#ff4444',desc:'Mega food ahead',dur:0},
+];
+
+function startGame(m){
+  document.getElementById('msg').style.display='none';
+  mode=m||'classic';
+  snake=[];dir={x:1,y:0};nextDir={x:1,y:0};frame=0;score=0;
+  powerUp=null;powerTimer=0;particles=[];
+  // Starting snake
+  snake=[{x:12,y:12},{x:11,y:12},{x:10,y:12}];
+  gameSpeed=mode==='speed'?5:8;
+  spawnFood(1);
+  powerUp=null;
+  if(Math.random()<.5)spawnPower();
+  gameState='play';
+  updateHUD();
+}
+
+function spawnFood(mega){
+  var cells=freeCells();if(!cells.length)return;
+  var c=cells[Math.floor(Math.random()*cells.length)];
+  food={x:c.x,y:c.y,mega:mega,anim:0,col:mega?'#ff4444':'#44ff44',pts:mega?50:10};
+}
+
+function spawnPower(){
+  var cells=freeCells();if(cells.length<2)return;
+  var c=cells[Math.floor(Math.random()*cells.length)];
+  var def=POWERS[Math.floor(Math.random()*POWERS.length)];
+  powerUp={x:c.x,y:c.y,def:def,anim:0,life:400};
+}
+
+function freeCells(){
+  var occ=new Set();
+  snake.forEach(function(s){occ.add(s.x+','+s.y);});
+  if(food)occ.add(food.x+','+food.y);
+  var cells=[];
+  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++)if(!occ.has(c+','+r))cells.push({x:c,y:r});
+  return cells;
+}
+
+var activePower=null,activePowerTimer=0;
+
+function update(){
+  if(gameState!=='play') return;
+  frame++;
+  var spd=gameSpeed;
+  if(activePower&&activePower.id==='speed')spd=Math.max(3,spd-3);
+  if(activePower&&activePower.id==='slow')spd=Math.min(16,spd+6);
+  if(mode==='speed')spd=Math.max(3,spd-Math.floor(score/100));
+  if(frame%spd!==0) return;
+
+  dir=nextDir;
+  var head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+
+  // wall wrap or die
+  if(mode==='walls'){head.x=((head.x%COLS)+COLS)%COLS;head.y=((head.y%ROWS)+ROWS)%ROWS;}
+  else if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS){die();return;}
+
+  // self collision
+  var ghost=activePower&&activePower.id==='ghost';
+  if(!ghost&&snake.some(function(s){return s.x===head.x&&s.y===head.y;})){die();return;}
+
+  snake.unshift(head);
+  // eat food
+  if(food&&head.x===food.x&&head.y===food.y){
+    var pts=food.pts*(activePower&&activePower.id==='double'?2:1);
+    score+=pts;
+    spawnParts(head.x*T+T/2,head.y*T+T/2,food.col);
+    spawnFood(Math.random()<.1?1:0);
+    if(!powerUp&&Math.random()<.25)spawnPower();
+  } else {snake.pop();}
+
+  // eat powerup
+  if(powerUp&&head.x===powerUp.x&&head.y===powerUp.y){
+    var def=powerUp.def;
+    if(def.id==='short'){
+      var cut=Math.floor(snake.length/3);
+      snake=snake.slice(0,Math.max(3,snake.length-cut));
+    } else {
+      activePower=def;activePowerTimer=def.dur;
+    }
+    showPower(def.label,def.col);
+    powerUp=null;
+    if(Math.random()<.5)setTimeout(function(){if(gameState==='play')spawnPower();},2000);
+  }
+
+  // power timer
+  if(activePowerTimer>0){activePowerTimer--;if(activePowerTimer<=0){activePower=null;}}
+  if(powerUp){powerUp.life--;if(powerUp.life<=0)powerUp=null;}
+
+  if(food)food.anim++;
+  if(powerUp)powerUp.anim++;
+  for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1);}
+  updateHUD();
+}
+
+function die(){
+  if(score>hiScore)hiScore=score;
+  gameState='over';
+  spawnParts(snake[0].x*T+T/2,snake[0].y*T+T/2,'#ff4444',25);
+  setTimeout(function(){
+    document.getElementById('msg').style.display='flex';
+    document.getElementById('msg').innerHTML=
+      '<h1 style="color:#ff4444">GAME OVER</h1>'+
+      '<p style="color:#0a2a0a">Score: '+score+'<br>Hi-Score: '+hiScore+'<br>Length: '+snake.length+'</p>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">'+
+      '<button class="btn modebtn" onclick="startGame(\''+mode+'\')">RETRY</button>'+
+      '<button class="btn modebtn" onclick="startGame(\'classic\')">MENU</button></div>';
+  },600);
+}
+
+function showPower(label,col){
+  var el=document.getElementById('powerInfo');
+  el.textContent='⚡ '+label+' ACTIVATED!';el.style.color=col;
+  clearTimeout(el._t);el._t=setTimeout(function(){el.textContent='';},1500);
+}
+
+function spawnParts(x,y,col){
+  for(var i=0;i<14;i++){var a=Math.random()*Math.PI*2,s=2+Math.random()*4;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,col,life:20+Math.random()*15,r:2+Math.random()*2});}
+}
+
+function updateHUD(){
+  document.getElementById('scoreV').textContent=score;
+  document.getElementById('hiV').textContent=hiScore;
+  document.getElementById('lenV').textContent=snake.length;
+  var pStr=activePower?activePower.label+'('+(activePowerTimer)+'f)':'—';
+  document.getElementById('powerV').textContent=activePower?activePower.label:'—';
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#050a05';ctx.fillRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='#0a150a';ctx.lineWidth=.4;
+  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++)ctx.strokeRect(c*T,r*T,T,T);
+
+  // particles
+  particles.forEach(function(p){ctx.globalAlpha=p.life/35;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
+
+  if(gameState==='menu'&&!snake) return;
+  if(!snake||snake.length===0) return;
+
+  // food
+  if(food){
+    var fp=.6+Math.sin(food.anim*.12)*.4;
+    ctx.shadowColor=food.col;ctx.shadowBlur=10*fp;
+    ctx.fillStyle=food.col;
+    if(food.mega){ctx.beginPath();for(var i=0;i<5;i++){var a=food.anim*.03+i/5*Math.PI*2;ctx.lineTo(food.x*T+T/2+Math.cos(a)*(T*.45),food.y*T+T/2+Math.sin(a)*(T*.45));}ctx.closePath();ctx.fill();}
+    else{ctx.fillRect(food.x*T+3,food.y*T+3,T-6,T-6);}
+    ctx.shadowBlur=0;
+  }
+
+  // power-up
+  if(powerUp){
+    var pp=.5+Math.sin(powerUp.anim*.15)*.5;
+    ctx.shadowColor=powerUp.def.col;ctx.shadowBlur=14*pp;
+    ctx.fillStyle=powerUp.def.col+'88';ctx.fillRect(powerUp.x*T+2,powerUp.y*T+2,T-4,T-4);
+    ctx.strokeStyle=powerUp.def.col;ctx.lineWidth=2;ctx.strokeRect(powerUp.x*T+2,powerUp.y*T+2,T-4,T-4);
+    ctx.fillStyle=powerUp.def.col;ctx.font='9px Orbitron,monospace';ctx.textAlign='center';
+    ctx.fillText(powerUp.def.label.slice(0,5),powerUp.x*T+T/2,powerUp.y*T+T*.6);ctx.textAlign='left';
+    ctx.shadowBlur=0;
+  }
+
+  // snake
+  var ghost2=activePower&&activePower.id==='ghost';
+  snake.forEach(function(seg,i){
+    var isHead=i===0;
+    var t=i/snake.length;
+    var col=isHead?(ghost2?'#aaaaff':'#44ff44'):
+      ghost2?'rgba(100,100,255,'+(0.4-t*.2)+')':
+      ('hsl('+(120-t*30)+','+(80-t*20)+'%,'+(40-t*15)+'%)');
+    ctx.fillStyle=col;
+    if(isHead){ctx.shadowColor=col;ctx.shadowBlur=12;}
+    ctx.fillRect(seg.x*T+1,seg.y*T+1,T-2,T-2);
+    if(isHead){
+      ctx.shadowBlur=0;
+      // eyes
+      var ex=seg.x*T+(dir.x>0?T-6:dir.x<0?3:T/2-3);
+      var ey=seg.y*T+(dir.y>0?T-6:dir.y<0?3:T/2-3);
+      ctx.fillStyle='#000';ctx.fillRect(ex,ey,3,3);
+      ctx.fillStyle='#fff';ctx.fillRect(ex,ey,2,2);
+    }
+    // neck highlight
+    else if(i===1){ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(seg.x*T+2,seg.y*T+2,T-4,T-4);}
+  });
+
+  // active power timer bar
+  if(activePower&&activePowerTimer>0){
+    var maxDur=activePower.dur;
+    var pct=activePowerTimer/maxDur;
+    ctx.fillStyle=activePower.col+'44';ctx.fillRect(0,H-4,W,4);
+    ctx.fillStyle=activePower.col;ctx.fillRect(0,H-4,W*pct,4);
+  }
+}
+
+document.addEventListener('keydown',function(e){
+  keys[e.key]=true;
+  var D=nextDir;
+  if((e.key==='ArrowUp'||e.key==='w')&&dir.y!==1)nextDir={x:0,y:-1};
+  if((e.key==='ArrowDown'||e.key==='s')&&dir.y!==-1)nextDir={x:0,y:1};
+  if((e.key==='ArrowLeft'||e.key==='a')&&dir.x!==1)nextDir={x:-1,y:0};
+  if((e.key==='ArrowRight'||e.key==='d')&&dir.x!==-1)nextDir={x:1,y:0};
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+});
+document.addEventListener('keyup',function(e){keys[e.key]=false;});
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
