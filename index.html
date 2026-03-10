@@ -4,12 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PIXEL FORGE GAMES</title>
-
 <style>
 :root{--ink:#0a0005;--red:#ff1744;--yellow:#ffe100;--cyan:#00fff5;--green:#39ff14;--orange:#ff6d00;--purple:#d500f9;--white:#ffffff;--dim:#555566;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
-body{background:var(--ink);color:var(--white);font-family:'Syne', "Trebuchet MS", "Segoe UI", sans-serif,sans-serif;overflow-x:hidden;cursor:none;}
+body{background:var(--ink);color:var(--white);font-family:'Syne',"Trebuchet MS","Segoe UI",sans-serif;overflow-x:hidden;cursor:none;}
 #dot{position:fixed;width:8px;height:8px;background:var(--yellow);pointer-events:none;z-index:99999;transform:translate(-50%,-50%);}
 #cross{position:fixed;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);}
 #cross::before,#cross::after{content:'';position:absolute;background:var(--cyan);opacity:0.5;}
@@ -20,11 +19,11 @@ body{background:var(--ink);color:var(--white);font-family:'Syne', "Trebuchet MS"
 #noise{position:fixed;inset:0;pointer-events:none;z-index:8999;opacity:0.025;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");animation:noiseA .15s steps(1) infinite;}
 @keyframes noiseA{0%{background-position:0 0}20%{background-position:-50px -100px}40%{background-position:100px 50px}60%{background-position:-100px 50px}80%{background-position:50px -50px}}
 nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:stretch;background:var(--ink);border-bottom:3px solid var(--yellow);height:52px;}
-.nav-brand{display:flex;align-items:center;gap:10px;padding:0 24px;border-right:3px solid var(--yellow);font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:18px;letter-spacing:3px;color:var(--yellow);text-shadow:2px 2px 0 var(--red),4px 4px 0 rgba(255,23,68,.3);}
+.nav-brand{display:flex;align-items:center;gap:10px;padding:0 24px;border-right:3px solid var(--yellow);font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:18px;letter-spacing:3px;color:var(--yellow);text-shadow:2px 2px 0 var(--red),4px 4px 0 rgba(255,23,68,.3);}
 .blink{animation:blink 1s step-end infinite;}
 @keyframes blink{50%{opacity:0;}}
 .nav-links{display:flex;align-items:stretch;margin-left:auto;}
-.nav-link{display:flex;align-items:center;padding:0 18px;font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:10px;letter-spacing:2px;color:var(--dim);text-decoration:none;border-left:1px solid rgba(255,255,255,.06);transition:color .1s,background .1s;text-transform:uppercase;}
+.nav-link{display:flex;align-items:center;padding:0 18px;font-family:'Syne Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--dim);text-decoration:none;border-left:1px solid rgba(255,255,255,.06);transition:color .1s,background .1s;text-transform:uppercase;}
 .nav-link:hover{color:var(--yellow);background:rgba(255,225,0,.07);}
 #hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 24px 60px;position:relative;overflow:hidden;}
 #hero::before{content:'';position:absolute;inset:60px 20px 20px;border:2px solid rgba(255,225,0,.1);pointer-events:none;}
@@ -33,68 +32,68 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:str
 .hero-line:nth-child(2){top:65%;animation-delay:2s;}
 .hero-line:nth-child(3){top:80%;animation-delay:4s;}
 @keyframes lineSweep{0%,100%{opacity:0;transform:scaleX(0);transform-origin:left;}20%{opacity:1;transform:scaleX(1);transform-origin:left;}80%{opacity:1;transform:scaleX(1);transform-origin:right;}99%{opacity:0;transform:scaleX(0);transform-origin:right;}}
-.hero-bg-text{position:absolute;font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:clamp(120px,22vw,280px);color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.04);pointer-events:none;letter-spacing:-10px;white-space:nowrap;animation:bgDrift 20s ease-in-out infinite;user-select:none;}
+.hero-bg-text{position:absolute;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:clamp(120px,22vw,280px);color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.04);pointer-events:none;letter-spacing:-10px;white-space:nowrap;animation:bgDrift 20s ease-in-out infinite;user-select:none;}
 @keyframes bgDrift{0%,100%{transform:translateX(-2%) translateY(0);}50%{transform:translateX(2%) translateY(-10px);}}
-.insert-coin{font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:11px;letter-spacing:8px;color:var(--yellow);text-transform:uppercase;margin-bottom:28px;opacity:0;animation:fadeIn .5s .3s forwards,blinkY 1.2s .8s step-end infinite;}
+.insert-coin{font-family:'Syne Mono',monospace;font-size:11px;letter-spacing:8px;color:var(--yellow);text-transform:uppercase;margin-bottom:28px;opacity:0;animation:fadeIn .5s .3s forwards,blinkY 1.2s .8s step-end infinite;}
 @keyframes blinkY{50%{color:transparent;}}
 @keyframes fadeIn{to{opacity:1;}}
 .hero-title-wrap{position:relative;text-align:center;margin-bottom:12px;opacity:0;animation:titleReveal .8s .5s cubic-bezier(.23,1,.32,1) forwards;}
 @keyframes titleReveal{from{opacity:0;transform:scale(.92) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
-.hero-t1{display:block;font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:clamp(64px,13vw,160px);line-height:.85;letter-spacing:6px;color:var(--white);text-shadow:3px 3px 0 var(--red),6px 6px 0 rgba(255,23,68,.4),-1px -1px 0 var(--cyan),0 0 60px rgba(0,255,245,.15);}
-.hero-t2{display:block;font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:clamp(64px,13vw,160px);line-height:.85;letter-spacing:6px;color:var(--yellow);text-shadow:3px 3px 0 var(--orange),6px 6px 0 rgba(255,109,0,.4),0 0 80px rgba(255,225,0,.2);}
-.hero-t3{display:block;font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:clamp(24px,4vw,52px);letter-spacing:18px;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.35);margin-top:10px;}
+.hero-t1{display:block;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:clamp(64px,13vw,160px);line-height:.85;letter-spacing:6px;color:var(--white);text-shadow:3px 3px 0 var(--red),6px 6px 0 rgba(255,23,68,.4),-1px -1px 0 var(--cyan),0 0 60px rgba(0,255,245,.15);}
+.hero-t2{display:block;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:clamp(64px,13vw,160px);line-height:.85;letter-spacing:6px;color:var(--yellow);text-shadow:3px 3px 0 var(--orange),6px 6px 0 rgba(255,109,0,.4),0 0 80px rgba(255,225,0,.2);}
+.hero-t3{display:block;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:clamp(24px,4vw,52px);letter-spacing:18px;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.35);margin-top:10px;}
 .hero-stats-row{display:flex;align-items:center;border:2px solid rgba(255,255,255,.12);margin-top:40px;opacity:0;animation:fadeUp .6s 1s forwards;}
 .hstat{padding:14px 26px;text-align:center;border-right:2px solid rgba(255,255,255,.12);}
 .hstat:last-child{border-right:none;}
-.hstat-n{display:block;font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:36px;line-height:1;color:var(--cyan);text-shadow:0 0 20px rgba(0,255,245,.5);}
-.hstat-l{display:block;font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-top:4px;text-transform:uppercase;}
-.scroll-down{margin-top:48px;display:flex;flex-direction:column;align-items:center;gap:8px;font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:9px;letter-spacing:4px;color:var(--dim);opacity:0;animation:fadeUp .6s 1.3s forwards;}
+.hstat-n{display:block;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:36px;line-height:1;color:var(--cyan);text-shadow:0 0 20px rgba(0,255,245,.5);}
+.hstat-l{display:block;font-family:'Syne Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-top:4px;text-transform:uppercase;}
+.scroll-down{margin-top:48px;display:flex;flex-direction:column;align-items:center;gap:8px;font-family:'Syne Mono',monospace;font-size:9px;letter-spacing:4px;color:var(--dim);opacity:0;animation:fadeUp .6s 1.3s forwards;}
 .scroll-chevron{color:var(--yellow);animation:chevronB 1.5s ease-in-out infinite;font-size:18px;}
 @keyframes chevronB{0%,100%{transform:translateY(0);}50%{transform:translateY(6px);}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 .ticker-zone{overflow:hidden;background:var(--yellow);padding:10px 0;position:relative;z-index:10;}
-.ticker-track{display:inline-flex;white-space:nowrap;animation:tickerRoll 25s linear infinite;font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:14px;letter-spacing:3px;color:var(--ink);}
+.ticker-track{display:inline-flex;white-space:nowrap;animation:tickerRoll 25s linear infinite;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:14px;letter-spacing:3px;color:var(--ink);}
 .ticker-item{padding:0 32px;}
 .ticker-diam{color:var(--red);padding:0 8px;}
 @keyframes tickerRoll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
 .ticker-zone-2{background:var(--red);padding:8px 0;overflow:hidden;position:relative;z-index:10;}
-.ticker-track-2{display:inline-flex;white-space:nowrap;animation:tickerRoll2 20s linear infinite;font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:10px;letter-spacing:4px;color:var(--white);}
+.ticker-track-2{display:inline-flex;white-space:nowrap;animation:tickerRoll2 20s linear infinite;font-family:'Syne Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--white);}
 @keyframes tickerRoll2{from{transform:translateX(-50%);}to{transform:translateX(0);}}
 .stat-strip{display:grid;grid-template-columns:repeat(5,1fr);border-top:3px solid var(--yellow);border-bottom:3px solid var(--yellow);position:relative;z-index:10;}
 .stat-cell{padding:28px 20px;text-align:center;border-right:1px solid rgba(255,225,0,.2);position:relative;overflow:hidden;}
 .stat-cell:last-child{border-right:none;}
 .stat-cell::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,225,0,.05) 0%,transparent 100%);transform:translateY(-100%);transition:transform .4s;}
 .stat-cell:hover::before{transform:translateY(0);}
-.stat-val{display:block;font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:clamp(26px,4vw,48px);color:var(--yellow);text-shadow:0 0 20px rgba(255,225,0,.4),2px 2px 0 var(--orange);line-height:1;}
-.stat-lbl{display:block;font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:8px;color:var(--dim);letter-spacing:3px;margin-top:6px;text-transform:uppercase;}
+.stat-val{display:block;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:clamp(26px,4vw,48px);color:var(--yellow);text-shadow:0 0 20px rgba(255,225,0,.4),2px 2px 0 var(--orange);line-height:1;}
+.stat-lbl{display:block;font-family:'Syne Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:3px;margin-top:6px;text-transform:uppercase;}
 .section{max-width:1440px;margin:0 auto;padding:80px 32px;position:relative;z-index:10;}
 .sec-header{display:flex;align-items:center;gap:20px;margin-bottom:56px;}
-.sec-num{font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:11px;color:var(--red);letter-spacing:2px;padding:4px 10px;border:1px solid var(--red);flex-shrink:0;}
-.sec-title{font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:clamp(34px,5vw,56px);letter-spacing:4px;color:var(--white);line-height:1;}
+.sec-num{font-family:'Syne Mono',monospace;font-size:11px;color:var(--red);letter-spacing:2px;padding:4px 10px;border:1px solid var(--red);flex-shrink:0;}
+.sec-title{font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:clamp(34px,5vw,56px);letter-spacing:4px;color:var(--white);line-height:1;}
 .sec-title em{color:var(--yellow);font-style:normal;}
 .sec-rule{flex:1;height:2px;background:rgba(255,255,255,.08);}
 .sec-rule::after{content:'';display:block;height:2px;background:var(--yellow);width:40px;}
 .featured-card{display:grid;grid-template-columns:1.1fr 1fr;border:3px solid var(--yellow);position:relative;overflow:hidden;margin-bottom:4px;transition:transform .2s;cursor:pointer;}
-.featured-card::before{content:'★ FEATURED';position:absolute;top:16px;right:-32px;background:var(--red);color:white;font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:9px;letter-spacing:2px;padding:5px 40px;z-index:5;}
+.featured-card::before{content:'★ FEATURED';position:absolute;top:16px;right:-32px;background:var(--red);color:white;font-family:'Syne Mono',monospace;font-size:9px;letter-spacing:2px;padding:5px 40px;z-index:5;}
 .featured-card:hover{transform:translate(-2px,-2px);}
 .featured-screen{position:relative;overflow:hidden;background:#000;min-height:320px;}
 .featured-screen canvas{width:100%;height:100%;position:absolute;inset:0;display:block;}
-.play-over{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;gap:14px;font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:22px;letter-spacing:6px;color:white;background:rgba(0,0,0,.4);transition:background .2s;cursor:pointer;}
+.play-over{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;gap:14px;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:22px;letter-spacing:6px;color:white;background:rgba(0,0,0,.4);transition:background .2s;cursor:pointer;}
 .play-over:hover{background:rgba(0,0,0,.15);}
 .play-circle{width:52px;height:52px;border:3px solid var(--yellow);display:flex;align-items:center;justify-content:center;font-size:18px;padding-left:4px;color:var(--yellow);transition:background .15s,color .15s;flex-shrink:0;}
 .play-over:hover .play-circle{background:var(--yellow);color:var(--ink);}
 .featured-body{background:#0e0007;padding:40px 44px;display:flex;flex-direction:column;justify-content:center;border-left:3px solid var(--yellow);}
-.feat-series{font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:9px;letter-spacing:4px;color:var(--yellow);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.feat-series{font-family:'Syne Mono',monospace;font-size:9px;letter-spacing:4px;color:var(--yellow);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 .feat-series::before{content:'';width:20px;height:2px;background:var(--yellow);}
-.feat-title{font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:clamp(30px,4vw,52px);line-height:.9;letter-spacing:2px;color:var(--cyan);text-shadow:3px 3px 0 rgba(0,100,120,.5);margin-bottom:20px;}
+.feat-title{font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:clamp(30px,4vw,52px);line-height:.9;letter-spacing:2px;color:var(--cyan);text-shadow:3px 3px 0 rgba(0,100,120,.5);margin-bottom:20px;}
 .feat-desc{font-size:16px;color:rgba(255,255,255,.65);line-height:1.7;margin-bottom:28px;}
 .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;}
-.tag{font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:8px;padding:4px 10px;letter-spacing:1px;text-transform:uppercase;border:1px solid;display:inline-block;}
+.tag{font-family:'Syne Mono',monospace;font-size:8px;padding:4px 10px;letter-spacing:1px;text-transform:uppercase;border:1px solid;display:inline-block;}
 .tag-web{color:var(--green);border-color:var(--green);}
 .tag-new{color:var(--red);border-color:var(--red);animation:tagP 2s infinite;}
 @keyframes tagP{0%,100%{opacity:1;}50%{opacity:.6;}}
 .tag-gen{color:rgba(255,255,255,.3);border-color:rgba(255,255,255,.2);}
-.play-btn-main{font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:16px;letter-spacing:4px;padding:14px 32px;background:var(--yellow);color:var(--ink);border:none;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:all .12s;align-self:flex-start;}
+.play-btn-main{font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:16px;letter-spacing:4px;padding:14px 32px;background:var(--yellow);color:var(--ink);border:none;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:all .12s;align-self:flex-start;}
 .play-btn-main:hover{background:var(--white);transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--red);}
 .play-btn-main::after{content:'▶';}
 .game-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:4px;margin-top:4px;}
@@ -106,46 +105,48 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:str
 .game-card:active{transform:translate(2px,2px);}
 .card-screen{position:relative;overflow:hidden;background:#000;aspect-ratio:16/10;}
 .card-screen canvas{width:100%;height:100%;display:block;transition:transform .4s;}
-.card-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);transition:background .2s;font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:15px;letter-spacing:5px;color:white;gap:10px;}
+.card-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);transition:background .2s;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:15px;letter-spacing:5px;color:white;gap:10px;}
 .card-play:hover{background:rgba(0,0,0,.2);}
 .play-sq{width:34px;height:34px;border:2px solid var(--card-accent,var(--cyan));display:flex;align-items:center;justify-content:center;font-size:11px;padding-left:3px;color:var(--card-accent,var(--cyan));}
 .card-body{padding:18px 20px 20px;}
-.card-title{font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:20px;letter-spacing:2px;color:var(--white);margin-bottom:6px;line-height:1.1;}
+.card-title{font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:20px;letter-spacing:2px;color:var(--white);margin-bottom:6px;line-height:1.1;}
 .card-desc{font-size:13px;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:12px;}
 .card-footer{display:flex;align-items:center;justify-content:space-between;}
-.mini-btn{font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:9px;letter-spacing:2px;padding:7px 14px;border:1px solid var(--card-accent,var(--cyan));color:var(--card-accent,var(--cyan));background:transparent;cursor:pointer;text-decoration:none;display:inline-block;transition:all .12s;text-transform:uppercase;}
+.mini-btn{font-family:'Syne Mono',monospace;font-size:9px;letter-spacing:2px;padding:7px 14px;border:1px solid var(--card-accent,var(--cyan));color:var(--card-accent,var(--cyan));background:transparent;cursor:pointer;text-decoration:none;display:inline-block;transition:all .12s;text-transform:uppercase;}
 .mini-btn:hover{background:var(--card-accent,var(--cyan));color:var(--ink);}
-.card-key{font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:9px;color:var(--dim);letter-spacing:1px;}
+.card-key{font-family:'Syne Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:1px;}
 .dl-table{border:2px solid rgba(255,255,255,.1);}
 .dl-row{display:grid;grid-template-columns:44px 1fr auto auto;align-items:center;border-bottom:1px solid rgba(255,255,255,.06);transition:background .12s;}
 .dl-row:last-child{border-bottom:none;}
 .dl-row:hover{background:rgba(255,255,255,.03);}
 .dl-icon-cell{display:flex;align-items:center;justify-content:center;height:56px;font-size:20px;border-right:1px solid rgba(255,255,255,.06);}
 .dl-info-cell{padding:14px 20px;}
-.dl-name{font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:16px;letter-spacing:2px;margin-bottom:3px;}
-.dl-sub{font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:9px;color:var(--dim);letter-spacing:1px;}
-.dl-meta-cell{padding:0 20px;font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:8px;color:var(--dim);text-align:right;border-left:1px solid rgba(255,255,255,.06);white-space:nowrap;}
+.dl-name{font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:16px;letter-spacing:2px;margin-bottom:3px;}
+.dl-sub{font-family:'Syne Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:1px;}
+.dl-meta-cell{padding:0 20px;font-family:'Syne Mono',monospace;font-size:8px;color:var(--dim);text-align:right;border-left:1px solid rgba(255,255,255,.06);white-space:nowrap;}
 .dl-btn-cell{display:flex;border-left:1px solid rgba(255,255,255,.06);}
-.dl-btn{padding:0 16px;height:56px;font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:9px;color:var(--dim);background:transparent;cursor:pointer;border:none;border-right:1px solid rgba(255,255,255,.06);text-decoration:none;display:flex;align-items:center;letter-spacing:1px;text-transform:uppercase;transition:color .12s,background .12s;}
+.dl-btn{padding:0 16px;height:56px;font-family:'Syne Mono',monospace;font-size:9px;color:var(--dim);background:transparent;cursor:pointer;border:none;border-right:1px solid rgba(255,255,255,.06);text-decoration:none;display:flex;align-items:center;letter-spacing:1px;text-transform:uppercase;transition:color .12s,background .12s;}
 .dl-btn:last-child{border-right:none;}
 .dl-btn:hover{color:var(--yellow);background:rgba(255,225,0,.07);}
 .manifesto{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
 .manifesto-cell{padding:40px;border:1px solid rgba(255,255,255,.08);}
 .manifesto-cell:first-child{grid-column:1/-1;background:#0e0007;border-color:rgba(255,225,0,.2);}
-.manifesto-cell h3{font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:28px;letter-spacing:3px;color:var(--yellow);margin-bottom:16px;text-shadow:2px 2px 0 var(--orange);}
+.manifesto-cell h3{font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:28px;letter-spacing:3px;color:var(--yellow);margin-bottom:16px;text-shadow:2px 2px 0 var(--orange);}
 .manifesto-cell p{font-size:16px;color:rgba(255,255,255,.6);line-height:1.8;}
-.code-snip{font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:12px;background:rgba(0,255,245,.05);border:1px solid rgba(0,255,245,.2);padding:16px 20px;color:var(--cyan);margin-top:16px;line-height:1.9;}
+.code-snip{font-family:'Syne Mono',monospace;font-size:12px;background:rgba(0,255,245,.05);border:1px solid rgba(0,255,245,.2);padding:16px 20px;color:var(--cyan);margin-top:16px;line-height:1.9;}
 .code-snip .cm{color:var(--dim);}
 footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:24px;position:relative;z-index:10;background:#05000a;}
-.footer-brand{font-family:'Black Han Sans', Impact, "Arial Black", sans-serif,sans-serif;font-size:28px;letter-spacing:4px;color:var(--white);text-shadow:2px 2px 0 var(--red),4px 4px 0 rgba(255,23,68,.3);}
-.footer-copy{font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:9px;color:var(--dim);letter-spacing:2px;line-height:2;}
-.footer-made{font-family:'Permanent Marker', "Comic Sans MS", cursive, sans-serif,cursive;font-size:14px;color:var(--yellow);transform:rotate(-2deg);}
+.footer-brand{font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:28px;letter-spacing:4px;color:var(--white);text-shadow:2px 2px 0 var(--red),4px 4px 0 rgba(255,23,68,.3);}
+.footer-copy{font-family:'Syne Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;line-height:2;}
+.footer-made{font-family:"Comic Sans MS",cursive;font-size:14px;color:var(--yellow);transform:rotate(-2deg);}
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
 .reveal.in{opacity:1;transform:none;}
 @media(max-width:768px){.featured-card{grid-template-columns:1fr;}.featured-body{border-left:none;border-top:3px solid var(--yellow);}.manifesto{grid-template-columns:1fr;}.manifesto-cell:first-child{grid-column:1;}.stat-strip{grid-template-columns:repeat(3,1fr);}.stat-cell:nth-child(n+4){display:none;}.nav-links{display:none;}.dl-row{grid-template-columns:44px 1fr auto;}.dl-meta-cell{display:none;}}
 </style>
 </head>
-<body><!-- ── NAME PROMPT ── -->
+<body>
+
+<!-- NAME PROMPT MODAL -->
 <div id="nameModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center;">
   <div style="background:#0f0f1e;border:2px solid #ffd700;border-radius:14px;padding:40px;text-align:center;max-width:360px;width:90%;box-shadow:0 0 40px rgba(255,215,0,.2);">
     <div style="font-family:Impact,'Arial Black',sans-serif;font-size:28px;color:#ffd700;margin-bottom:8px;letter-spacing:3px;">WELCOME!</div>
@@ -156,7 +157,6 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
     <button onclick="saveName()" style="background:#ffd700;color:#111;border:none;font-family:inherit;font-size:14px;font-weight:bold;padding:12px 32px;border-radius:8px;cursor:pointer;letter-spacing:2px;width:100%;">LET'S GO ▶</button>
   </div>
 </div>
-
 
 <div id="dot"></div>
 <div id="cross"></div>
@@ -173,6 +173,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
   </div>
 </nav>
 
+<!-- HERO -->
 <div id="hero">
   <div class="hero-line"></div>
   <div class="hero-line"></div>
@@ -185,14 +186,16 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
     <span class="hero-t3">GAMES</span>
   </div>
   <div class="hero-stats-row">
-    <div class="hstat"><span class="hstat-n">24</span><span class="hstat-l">Games</span></div>
+    <div class="hstat"><span class="hstat-n">34</span><span class="hstat-l">Games</span></div>
     <div class="hstat"><span class="hstat-n">30</span><span class="hstat-l">Levels</span></div>
+    <div class="hstat"><span class="hstat-n">158</span><span class="hstat-l">Achievements</span></div>
     <div class="hstat"><span class="hstat-n">4</span><span class="hstat-l">Worlds</span></div>
     <div class="hstat"><span class="hstat-n">∞</span><span class="hstat-l">Replay</span></div>
   </div>
   <div class="scroll-down"><span>SCROLL DOWN</span><span class="scroll-chevron">⌄</span></div>
 </div>
 
+<!-- TICKER 1 -->
 <div class="ticker-zone">
   <div class="ticker-track">
     <span class="ticker-item">THE BLUE GUY 3 — DARK WORLD</span><span class="ticker-diam">◆</span>
@@ -207,20 +210,32 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
     <span class="ticker-item">NEON KART — ONLINE RACING</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">TOWER SIEGE — 5 TOWER TYPES</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">STAR SWARM — BULLET HELL</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">BRAIN BLAST — PUZZLE</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">PIXEL BRAWLER — BEAT EM UP</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">GHOST STATIC — SURVIVAL HORROR</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">HOOP DREAMS — BASKETBALL</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">GRAVITY SHIFT — FLIP REALITY</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">RAGDOLL ARCHERS — PHYSICS BOW COMBAT</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">SLIME LAB — MERGE 18 SPECIES</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">PIXEL TANKS — 2 PLAYER TANK BATTLE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">SPEED TYPER — TYPE TO SURVIVE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">DUNGEON CRAWLER — ROGUELITE DUNGEON</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">DRIFT ZONE — ARCADE DRIFT RACING</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">SPACE MINER — MINE ASTEROIDS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">FLIP MASTER — TRAMPOLINE TRICKS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">SNAKE EVOLVED — 3 MODES + POWER-UPS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">CROWD CRUSHER — MATCH 3 MADNESS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">WORM WARS — 2 PLAYER WORM BATTLE</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">THE BLUE GUY 3 — DARK WORLD</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">POOPATROPAS — 4 PLAYABLE HEROES</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">BOX ROYALE — UP TO 4 PLAYERS</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">FORGE CLICKER — 158 ACHIEVEMENTS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">NIGHT SHIFT — SURVIVE 7 NIGHTS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">PIXEL DRIFT — ARCADE ASTEROID SHOOTER</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">BLOB PARTY — IMPOSTOR MAYHEM</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">PIXEL DRIFT 2 — WAVES + BOSSES + UPGRADES</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">RAGDOLL ARCHERS — PHYSICS BOW COMBAT</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">WORM WARS — 2 PLAYER WORM BATTLE</span><span class="ticker-diam">◆</span>
   </div>
 </div>
+
+<!-- TICKER 2 -->
 <div class="ticker-zone-2">
   <div class="ticker-track-2">
     <span class="ticker-item">NOW PLAYING: INDIE GAMES HANDCRAFTED IN HTML5 + PYTHON</span>
@@ -238,22 +253,27 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
   </div>
 </div>
 
+<!-- STAT STRIP -->
 <div class="stat-strip reveal">
-  <div class="stat-cell"><span class="stat-val">24</span><span class="stat-lbl">Games Made</span></div>
+  <div class="stat-cell"><span class="stat-val">34</span><span class="stat-lbl">Games Made</span></div>
   <div class="stat-cell"><span class="stat-val">30</span><span class="stat-lbl">Levels</span></div>
   <div class="stat-cell"><span class="stat-val">158</span><span class="stat-lbl">Achievements</span></div>
   <div class="stat-cell"><span class="stat-val">4</span><span class="stat-lbl">Worlds</span></div>
   <div class="stat-cell"><span class="stat-val">100%</span><span class="stat-lbl">Handcrafted</span></div>
 </div>
 
+<!-- SECTION 01: PLAY -->
 <section class="section" id="play">
   <div class="sec-header reveal">
     <span class="sec-num">01</span>
     <h2 class="sec-title">PLAY <em>NOW</em></h2>
     <div class="sec-rule"></div>
   </div>
+
+  <!-- FEATURED CARD -->
   <div class="featured-card reveal" onclick="window.open('the_blue_guy.html','_blank')">
-    <div class="featured-screen"><canvas id="featCanvas"></canvas>
+    <div class="featured-screen">
+      <canvas id="featCanvas"></canvas>
       <div class="play-over"><div class="play-circle">▶</div>PLAY NOW</div>
     </div>
     <div class="featured-body">
@@ -264,286 +284,422 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
       <button class="play-btn-main" onclick="event.stopPropagation();window.open('the_blue_guy.html','_blank')">PLAY IN BROWSER</button>
     </div>
   </div>
+
+  <!-- GAME GRID -->
   <div id="series" class="game-grid reveal">
+
     <div class="game-card" style="--card-accent:#00fff5;" onclick="window.open('the_blue_guy_2.html','_blank')">
       <div class="card-screen"><canvas id="c2"></canvas><div class="card-play"><div class="play-sq">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Dash</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Platformer</span><span class="tag tag-gen">Dash</span></div>
         <div class="card-title">THE BLUE GUY 2</div>
         <div class="card-desc">Return of Blue. Dash ability, enemy HP bars, boss RAGE mode. 10 levels.</div>
-        <div class="card-footer"><button class="mini-btn">▶ PLAY</button><span class="card-key">X: Dash</span></div>
+        <div class="card-footer"><a class="mini-btn" href="the_blue_guy_2.html" target="_blank">▶ PLAY NOW</a><span class="card-key">X: Dash</span></div>
       </div>
     </div>
+
     <div class="game-card" style="--card-accent:#d500f9;" onclick="window.open('the_blue_guy_3.html','_blank')">
       <div class="card-screen"><canvas id="c3"></canvas><div class="card-play" style="--card-accent:#d500f9;"><div class="play-sq" style="border-color:#d500f9;color:#d500f9;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Dark World</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Dark World</span></div>
         <div class="card-title" style="color:#d500f9;">THE BLUE GUY 3</div>
-        <div class="card-desc">Dark World. Teleport dash, gem combos, dark bosses. 10 levels of cosmic chaos.</div>
-        <div class="card-footer"><button class="mini-btn" style="border-color:#d500f9;color:#d500f9;">▶ PLAY</button><span class="card-key">X: Teleport</span></div>
+        <div class="card-desc">Dark World. Teleport dash, gem combos, dark boss encounters. 15 levels.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#d500f9;color:#d500f9;" href="the_blue_guy_3.html" target="_blank">▶ PLAY NOW</a><span class="card-key">X: Teleport</span></div>
       </div>
     </div>
+
     <div class="game-card" style="--card-accent:#ff3232;" onclick="window.open('the_blue_guy_4.html','_blank')">
       <div class="card-screen"><div class="card-play" style="--card-accent:#ff3232;"><div class="play-sq" style="border-color:#ff3232;color:#ff3232;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">30 Levels</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">30 Levels</span></div>
         <div class="card-title" style="color:#ff3232;">THE BLUE GUY 4: RED UPRISING</div>
-        <div class="card-desc">The biggest yet! 30 levels, flying bosses, 4 enemy types, shop, hats, stickers, achievements & cutscenes.</div>
-        <div class="card-footer"><button class="mini-btn" style="border-color:#ff3232;color:#ff3232;">▶ PLAY</button><span class="card-key">CTRL: Shoot</span></div>
+        <div class="card-desc">The biggest yet! 30 levels, flying bosses, 4 enemy types, upgrades shop.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff3232;color:#ff3232;" href="the_blue_guy_4.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
       </div>
     </div>
+
     <div class="game-card" style="--card-accent:#ff6d00;" onclick="window.open('forge_clicker.html','_blank')">
       <div class="card-screen"><canvas id="cFC"></canvas><div class="card-play" style="--card-accent:#ff6d00;"><div class="play-sq" style="border-color:#ff6d00;color:#ff6d00;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Idle</span><span class="tag tag-gen">Prestige</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Idle</span><span class="tag tag-gen">158 Achievements</span></div>
         <div class="card-title" style="color:#ff6d00;">FORGE CLICKER</div>
-        <div class="card-desc">Buildings, golden cookies, seasons, 158 achievements. Prestige for permanent bonuses.</div>
-        <div class="card-footer"><button class="mini-btn" style="border-color:#ff6d00;color:#ff6d00;">▶ PLAY</button></div>
+        <div class="card-desc">Buildings, golden cookies, seasons, 158 achievements, casino, prestige system.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff6d00;color:#ff6d00;" href="forge_clicker.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
       </div>
     </div>
+
     <div class="game-card" style="--card-accent:#ff1744;" onclick="window.open('box_royale.html','_blank')">
       <div class="card-screen"><canvas id="cBR"></canvas><div class="card-play" style="--card-accent:#ff1744;"><div class="play-sq" style="border-color:#ff1744;color:#ff1744;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">4 Player</span><span class="tag tag-gen">Racing</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">4 Player</span><span class="tag tag-gen">Party</span></div>
         <div class="card-title" style="color:#ff1744;">BOX ROYALE</div>
-        <div class="card-desc">4 players, same keyboard. Bots, coin shop, hats, 3 difficulty tracks.</div>
-        <div class="card-footer"><button class="mini-btn" style="border-color:#ff1744;color:#ff1744;">▶ PLAY</button></div>
+        <div class="card-desc">4 players, same keyboard. Bots, coin shop, hats and a research tree!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff1744;color:#ff1744;" href="box_royale.html" target="_blank">▶ PLAY NOW</a><span class="card-key">1-4 Players</span></div>
       </div>
     </div>
+
     <div class="game-card" style="--card-accent:#ffe100;" onclick="window.open('poopatropas.html','_blank')">
       <div class="card-screen"><canvas id="cPP"></canvas><div class="card-play" style="--card-accent:#ffe100;"><div class="play-sq" style="border-color:#ffe100;color:#ffe100;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">4 Heroes</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">4 Characters</span></div>
         <div class="card-title" style="color:#ffe100;">POOPATROPAS</div>
-        <div class="card-desc">Eli, Liam, Sammy or Kyle. 4 worlds: Forest, Desert, Ice, Volcano. Collect rings!</div>
-        <div class="card-footer"><button class="mini-btn" style="border-color:#ffe100;color:#ffe100;">▶ PLAY</button></div>
+        <div class="card-desc">Eli, Liam, Sammy or Kyle. 4 worlds: Forest, Desert, Snow and Space.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ffe100;color:#ffe100;" href="poopatropas.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
       </div>
     </div>
+
     <div class="game-card" style="--card-accent:#ffe100;" onclick="window.open('night_shift.html','_blank')">
       <div class="card-screen"><canvas id="cNS"></canvas><div class="card-play" style="--card-accent:#ffe100;"><div class="play-sq" style="border-color:#ffe100;color:#ffe100;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Horror</span><span class="tag tag-gen">7 Nights</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Horror</span><span class="tag tag-gen">Strategy</span></div>
         <div class="card-title" style="color:#ffe100;">NIGHT SHIFT</div>
-        <div class="card-desc">Watch cameras, manage power, survive until 6AM. 5 animatronics hunting you.</div>
-        <div class="card-footer"><button class="mini-btn" style="border-color:#ffe100;color:#ffe100;">▶ PLAY</button></div>
+        <div class="card-desc">Watch cameras, manage power, survive until 6AM. 5 animatronics. 7 nights.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ffe100;color:#ffe100;" href="night_shift.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#ff6d00;" onclick="window.open('pixel_drift.html','_blank')">
-      <div class="card-screen"><canvas id="cPD"></canvas><div class="card-play" style="--card-accent:#ff6d00;"><div class="play-sq" style="border-color:#ff6d00;color:#ff6d00;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#00ffcc;" onclick="window.open('pixel_drift.html','_blank')">
+      <div class="card-screen"><canvas id="cPD"></canvas><div class="card-play" style="--card-accent:#00ffcc;"><div class="play-sq" style="border-color:#00ffcc;color:#00ffcc;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Arcade</span><span class="tag tag-gen">Shooter</span></div>
-        <div class="card-title" style="color:#ff6d00;">PIXEL DRIFT</div>
-        <div class="card-desc">Dodge and destroy asteroids. Upgraded to 800×600 for maximum chaos.</div>
-        <div class="card-footer"><button class="mini-btn" style="border-color:#ff6d00;color:#ff6d00;">▶ PLAY</button><span class="card-key">Arrows + Space</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Shooter</span></div>
+        <div class="card-title" style="color:#00ffcc;">PIXEL DRIFT</div>
+        <div class="card-desc">Twin-stick arena shooter. Drift to dodge, blast waves of pixel enemies.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#00ffcc;color:#00ffcc;" href="pixel_drift.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Mouse</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#ff1744;" onclick="window.open('blob_party.html','_blank')">
-      <div class="card-screen"><canvas id="cBL"></canvas><div class="card-play" style="--card-accent:#ff1744;"><div class="play-sq" style="border-color:#ff1744;color:#ff1744;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#ff44aa;" onclick="window.open('pixel_drift_2.html','_blank')">
+      <div class="card-screen"><canvas id="cPD2"></canvas><div class="card-play" style="--card-accent:#ff44aa;"><div class="play-sq" style="border-color:#ff44aa;color:#ff44aa;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">AI BOTS</span><span class="tag tag-gen">Party</span><span class="tag tag-gen">Impostor</span></div>
-        <div class="card-title" style="color:#ff1744;">BLOB PARTY</div>
-        <div class="card-desc">Among Us-style with wobbly blobs. Tasks, voting, kills. AI bots added — solo play now works!</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#ff1744;color:#ff1744;" href="blob_party.html" target="_blank">▶ PLAY NOW</a></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Shooter</span><span class="tag tag-new">NEW</span></div>
+        <div class="card-title" style="color:#ff44aa;">PIXEL DRIFT 2</div>
+        <div class="card-desc">All-new waves, boss fights, upgrades and weapons. Harder, faster, deadlier.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff44aa;color:#ff44aa;" href="pixel_drift_2.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Mouse</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#39ff14;" onclick="window.open('BALLS.HTML','_blank')">
-      <div class="card-screen"><canvas id="cSB"></canvas><div class="card-play" style="--card-accent:#39ff14;"><div class="play-sq" style="border-color:#39ff14;color:#39ff14;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#00fff5;" onclick="window.open('blob_party.html','_blank')">
+      <div class="card-screen"><canvas id="cBP"></canvas><div class="card-play" style="--card-accent:#00fff5;"><div class="play-sq" style="border-color:#00fff5;color:#00fff5;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Music</span><span class="tag tag-gen">Relaxing</span></div>
-        <div class="card-title" style="color:#39ff14;">SOUND BALLS</div>
-        <div class="card-desc">Click to summon musical balls bouncing pentatonic notes. Interactive music toy.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#39ff14;color:#39ff14;" href="BALLS.HTML" target="_blank">▶ PLAY NOW</a></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Party</span><span class="tag tag-gen">AI Bots</span></div>
+        <div class="card-title" style="color:#00fff5;">BLOB PARTY</div>
+        <div class="card-desc">Eat smaller blobs, dodge bigger ones. Play vs AI bots or go solo. Power-ups!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#00fff5;color:#00fff5;" href="blob_party.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#00fff5;" onclick="window.open('pixel_drift_2.html','_blank')">
-      <div class="card-screen"><canvas id="cPD2"></canvas><div class="card-play" style="--card-accent:#00fff5;"><div class="play-sq" style="border-color:#00fff5;color:#00fff5;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#ffcc00;" onclick="window.open('goofy_cards.html','_blank')">
+      <div class="card-screen"><canvas id="cGC"></canvas><div class="card-play" style="--card-accent:#ffcc00;"><div class="play-sq" style="border-color:#ffcc00;color:#ffcc00;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Shooter</span><span class="tag tag-gen">Upgrades</span></div>
-        <div class="card-title" style="color:#00fff5;">PIXEL DRIFT 2</div>
-        <div class="card-desc">The sequel. Waves, shields, power-ups, boss asteroids, upgrade shop. Way more chaos.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#00fff5;color:#00fff5;" href="pixel_drift_2.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Arrows + Space</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Card Game</span><span class="tag tag-gen">120 Cards</span></div>
+        <div class="card-title" style="color:#ffcc00;">GOOFY CARDS</div>
+        <div class="card-desc">Collect 120 cards across 9 rarities. Secret codes unlock bonus packs!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ffcc00;color:#ffcc00;" href="goofy_cards.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#ffd700;" onclick="window.open('goofy_cards.html','_blank')">
-      <div class="card-screen"><canvas id="cGC"></canvas><div class="card-play" style="--card-accent:#ffd700;"><div class="play-sq" style="border-color:#ffd700;color:#ffd700;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#ff8800;" onclick="window.open('neon_kart.html','_blank')">
+      <div class="card-screen"><canvas id="cNK"></canvas><div class="card-play" style="--card-accent:#ff8800;"><div class="play-sq" style="border-color:#ff8800;color:#ff8800;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Card Game</span><span class="tag tag-gen">120 Cards</span></div>
-        <div class="card-title" style="color:#ffd700;">GOOFY CARDS</div>
-        <div class="card-desc">Ultimate card battler. 120 cards, 9 rarities, secret codes, tournaments and spin wheel. Play free in browser!</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#ffd700;color:#ffd700;" href="goofy_cards.html" target="_blank">▶ PLAY NOW</a></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Racing</span><span class="tag tag-gen">Online</span></div>
+        <div class="card-title" style="color:#ff8800;">NEON KART</div>
+        <div class="card-desc">Online multiplayer kart racing with items. Race up to 4 players via PeerJS.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff8800;color:#ff8800;" href="neon_kart.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#ff6600;" onclick="window.open('dungeon_depths.html','_blank')">
-      <div class="card-screen"><canvas id="cDD"></canvas><div class="card-play" style="--card-accent:#ff6600;"><div class="play-sq" style="border-color:#ff6600;color:#ff6600;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#44ccff;" onclick="window.open('star_dodge.html','_blank')">
+      <div class="card-screen"><canvas id="cSD"></canvas><div class="card-play" style="--card-accent:#44ccff;"><div class="play-sq" style="border-color:#44ccff;color:#44ccff;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">RPG</span><span class="tag tag-gen">Roguelike</span></div>
-        <div class="card-title" style="color:#ff6600;">DUNGEON DEPTHS</div>
-        <div class="card-desc">Procedural floors, spells, level-ups, boss fights. How deep can you go?</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#ff6600;color:#ff6600;" href="dungeon_depths.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + F</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Dodge</span><span class="tag tag-gen">Survival</span></div>
+        <div class="card-title" style="color:#44ccff;">STAR DODGE</div>
+        <div class="card-desc">Dodge endless waves of stars. One touch and it's over. How long can you last?</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44ccff;color:#44ccff;" href="star_dodge.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#00fff5;" onclick="window.open('neon_kart.html','_blank')">
-      <div class="card-screen"><canvas id="cNK"></canvas><div class="card-play" style="--card-accent:#00fff5;"><div class="play-sq" style="border-color:#00fff5;color:#00fff5;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#ff4444;" onclick="window.open('block_blast.html','_blank')">
+      <div class="card-screen"><canvas id="cBB"></canvas><div class="card-play" style="--card-accent:#ff4444;"><div class="play-sq" style="border-color:#ff4444;color:#ff4444;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Racing</span><span class="tag tag-gen">Online</span></div>
-        <div class="card-title" style="color:#00fff5;">NEON KART</div>
-        <div class="card-desc">Neon top-down racing. Host a race with a code, race friends online. 3 laps, nitro boost, minimap.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#00fff5;color:#00fff5;" href="neon_kart.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Arrows + Shift</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Puzzle</span></div>
+        <div class="card-title" style="color:#ff4444;">BLOCK BLAST</div>
+        <div class="card-desc">Stack and blast falling blocks. Combos score big. How many lines can you clear?</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff4444;color:#ff4444;" href="block_blast.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#cc00ff;" onclick="window.open('star_dodge.html','_blank')">
-      <div class="card-screen"><canvas id="cSD"></canvas><div class="card-play" style="--card-accent:#cc00ff;"><div class="play-sq" style="border-color:#cc00ff;color:#cc00ff;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#44ff88;" onclick="window.open('chain_reaction.html','_blank')">
+      <div class="card-screen"><canvas id="cCR"></canvas><div class="card-play" style="--card-accent:#44ff88;"><div class="play-sq" style="border-color:#44ff88;color:#44ff88;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Bullet Hell</span><span class="tag tag-gen">Dodge</span></div>
-        <div class="card-title" style="color:#cc00ff;">STAR DODGE</div>
-        <div class="card-desc">Fly through space dodging enemy blasts! Use your dash move to escape. How long can you survive?</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#cc00ff;color:#cc00ff;" href="star_dodge.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Space</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Puzzle</span><span class="tag tag-gen">Strategy</span></div>
+        <div class="card-title" style="color:#44ff88;">CHAIN REACTION</div>
+        <div class="card-desc">Click to explode — trigger chain reactions. Wipe out the enemy cells!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44ff88;color:#44ff88;" href="chain_reaction.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse Click</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#ff3fa4;" onclick="window.open('block_blast.html','_blank')">
-      <div class="card-screen"><canvas id="cBB"></canvas><div class="card-play" style="--card-accent:#ff3fa4;"><div class="play-sq" style="border-color:#ff3fa4;color:#ff3fa4;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#ff6600;" onclick="window.open('rocket_kid.html','_blank')">
+      <div class="card-screen"><canvas id="cRK"></canvas><div class="card-play" style="--card-accent:#ff6600;"><div class="play-sq" style="border-color:#ff6600;color:#ff6600;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Tetris</span><span class="tag tag-gen">2 Player</span></div>
-        <div class="card-title" style="color:#ff3fa4;">BLOCK BLAST</div>
-        <div class="card-desc">Neon Tetris with a full menu. Solo or split-screen 2 player — stack blocks, clear lines, race to survive!</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#ff3fa4;color:#ff3fa4;" href="block_blast.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Arrows | WASD</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Platformer</span><span class="tag tag-gen">Jetpack</span></div>
+        <div class="card-title" style="color:#ff6600;">ROCKET KID</div>
+        <div class="card-desc">Jetpack platformer. Blast through levels, collect fuel, dodge hazards.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff6600;color:#ff6600;" href="rocket_kid.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#00ff88;" onclick="window.open('chain_reaction.html','_blank')">
-      <div class="card-screen"><canvas id="cCR"></canvas><div class="card-play" style="--card-accent:#00ff88;"><div class="play-sq" style="border-color:#00ff88;color:#00ff88;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#8866ff;" onclick="window.open('city_legacy.html','_blank')">
+      <div class="card-screen"><canvas id="cCL"></canvas><div class="card-play" style="--card-accent:#8866ff;"><div class="play-sq" style="border-color:#8866ff;color:#8866ff;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Strategy</span><span class="tag tag-gen">VS AI</span></div>
-        <div class="card-title" style="color:#00ff88;">CHAIN REACTION</div>
-        <div class="card-desc">Click cells to add orbs. Fill a cell and it explodes into neighbors. Chain reactions win the board.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#00ff88;color:#00ff88;" href="chain_reaction.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">City Builder</span><span class="tag tag-gen">Idle</span></div>
+        <div class="card-title" style="color:#8866ff;">CITY LEGACY</div>
+        <div class="card-desc">Build your city from a single house to a megacity. Unlock eras, manage resources.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#8866ff;color:#8866ff;" href="city_legacy.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#88ff44;" onclick="window.open('tower_siege.html','_blank')">
-      <div class="card-screen"><canvas id="cTS"></canvas><div class="card-play" style="--card-accent:#88ff44;"><div class="play-sq" style="border-color:#88ff44;color:#88ff44;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#00ffcc;" onclick="window.open('computer.html','_blank')">
+      <div class="card-screen"><canvas id="cCOM"></canvas><div class="card-play" style="--card-accent:#00ffcc;"><div class="play-sq" style="border-color:#00ffcc;color:#00ffcc;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Tower Defense</span></div>
-        <div class="card-title" style="color:#88ff44;">TOWER SIEGE</div>
-        <div class="card-desc">5 tower types, boss waves, endless mode. Place towers, defend your base, survive!</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#88ff44;color:#88ff44;" href="tower_siege.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Click + Space</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Retro</span><span class="tag tag-gen">Puzzle</span></div>
+        <div class="card-title" style="color:#00ffcc;">COMPUTER</div>
+        <div class="card-desc">Navigate a retro computer OS. Solve puzzles, hack minigames, find the exit.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#00ffcc;color:#00ffcc;" href="computer.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse + Keyboard</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#a06cff;" onclick="window.open('star_swarm.html','_blank')">
-      <div class="card-screen"><canvas id="cVS"></canvas><div class="card-play" style="--card-accent:#a06cff;"><div class="play-sq" style="border-color:#a06cff;color:#a06cff;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#ff2266;" onclick="window.open('the_game_that_learns.html','_blank')">
+      <div class="card-screen"><canvas id="cTGL"></canvas><div class="card-play" style="--card-accent:#ff2266;"><div class="play-sq" style="border-color:#ff2266;color:#ff2266;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Bullet Hell</span><span class="tag tag-gen">Shooter</span></div>
-        <div class="card-title" style="color:#a06cff;">STAR SWARM</div>
-        <div class="card-desc">Bullet hell madness. Dodge swarms, collect graze combos, drop bombs, survive the void.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#a06cff;color:#a06cff;" href="star_swarm.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Space</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">AI</span><span class="tag tag-gen">Shooter</span></div>
+        <div class="card-title" style="color:#ff2266;">THE GAME THAT LEARNS</div>
+        <div class="card-desc">A platformer shooter where the AI actually adapts to your playstyle. 5 sectors.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff2266;color:#ff2266;" href="the_game_that_learns.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Mouse</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#00ff41;" onclick="window.open('computer.html','_blank')">
-      <div class="card-screen"><canvas id="cCMP"></canvas><div class="card-play" style="--card-accent:#00ff41;"><div class="play-sq" style="border-color:#00ff41;color:#00ff41;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#ffaa00;" onclick="window.open('button_factory.html','_blank')">
+      <div class="card-screen"><canvas id="cBF"></canvas><div class="card-play" style="--card-accent:#ffaa00;"><div class="play-sq" style="border-color:#ffaa00;color:#ffaa00;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Hacker</span><span class="tag tag-gen">Missions</span></div>
-        <div class="card-title" style="color:#00ff41;">COMPUTER</div>
-        <div class="card-desc">You are an ultra hacker. Use your desktop, browser, terminal and tools to complete missions and grow your rep.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#00ff41;color:#00ff41;" href="computer.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse + Keyboard</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Puzzle</span><span class="tag tag-gen">15 Levels</span></div>
+        <div class="card-title" style="color:#ffaa00;">BUTTON FACTORY</div>
+        <div class="card-desc">15 levels of button-pushing mayhem. Discover 14 button types with wild effects.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ffaa00;color:#ffaa00;" href="button_factory.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#ff4422;" onclick="window.open('street_brawler.html','_blank')">
-      <div class="card-screen"><canvas id="cSBR"></canvas><div class="card-play" style="--card-accent:#ff4422;"><div class="play-sq" style="border-color:#ff4422;color:#ff4422;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#44ffaa;" onclick="window.open('the_map_is_alive.html','_blank')">
+      <div class="card-screen"><canvas id="cTMA"></canvas><div class="card-play" style="--card-accent:#44ffaa;"><div class="play-sq" style="border-color:#44ffaa;color:#44ffaa;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Beat Em Up</span><span class="tag tag-gen">Fighting</span></div>
-        <div class="card-title" style="color:#ff4422;">PIXEL BRAWLER</div>
-        <div class="card-desc">Side-scrolling brawler. Punch, kick, special moves. Clear each stage. Bosses get nasty.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#ff4422;color:#ff4422;" href="street_brawler.html" target="_blank">▶ PLAY NOW</a><span class="card-key">A/D + J/K/L</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Maze</span><span class="tag tag-gen">Puzzle</span></div>
+        <div class="card-title" style="color:#44ffaa;">THE MAP IS ALIVE</div>
+        <div class="card-desc">The maze changes as you move. Sliding walls, toggling doors, a moving exit.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44ffaa;color:#44ffaa;" href="the_map_is_alive.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
       </div>
     </div>
+
+    <div class="game-card" style="--card-accent:#ff88ff;" onclick="window.open('keyboard_chaos.html','_blank')">
+      <div class="card-screen"><canvas id="cKC"></canvas><div class="card-play" style="--card-accent:#ff88ff;"><div class="play-sq" style="border-color:#ff88ff;color:#ff88ff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Action</span><span class="tag tag-gen">26 Powers</span></div>
+        <div class="card-title" style="color:#ff88ff;">KEYBOARD CHAOS</div>
+        <div class="card-desc">Every key on your keyboard triggers a different ability. Discover all 26!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff88ff;color:#ff88ff;" href="keyboard_chaos.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Full Keyboard</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#aa44ff;" onclick="window.open('dungeon_depths.html','_blank')">
+      <div class="card-screen"><canvas id="cDD"></canvas><div class="card-play" style="--card-accent:#aa44ff;"><div class="play-sq" style="border-color:#aa44ff;color:#aa44ff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">RPG</span><span class="tag tag-gen">Roguelike</span></div>
+        <div class="card-title" style="color:#aa44ff;">DUNGEON DEPTHS</div>
+        <div class="card-desc">Roguelike RPG. Level up your hero, find loot, slay monsters, go deeper.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#aa44ff;color:#aa44ff;" href="dungeon_depths.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#44aaff;" onclick="window.open('tower_siege.html','_blank')">
+      <div class="card-screen"><canvas id="cTS"></canvas><div class="card-play" style="--card-accent:#44aaff;"><div class="play-sq" style="border-color:#44aaff;color:#44aaff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Tower Defense</span></div>
+        <div class="card-title" style="color:#44aaff;">TOWER SIEGE</div>
+        <div class="card-desc">5 tower types, escalating enemy waves, upgrade paths. Defend your base!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44aaff;color:#44aaff;" href="tower_siege.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#ff2244;" onclick="window.open('star_swarm.html','_blank')">
+      <div class="card-screen"><canvas id="cSS"></canvas><div class="card-play" style="--card-accent:#ff2244;"><div class="play-sq" style="border-color:#ff2244;color:#ff2244;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Bullet Hell</span><span class="tag tag-gen">Shooter</span></div>
+        <div class="card-title" style="color:#ff2244;">STAR SWARM</div>
+        <div class="card-desc">Bullet-hell shooter. Survive endless swarms of star enemies in deep space.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff2244;color:#ff2244;" href="star_swarm.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Mouse</span></div>
+      </div>
+    </div>
+
     <div class="game-card" style="--card-accent:#44ff88;" onclick="window.open('dead_static.html','_blank')">
-      <div class="card-screen"><canvas id="cDS"></canvas><div class="card-play" style="--card-accent:#44ff88;"><div class="play-sq" style="border-color:#44ff88;color:#44ff88;">▶</div>PLAY</div></div>
+      <div class="card-screen"><canvas id="cGS"></canvas><div class="card-play" style="--card-accent:#44ff88;"><div class="play-sq" style="border-color:#44ff88;color:#44ff88;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Survival Horror</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Horror</span><span class="tag tag-gen">Survival</span></div>
         <div class="card-title" style="color:#44ff88;">GHOST STATIC</div>
-        <div class="card-desc">Flashlight horror. Collect 3 keys per night. Stun monsters by clicking your flashlight on them.</div>
+        <div class="card-desc">Tune your radio to find ghosts before they find you. Survive the night.</div>
         <div class="card-footer"><a class="mini-btn" style="border-color:#44ff88;color:#44ff88;" href="dead_static.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Mouse</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#ff8800;" onclick="window.open('hoop_dreams.html','_blank')">
-      <div class="card-screen"><canvas id="cHD"></canvas><div class="card-play" style="--card-accent:#ff8800;"><div class="play-sq" style="border-color:#ff8800;color:#ff8800;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#ff8844;" onclick="window.open('hoop_dreams.html','_blank')">
+      <div class="card-screen"><canvas id="cHD"></canvas><div class="card-play" style="--card-accent:#ff8844;"><div class="play-sq" style="border-color:#ff8844;color:#ff8844;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Sports</span><span class="tag tag-gen">Basketball</span></div>
-        <div class="card-title" style="color:#ff8800;">HOOP DREAMS</div>
-        <div class="card-desc">1v1 basketball vs CPU. 60 second match. Hold Space to charge your shot — risk a 3-pointer!</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#ff8800;color:#ff8800;" href="hoop_dreams.html" target="_blank">▶ PLAY NOW</a><span class="card-key">A/D + Space</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Sports</span><span class="tag tag-gen">Basketball</span></div>
+        <div class="card-title" style="color:#ff8844;">HOOP DREAMS</div>
+        <div class="card-desc">Basketball arcade. Shoot from anywhere, score combos, bank shots off the wall.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff8844;color:#ff8844;" href="hoop_dreams.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#a0ff60;" onclick="window.open('gravity_shift.html','_blank')">
-      <div class="card-screen"><canvas id="cGS"></canvas><div class="card-play" style="--card-accent:#a0ff60;"><div class="play-sq" style="border-color:#a0ff60;color:#a0ff60;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#44ffff;" onclick="window.open('gravity_shift.html','_blank')">
+      <div class="card-screen"><canvas id="cGV"></canvas><div class="card-play" style="--card-accent:#44ffff;"><div class="play-sq" style="border-color:#44ffff;color:#44ffff;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Puzzle Platformer</span></div>
-        <div class="card-title" style="color:#a0ff60;">GRAVITY SHIFT</div>
-        <div class="card-desc">Flip gravity to survive. 6 hand-crafted levels of spikes and stars. Your brain will break.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#a0ff60;color:#a0ff60;" href="gravity_shift.html" target="_blank">▶ PLAY NOW</a><span class="card-key">A/D + Space</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Platformer</span><span class="tag tag-gen">Gravity</span></div>
+        <div class="card-title" style="color:#44ffff;">GRAVITY SHIFT</div>
+        <div class="card-desc">Flip gravity to platform through mind-bending levels. Everything is upside down.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44ffff;color:#44ffff;" href="gravity_shift.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Space</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#ff9900;" onclick="window.open('rocket_kid.html','_blank')">
-      <div class="card-screen"><canvas id="cRK"></canvas><div class="card-play" style="--card-accent:#ff9900;"><div class="play-sq" style="border-color:#ff9900;color:#ff9900;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#ff3355;" onclick="window.open('street_brawler.html','_blank')">
+      <div class="card-screen"><canvas id="cSB"></canvas><div class="card-play" style="--card-accent:#ff3355;"><div class="play-sq" style="border-color:#ff3355;color:#ff3355;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Platformer</span><span class="tag tag-gen">Double Jump</span></div>
-        <div class="card-title" style="color:#ff9900;">ROCKET KID</div>
-        <div class="card-desc">Jetpack platformer across 5 neon worlds. Double jump, stomp enemies, grab coins, hit the portal!</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#ff9900;color:#ff9900;" href="rocket_kid.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Arrows + Space</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Beat Em Up</span><span class="tag tag-gen">Fighter</span></div>
+        <div class="card-title" style="color:#ff3355;">PIXEL BRAWLER</div>
+        <div class="card-desc">Side-scrolling beat-em-up. Punch, kick, combo your way through enemy waves.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff3355;color:#ff3355;" href="street_brawler.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Z/X</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#44aaff;" onclick="window.open('city_legacy.html','_blank')">
-      <div class="card-screen"><canvas id="cCL"></canvas><div class="card-play" style="--card-accent:#44aaff;"><div class="play-sq" style="border-color:#44aaff;color:#44aaff;">▶</div>PLAY</div></div>
+
+    <!-- NEW GAMES -->
+    <div class="game-card" style="--card-accent:#ff8844;" onclick="window.open('ragdoll_archers.html','_blank')">
+      <div class="card-screen"><canvas id="cRA"></canvas><div class="card-play" style="--card-accent:#ff8844;"><div class="play-sq" style="border-color:#ff8844;color:#ff8844;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">City Builder</span><span class="tag tag-gen">Strategy</span></div>
-        <div class="card-title" style="color:#44aaff;">CITY LEGACY</div>
-        <div class="card-desc">Build and grow your own city from the ground up. Place buildings, manage resources, leave a legacy.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#44aaff;color:#44aaff;" href="city_legacy.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
-      </div>
-    <div class="game-card" style="--card-accent:#7777ff;" onclick="window.open('the_game_that_learns.html','_blank')">
-      <div class="card-screen"><canvas id="cTGL"></canvas><div class="card-play" style="--card-accent:#7777ff;"><div class="play-sq" style="border-color:#7777ff;color:#7777ff;">▶</div>PLAY</div></div>
-      <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Shooter</span><span class="tag tag-gen">Adaptive AI</span></div>
-        <div class="card-title" style="color:#7777ff;">THE GAME THAT LEARNS</div>
-        <div class="card-desc">Enemies watch how you play and adapt. Jump too much? They shoot upward. Hide? Grenades. Eventually it becomes brutal.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#7777ff;color:#7777ff;" href="the_game_that_learns.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Z/X</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Physics</span><span class="tag tag-gen">Archery</span></div>
+        <div class="card-title" style="color:#ff8844;">RAGDOLL ARCHERS</div>
+        <div class="card-desc">Physics bow combat vs CPU. Drag to aim, wind affects arrows, ragdoll death. Best of 5!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff8844;color:#ff8844;" href="ragdoll_archers.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse Drag</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#cc88ff;" onclick="window.open('button_factory.html','_blank')">
-      <div class="card-screen"><canvas id="cBF"></canvas><div class="card-play" style="--card-accent:#cc88ff;"><div class="play-sq" style="border-color:#cc88ff;color:#cc88ff;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#44ff88;" onclick="window.open('slime_lab.html','_blank')">
+      <div class="card-screen"><canvas id="cSL"></canvas><div class="card-play" style="--card-accent:#44ff88;"><div class="play-sq" style="border-color:#44ff88;color:#44ff88;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Puzzle</span><span class="tag tag-gen">Chaos</span></div>
-        <div class="card-title" style="color:#cc88ff;">BUTTON FACTORY</div>
-        <div class="card-desc">Every level gives you new buttons. Reverse controls. Spawn walls. Freeze time. Use them to escape the room!</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#cc88ff;color:#cc88ff;" href="button_factory.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Mouse</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Idle</span><span class="tag tag-gen">Merge</span></div>
+        <div class="card-title" style="color:#44ff88;">SLIME LAB</div>
+        <div class="card-desc">Drag and merge 18 slime species to discover rarer ones. Coins, upgrades, auto-mixer!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44ff88;color:#44ff88;" href="slime_lab.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse Drag</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#44aaff;" onclick="window.open('the_map_is_alive.html','_blank')">
-      <div class="card-screen"><canvas id="cTMA"></canvas><div class="card-play" style="--card-accent:#44aaff;"><div class="play-sq" style="border-color:#44aaff;color:#44aaff;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#4488ff;" onclick="window.open('pixel_tanks.html','_blank')">
+      <div class="card-screen"><canvas id="cPT"></canvas><div class="card-play" style="--card-accent:#4488ff;"><div class="play-sq" style="border-color:#4488ff;color:#4488ff;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Maze</span><span class="tag tag-gen">Puzzle</span></div>
-        <div class="card-title" style="color:#44aaff;">THE MAP IS ALIVE</div>
-        <div class="card-desc">Walls slide. Doors relocate. The exit moves. Reach it before it disappears — you're racing against the level itself.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#44aaff;color:#44aaff;" href="the_map_is_alive.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">2 Player</span><span class="tag tag-gen">Tanks</span></div>
+        <div class="card-title" style="color:#4488ff;">PIXEL TANKS</div>
+        <div class="card-desc">2-player local tank battle on maze map. Bounce bullets off walls. First to 5 kills!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#4488ff;color:#4488ff;" href="pixel_tanks.html" target="_blank">▶ PLAY NOW</a><span class="card-key">P1: WASD+F · P2: Arrows+L</span></div>
       </div>
     </div>
-    <div class="game-card" style="--card-accent:#ff44cc;" onclick="window.open('keyboard_chaos.html','_blank')">
-      <div class="card-screen"><canvas id="cKC"></canvas><div class="card-play" style="--card-accent:#ff44cc;"><div class="play-sq" style="border-color:#ff44cc;color:#ff44cc;">▶</div>PLAY</div></div>
+
+    <div class="game-card" style="--card-accent:#00ffaa;" onclick="window.open('speed_typer.html','_blank')">
+      <div class="card-screen"><canvas id="cST"></canvas><div class="card-play" style="--card-accent:#00ffaa;"><div class="play-sq" style="border-color:#00ffaa;color:#00ffaa;">▶</div>PLAY</div></div>
       <div class="card-body">
-        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Action</span><span class="tag tag-gen">Discovery</span></div>
-        <div class="card-title" style="color:#ff44cc;">KEYBOARD CHAOS</div>
-        <div class="card-desc">Every key on your keyboard does something weird. Teleport. Shrink. Laser. Dance. Press them all to discover 26 abilities!</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#ff44cc;color:#ff44cc;" href="keyboard_chaos.html" target="_blank">▶ PLAY NOW</a><span class="card-key">A-Z Keys</span></div>
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Typing</span><span class="tag tag-gen">Survival</span></div>
+        <div class="card-title" style="color:#00ffaa;">SPEED TYPER</div>
+        <div class="card-desc">Words fall from above — type before they hit the ground! Combos, WPM tracker, escalating levels.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#00ffaa;color:#00ffaa;" href="speed_typer.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Keyboard</span></div>
       </div>
     </div>
+
+    <div class="game-card" style="--card-accent:#aa66ff;" onclick="window.open('dungeon_crawler.html','_blank')">
+      <div class="card-screen"><canvas id="cDC"></canvas><div class="card-play" style="--card-accent:#aa66ff;"><div class="play-sq" style="border-color:#aa66ff;color:#aa66ff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Roguelite</span><span class="tag tag-gen">Dungeon</span></div>
+        <div class="card-title" style="color:#aa66ff;">DUNGEON CRAWLER</div>
+        <div class="card-desc">Procedural cellular-automata caves. Find the key, reach the stairs. Goblin → Orc → Demon!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#aa66ff;color:#aa66ff;" href="dungeon_crawler.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#ffcc00;" onclick="window.open('drift_zone.html','_blank')">
+      <div class="card-screen"><canvas id="cDZ"></canvas><div class="card-play" style="--card-accent:#ffcc00;"><div class="play-sq" style="border-color:#ffcc00;color:#ffcc00;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Racing</span><span class="tag tag-gen">Drift</span></div>
+        <div class="card-title" style="color:#ffcc00;">DRIFT ZONE</div>
+        <div class="card-desc">Top-down arcade racer. Score points by drifting corners. 3-lap circuit, beat your high score!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ffcc00;color:#ffcc00;" href="drift_zone.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#4488ff;" onclick="window.open('space_miner.html','_blank')">
+      <div class="card-screen"><canvas id="cSM"></canvas><div class="card-play" style="--card-accent:#4488ff;"><div class="play-sq" style="border-color:#4488ff;color:#4488ff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Shooter</span><span class="tag tag-gen">Upgrades</span></div>
+        <div class="card-title" style="color:#4488ff;">SPACE MINER</div>
+        <div class="card-desc">Blast asteroids for minerals. Upgrade your laser, engine, hull and fire rate. Unlock bombs!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#4488ff;color:#4488ff;" href="space_miner.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Space</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#ff8844;" onclick="window.open('flip_master.html','_blank')">
+      <div class="card-screen"><canvas id="cFM"></canvas><div class="card-play" style="--card-accent:#ff8844;"><div class="play-sq" style="border-color:#ff8844;color:#ff8844;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Tricks</span><span class="tag tag-gen">Stickman</span></div>
+        <div class="card-title" style="color:#ff8844;">FLIP MASTER</div>
+        <div class="card-desc">Bounce on the trampoline and pull off flips! Triple flips, combos, perfect landings.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff8844;color:#ff8844;" href="flip_master.html" target="_blank">▶ PLAY NOW</a><span class="card-key">← → to flip</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#44ff44;" onclick="window.open('snake_evolved.html','_blank')">
+      <div class="card-screen"><canvas id="cSE"></canvas><div class="card-play" style="--card-accent:#44ff44;"><div class="play-sq" style="border-color:#44ff44;color:#44ff44;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Snake</span><span class="tag tag-gen">3 Modes</span></div>
+        <div class="card-title" style="color:#44ff44;">SNAKE EVOLVED</div>
+        <div class="card-desc">Classic Snake — evolved. Ghost mode, speed bursts, score multipliers, shrink and more!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44ff44;color:#44ff44;" href="snake_evolved.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD / Arrows</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#aa44ff;" onclick="window.open('crowd_crusher.html','_blank')">
+      <div class="card-screen"><canvas id="cCC"></canvas><div class="card-play" style="--card-accent:#aa44ff;"><div class="play-sq" style="border-color:#aa44ff;color:#aa44ff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Match 3</span><span class="tag tag-gen">Puzzle</span></div>
+        <div class="card-title" style="color:#aa44ff;">CROWD CRUSHER</div>
+        <div class="card-desc">Swap monsters to match 3 or more. Crush mega combos for big points. Hit the target!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#aa44ff;color:#aa44ff;" href="crowd_crusher.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse Click</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#ff6644;" onclick="window.open('worm_wars.html','_blank')">
+      <div class="card-screen"><canvas id="cWW"></canvas><div class="card-play" style="--card-accent:#ff6644;"><div class="play-sq" style="border-color:#ff6644;color:#ff6644;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">2 Player</span><span class="tag tag-gen">Battle</span></div>
+        <div class="card-title" style="color:#ff6644;">WORM WARS</div>
+        <div class="card-desc">2-player worm battle. Slither, eat food to grow, crash your opponent. First to 5 wins!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff6644;color:#ff6644;" href="worm_wars.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD · Arrows</span></div>
+      </div>
+    </div>
+
   </div>
 </section>
 
+<!-- SECTION 02: DOWNLOAD -->
 <section class="section" id="download">
   <div class="sec-header reveal">
     <span class="sec-num">02</span>
     <h2 class="sec-title">DOWN<em>LOAD</em></h2>
     <div class="sec-rule"></div>
   </div>
-  <div style="font-family:'Syne Mono', "Courier New", Courier, monospace,monospace;font-size:10px;color:var(--dim);letter-spacing:2px;margin-bottom:28px;">▸ Requires Python 3 + Pygame &nbsp;·&nbsp; Install: <span style="color:var(--cyan);">pip install pygame</span> &nbsp;·&nbsp; Run: <span style="color:var(--green);">python game.py</span></div>
+  <div style="font-family:'Syne Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:2px;margin-bottom:28px;">▸ Requires Python 3 + Pygame &nbsp;·&nbsp; Install: <span style="color:var(--cyan);">pip install pygame</span> &nbsp;·&nbsp; Run: <span style="color:var(--green);">python game.py</span></div>
   <div class="dl-table reveal">
     <div class="dl-row"><div class="dl-icon-cell">🔵</div><div class="dl-info-cell"><div class="dl-name" style="color:#00fff5;">The Blue Guy</div><div class="dl-sub">15-level platformer · boss fights · double-jump · coins</div></div><div class="dl-meta-cell">1,260 lines<br>v1.0</div><div class="dl-btn-cell"><a class="dl-btn" href="c.py" download="TheBlueGuy.py">▼ WIN</a><a class="dl-btn" href="c.py" download="TheBlueGuy.pyw">▼ MAC</a></div></div>
     <div class="dl-row"><div class="dl-icon-cell">⚡</div><div class="dl-info-cell"><div class="dl-name" style="color:#00ffff;">Cyber Platformer 2X</div><div class="dl-sub">Cyberpunk neon platformer · enhanced visuals</div></div><div class="dl-meta-cell">1,143 lines<br>v2X</div><div class="dl-btn-cell"><a class="dl-btn" href="c2x.py" download="CyberPlatformer2X.py">▼ WIN</a><a class="dl-btn" href="c2x.py" download="CyberPlatformer2X.pyw">▼ MAC</a></div></div>
@@ -556,6 +712,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
   </div>
 </section>
 
+<!-- SECTION 03: ABOUT -->
 <section class="section" id="about">
   <div class="sec-header reveal">
     <span class="sec-num">03</span>
@@ -579,7 +736,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
   </div>
 </section>
 
-<!-- ── SCOREBOARD ── -->
+<!-- SCOREBOARD -->
 <section id="scoreboard" style="padding:60px 20px;max-width:900px;margin:0 auto;">
   <div style="text-align:center;margin-bottom:30px;">
     <div style="font-family:Impact,'Arial Black',sans-serif;font-size:36px;color:#ffd700;letter-spacing:4px;text-shadow:2px 2px 0 #7a4000;">🏆 SCOREBOARD</div>
@@ -596,7 +753,6 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
   </div>
 </section>
 
-
 <footer>
   <div class="footer-brand">PIXEL FORGE</div>
   <div class="footer-copy">ALL GAMES HANDCRAFTED IN HTML5 + PYTHON<br>NO ADS · NO TRACKING · JUST GAMES<br>EST. 2024</div>
@@ -609,6 +765,7 @@ const dot=document.getElementById('dot'),cross=document.getElementById('cross');
 let mx=0,my=0,cx=0,cy=0;
 document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
 (function rl(){cx+=(mx-cx)*0.09;cy+=(my-cy)*0.09;cross.style.left=cx+'px';cross.style.top=cy+'px';requestAnimationFrame(rl);})();
+
 // ── SCROLL REVEAL ──
 const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');obs.unobserve(e.target);}});},{threshold:0.08});
 document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
@@ -618,7 +775,7 @@ function sc(id){const c=document.getElementById(id);if(!c)return null;const ctx=
 
 // ── FEATURED: Blue Guy 1 ──
 (()=>{
-  const {c,ctx}=sc('featCanvas')||{};if(!c)return;
+  const s=sc('featCanvas');if(!s)return;const{c,ctx}=s;
   let px={x:80,y:0,vy:0},dir=1,frame=0,coins=[],pts=[];
   function init(){coins=[{x:c.width*.35,y:c.height-130,a:true},{x:c.width*.58,y:c.height-165,a:true},{x:c.width*.78,y:c.height-125,a:true}];}
   function loop(){
@@ -643,289 +800,207 @@ function sc(id){const c=document.getElementById(id);if(!c)return null;const ctx=
     for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.2;p.life--;ctx.globalAlpha=p.life/30;ctx.fillStyle='#ffe100';ctx.fillRect(p.x-2,p.y-2,4,4);if(p.life<=0)pts.splice(i,1);}
     ctx.globalAlpha=1;
     const bob=Math.abs(px.vy)*.3;
-    ctx.shadowColor='#00d4ff';ctx.shadowBlur=18;ctx.fillStyle='#4fc3f7';ctx.fillRect(px.x-8,px.y-bob,16,16+bob*.5);ctx.shadowBlur=0;
-    ctx.fillStyle='white';ctx.beginPath();ctx.arc(px.x-3,px.y+3,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(px.x+5,px.y+3,2,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(px.x-3+dir,px.y+3,1,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(px.x+5+dir,px.y+3,1,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#00aaff';ctx.fillRect(px.x-8,px.y-16+bob,16,16);
+    ctx.fillStyle='#ffffff';ctx.fillRect(px.x-5,px.y-13+bob,5,5);ctx.fillRect(px.x+1,px.y-13+bob,5,5);
+    ctx.fillStyle='#000033';ctx.fillRect(px.x-3,px.y-12+bob,3,3);ctx.fillRect(px.x+3,px.y-12+bob,3,3);
+    ctx.fillStyle='#0088dd';ctx.fillRect(px.x-10,px.y-8+bob,4,12);ctx.fillRect(px.x+6,px.y-8+bob,4,12);
+    ctx.fillStyle='#005599';ctx.fillRect(px.x-8,px.y+bob,16,8);
+    ctx.fillStyle='#003377';ctx.fillRect(px.x-10,px.y+8+bob,6,8);ctx.fillRect(px.x+4,px.y+8+bob,6,8);
     frame++;requestAnimationFrame(loop);
   }
   loop();
 })();
 
-// ── Blue Guy 2 ──
+// ── FORGE CLICKER preview ──
 (()=>{
-  const {c,ctx}=sc('c2')||{};if(!c)return;
-  let px={x:40,y:0,vy:0},dir=1,frame=0,dash=0;
+  const s=sc('cFC');if(!s)return;const{c,ctx}=s;
+  let frame=0,cookies=0,cps=0;
+  const buildings=[{x:.15,y:.6,w:.08,h:.25,col:'#3a1500'},{x:.25,y:.5,w:.08,h:.35,col:'#2a1000'},{x:.37,y:.4,w:.1,h:.45,col:'#1a0a00'},{x:.5,y:.3,w:.12,h:.55,col:'#110700'}];
   function loop(){
-    if(px.y===0)px.y=c.height-40;
-    ctx.fillStyle='rgba(8,8,24,.22)';ctx.fillRect(0,0,c.width,c.height);
-    for(let i=0;i<30;i++){ctx.fillStyle='rgba(100,100,255,.22)';ctx.fillRect((i*73)%c.width,(i*41)%c.height,1,1);}
-    const pl=[[0,c.height-14,c.width,14],[c.width*.18,c.height-72,c.width*.2,8],[c.width*.55,c.height-122,c.width*.22,8]];
-    pl.forEach(([x,y,w,h])=>{ctx.fillStyle='#0c0c2a';ctx.fillRect(x,y,w,h);ctx.fillStyle='rgba(0,220,255,.6)';ctx.fillRect(x,y,w,2);});
-    if(frame%55===0)dash=12;
-    const spd=dash>0?9:2.5;px.x+=dir*spd;if(px.x>c.width-20||px.x<10)dir*=-1;
-    if(dash>0){for(let i=0;i<3;i++){ctx.globalAlpha=i/3*.3;ctx.fillStyle='#00ffff';ctx.fillRect(px.x-8-dir*(4-i)*8,px.y-4,12,14);}ctx.globalAlpha=1;dash--;}
-    px.vy+=.7;px.y+=px.vy;
-    pl.forEach(([x,y,w,h])=>{if(px.x+8>x&&px.x-8<x+w&&px.y+14>y&&px.y+14<y+h+5&&px.vy>0){px.y=y-14;px.vy=Math.random()>.5?-10:0;}});
-    if(px.y>=c.height-28){px.y=c.height-28;px.vy=0;}
-    const g=dash>2?'#00ffff':'#4fc3f7';
-    ctx.shadowColor=g;ctx.shadowBlur=dash>2?22:10;ctx.fillStyle=g;ctx.fillRect(px.x-8,px.y,14,14);ctx.shadowBlur=0;
-    ctx.fillStyle='white';ctx.beginPath();ctx.arc(px.x-3,px.y+4,1.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(px.x+4,px.y+4,1.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(10,5,0,.3)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#0a0500';if(frame%120===0){ctx.fillRect(0,0,c.width,c.height);}
+    const g=ctx.createRadialGradient(c.width/2,c.height*.1,0,c.width/2,c.height*.5,c.width*.7);
+    g.addColorStop(0,'rgba(255,100,0,.08)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,c.width,c.height);
+    buildings.forEach(b=>{
+      ctx.fillStyle=b.col;ctx.fillRect(b.x*c.width,b.y*c.height,b.w*c.width,b.h*c.height);
+      ctx.fillStyle='rgba(255,160,0,.5)';
+      for(let i=0;i<3;i++)for(let j=0;j<4;j++){
+        if(Math.sin(frame*.05+i*2+j*1.3)>.2)ctx.fillRect((b.x+.01+i*.02)*c.width,(b.y+.04+j*.05)*c.height,b.w*.2*c.width,b.w*.18*c.width);
+      }
+    });
+    ctx.fillStyle='#ff6600';ctx.shadowColor='#ff6600';ctx.shadowBlur=20;
+    ctx.font=`bold ${c.height*.14}px monospace`;ctx.textAlign='center';
+    ctx.fillText('🍪',c.width/2,c.height*.38+Math.sin(frame*.04)*4);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,180,0,.8)';ctx.font=`bold ${c.height*.09}px monospace`;
+    ctx.fillText(Math.floor(cookies).toLocaleString()+' cookies',c.width/2,c.height*.55);
+    ctx.fillStyle='rgba(255,120,0,.5)';ctx.font=`${c.height*.06}px monospace`;
+    ctx.fillText(cps.toFixed(1)+'/sec',c.width/2,c.height*.65);
+    ctx.textAlign='left';
+    if(frame%8===0){cookies+=cps/7.5;cps=Math.min(cps+.01,42);}
+    if(Math.random()<.015){const x=Math.random()*c.width,y=Math.random()*c.height*.5;ctx.fillStyle='rgba(255,200,0,.4)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('+'+Math.ceil(cps),x,y);ctx.textAlign='left';}
     frame++;requestAnimationFrame(loop);
   }
   loop();
 })();
 
-// ── Blue Guy 3 ──
+// ── BOX ROYALE preview ──
 (()=>{
-  const {c,ctx}=sc('c3')||{};if(!c)return;
-  let px={x:40,y:0,vy:0},dir=1,frame=0,gems=[],combo=0;
-  function loop(){
-    if(px.y===0){px.y=c.height-40;gems=[{x:c.width*.4,y:c.height-90,a:true,r:0},{x:c.width*.72,y:c.height-135,a:true,r:Math.PI}];}
-    ctx.fillStyle='rgba(3,0,8,.22)';ctx.fillRect(0,0,c.width,c.height);
-    const pg=ctx.createRadialGradient(c.width/2,c.height/3,0,c.width/2,c.height/3,150);
-    pg.addColorStop(0,'rgba(130,0,200,.12)');pg.addColorStop(1,'transparent');ctx.fillStyle=pg;ctx.fillRect(0,0,c.width,c.height);
-    const pl=[[0,c.height-14,c.width,14],[c.width*.2,c.height-78,c.width*.2,8],[c.width*.58,c.height-132,c.width*.22,8]];
-    pl.forEach(([x,y,w,h])=>{ctx.fillStyle='#100018';ctx.fillRect(x,y,w,h);ctx.fillStyle='rgba(180,0,255,.6)';ctx.fillRect(x,y,w,2);});
-    gems.forEach(gm=>{if(!gm.a)return;gm.r+=.06;const py2=gm.y+Math.sin(frame*.05+gm.x)*4;ctx.save();ctx.translate(gm.x,py2);ctx.rotate(gm.r);ctx.shadowColor='#d500f9';ctx.shadowBlur=16;ctx.fillStyle='#d500f9';ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(5,0);ctx.lineTo(0,8);ctx.lineTo(-5,0);ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.restore();});
-    px.x+=dir*2.2;if(px.x>c.width-20||px.x<10)dir*=-1;
-    px.vy+=.7;px.y+=px.vy;
-    pl.forEach(([x,y,w,h])=>{if(px.x+8>x&&px.x-8<x+w&&px.y+14>y&&px.y+14<y+h+5&&px.vy>0){px.y=y-14;px.vy=Math.random()>.5?-10:0;}});
-    if(px.y>=c.height-28){px.y=c.height-28;px.vy=0;}
-    gems.forEach(gm=>{if(gm.a&&Math.abs(px.x-gm.x)<18&&Math.abs(px.y-gm.y)<20){gm.a=false;combo++;}});
-    if(gems.every(g=>!g.a))gems.forEach(g=>g.a=true);
-    ctx.shadowColor='#4fc3f7';ctx.shadowBlur=12;ctx.fillStyle='#4fc3f7';ctx.fillRect(px.x-8,px.y,14,14);ctx.shadowBlur=0;
-    ctx.fillStyle='white';ctx.beginPath();ctx.arc(px.x-3,px.y+4,1.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(px.x+4,px.y+4,1.5,0,Math.PI*2);ctx.fill();
-    if(combo>0){ctx.font='bold 9px monospace';ctx.fillStyle='#d500f9';ctx.textAlign='center';ctx.fillText('x'+combo,px.x,px.y-7);}
-    frame++;requestAnimationFrame(loop);
-  }
-  loop();
-})();
-
-// ── Forge Clicker ──
-(()=>{
-  const {c,ctx}=sc('cFC')||{};if(!c)return;
-  let frame=0,pts=[],clicks=0;
-  c.onclick=()=>{clicks+=10;for(let i=0;i<5;i++)pts.push({x:c.width/2+(Math.random()-.5)*40,y:c.height/2,vy:-2-Math.random()*3,life:35});};
-  function loop(){
-    ctx.fillStyle='rgba(12,5,0,.2)';ctx.fillRect(0,0,c.width,c.height);
-    const s=Math.sin(frame*.04)*3;
-    ctx.font=(44+s)+'px serif';ctx.textAlign='center';ctx.shadowColor='#ff8c00';ctx.shadowBlur=20+s*3;
-    ctx.fillText('🍪',c.width/2,c.height/2+14);ctx.shadowBlur=0;
-    if(frame%12===0)pts.push({x:c.width/2+(Math.random()-.5)*20,y:c.height/2-10,vy:-1.5-Math.random()*2,life:40,auto:true});
-    for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.y+=p.vy;p.vy+=.15;p.life--;ctx.globalAlpha=p.life/40;ctx.font=(p.auto?'10':'12')+'px serif';ctx.fillText(p.auto?'+1':'🍪',p.x,p.y);ctx.globalAlpha=1;if(p.life<=0)pts.splice(i,1);}
-    const total=clicks+frame*.8;
-    ctx.font='bold 9px monospace';ctx.textAlign='left';ctx.fillStyle='#ff6d00';ctx.fillText(Math.floor(total)+' cookies',6,14);
-    ctx.fillStyle='#7a3000';ctx.font='7px monospace';ctx.fillText((2.4+Math.sin(frame*.01)*.3).toFixed(1)+'/sec',6,26);
-    frame++;requestAnimationFrame(loop);
-  }
-  loop();
-})();
-
-// ── Box Royale ──
-(()=>{
-  const {c,ctx}=sc('cBR')||{};if(!c)return;
-  const PALS=['#ff1744','#00fff5','#39ff14','#ffe100'],HATS=['👑','🧙','🔥','🎉'];
+  const s=sc('cBR');if(!s)return;const{c,ctx}=s;
+  const players=[{x:.2,y:.5,col:'#ff1744',vx:.012,vy:0},{x:.5,y:.3,col:'#00fff5',vx:-.008,vy:.01},{x:.75,y:.65,col:'#39ff14',vx:.009,vy:-.008},{x:.4,y:.7,col:'#ffe100',vx:-.011,vy:.009}];
   let frame=0;
-  const players=PALS.map((col,i)=>({x:20+i*55,y:0,vx:1.5+i*.35,vy:0,col,hat:HATS[i],bob:i*Math.PI/2}));
-  const obs=[{x:0,y:0,w:16,h:50},{x:0,y:0,w:16,h:40}];
   function loop(){
-    if(players[0].y===0){players.forEach(p=>p.y=c.height-26);obs[0].x=c.width*.5;obs[0].y=c.height-50;obs[1].x=c.width*.75;obs[1].y=c.height-40;}
-    ctx.fillStyle='rgba(10,0,20,.2)';ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle='#1a0025';ctx.fillRect(0,c.height-14,c.width,14);ctx.fillStyle='#ff1744';ctx.fillRect(0,c.height-14,c.width,2);
-    for(let i=0;i<10;i++){const cx2=((i*173+frame*1.5)%c.width+c.width)%c.width,cy2=(i*28+frame*.8)%c.height;ctx.fillStyle=PALS[i%4];ctx.globalAlpha=.5;ctx.fillRect(cx2,cy2,3,2);}ctx.globalAlpha=1;
-    obs.forEach(o=>{ctx.fillStyle='#2a0035';ctx.fillRect(o.x,o.y,o.w,o.h);ctx.fillStyle='#ff1744';ctx.fillRect(o.x,o.y,o.w,2);});
+    ctx.fillStyle='rgba(5,0,15,.25)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#0a001a';if(frame%90===0)ctx.fillRect(0,0,c.width,c.height);
     players.forEach(p=>{
-      p.x+=p.vx;if(p.x>c.width+15)p.x=-15;
-      obs.forEach(o=>{if(Math.abs(p.x-o.x-8)<20&&p.y>o.y-8&&p.vy>=0)p.vy=-12;});
-      p.vy+=.65;p.y+=p.vy;if(p.y>=c.height-26){p.y=c.height-26;p.vy=0;}
-      const b=Math.sin(frame*.15+p.bob)*1.5;
-      ctx.shadowColor=p.col;ctx.shadowBlur=10;ctx.fillStyle=p.col;ctx.fillRect(p.x-9,p.y-10+b,18,18);ctx.shadowBlur=0;
-      ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(p.x-5,p.y-6+b,3,3);ctx.fillRect(p.x+2,p.y-6+b,3,3);
-      ctx.font='11px serif';ctx.textAlign='center';ctx.fillText(p.hat,p.x,p.y-12+b);
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<.05||p.x>.9){p.vx*=-1;}if(p.y<.1||p.y>.85){p.vy*=-1;}
+      const px=p.x*c.width,py=p.y*c.height,sz=c.height*.09;
+      ctx.fillStyle=p.col;ctx.shadowColor=p.col;ctx.shadowBlur=12;
+      ctx.fillRect(px-sz/2,py-sz/2,sz,sz);
+      ctx.shadowBlur=0;ctx.fillStyle='#000';ctx.fillRect(px-sz*.25,py-sz*.2,sz*.2,sz*.2);ctx.fillRect(px+sz*.05,py-sz*.2,sz*.2,sz*.2);
     });
+    ctx.fillStyle='rgba(255,255,255,.06)';ctx.font=`bold ${c.height*.07}px monospace`;ctx.textAlign='center';
+    ctx.fillText('BOX ROYALE',c.width/2,c.height*.92);ctx.textAlign='left';
     frame++;requestAnimationFrame(loop);
   }
   loop();
 })();
 
-// ── Poopatropas ──
+// ── POOPATROPAS preview ──
 (()=>{
-  const {c,ctx}=sc('cPP')||{};if(!c)return;
-  const CCOLS=['#1296ff','#e03030','#22b040','#e0b000'];
+  const s=sc('cPP');if(!s)return;const{c,ctx}=s;
+  const chars=[{x:.1,col:'#4488ff'},{x:.3,col:'#44ff44'},{x:.55,col:'#ff4444'},{x:.75,col:'#ffff44'}];
   let frame=0;
-  const chars=CCOLS.map((col,i)=>({x:20+i*50,y:0,vx:1.4+i*.3,vy:0,col}));
-  const rings=[{x:0,y:0,a:true},{x:0,y:0,a:true},{x:0,y:0,a:true}];
   function loop(){
-    if(chars[0].y===0){chars.forEach((ch,i)=>{ch.y=c.height-26;ch.x=20+i*50;});rings[0].x=c.width*.35;rings[0].y=c.height-75;rings[1].x=c.width*.6;rings[1].y=c.height-100;rings[2].x=c.width*.82;rings[2].y=c.height-65;}
-    const bg=ctx.createLinearGradient(0,0,0,c.height);bg.addColorStop(0,'rgba(40,80,20,.3)');bg.addColorStop(1,'rgba(20,40,10,.3)');ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle='rgba(255,255,255,.18)';
-    [[.1,.15],[.45,.08],[.75,.18]].forEach(([fx,fy])=>{const cx2=((fx*c.width+frame*.4)%c.width+c.width)%c.width,cy2=fy*c.height;ctx.beginPath();ctx.arc(cx2,cy2,12,0,Math.PI*2);ctx.arc(cx2+16,cy2-4,9,0,Math.PI*2);ctx.arc(cx2+30,cy2,10,0,Math.PI*2);ctx.fill();});
-    ctx.fillStyle='#2a1200';ctx.fillRect(0,c.height-14,c.width,14);ctx.fillStyle='#2a7020';ctx.fillRect(0,c.height-14,c.width,5);
-    [[c.width*.22,c.height-70],[c.width*.52,c.height-108],[c.width*.75,c.height-78]].forEach(([x,y])=>{ctx.fillStyle='#2a1200';ctx.fillRect(x,y,c.width*.2,10);ctx.fillStyle='#2a7020';ctx.fillRect(x,y,c.width*.2,4);});
-    rings.forEach(r=>{if(!r.a)return;ctx.strokeStyle='#ffe100';ctx.lineWidth=2;ctx.shadowColor='#ffe100';ctx.shadowBlur=8;ctx.beginPath();ctx.arc(r.x,r.y+Math.sin(frame*.07+r.x)*3,6,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;});
-    chars.forEach(ch=>{
-      ch.x+=ch.vx;if(ch.x>c.width+15)ch.x=-15;
-      ch.vy+=.65;ch.y+=ch.vy;
-      [[c.width*.22,c.height-70],[c.width*.52,c.height-108],[c.width*.75,c.height-78]].forEach(([x,y])=>{if(ch.x+8>x&&ch.x-8<x+c.width*.2&&ch.y+14>y&&ch.y+14<y+10+5&&ch.vy>0){ch.y=y-14;ch.vy=Math.random()>.6?-11:0;}});
-      if(ch.y>=c.height-28){ch.y=c.height-28;ch.vy=0;}
-      rings.forEach(r=>{if(r.a&&Math.abs(ch.x-r.x)<15&&Math.abs(ch.y-r.y)<18)r.a=false;});
-      if(rings.every(r=>!r.a))rings.forEach(r=>r.a=true);
-      ctx.shadowColor=ch.col;ctx.shadowBlur=8;ctx.fillStyle=ch.col;ctx.fillRect(ch.x-7,ch.y-8,14,16);ctx.shadowBlur=0;
-      ctx.fillStyle='rgba(255,220,160,.95)';ctx.beginPath();ctx.arc(ch.x,ch.y-12,5,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#000';ctx.beginPath();ctx.arc(ch.x-2,ch.y-13,1.2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(ch.x+2,ch.y-13,1.2,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(5,15,5,.2)';ctx.fillRect(0,0,c.width,c.height);
+    if(frame%100===0){ctx.fillStyle='#050f05';ctx.fillRect(0,0,c.width,c.height);}
+    ctx.fillStyle='#1a3a1a';ctx.fillRect(0,c.height*.8,c.width,c.height*.2);
+    ctx.fillStyle='#2a5a2a';ctx.fillRect(0,c.height*.78,c.width,4);
+    chars.forEach((ch,i)=>{
+      const px=ch.x*c.width,py=(c.height*.65)+Math.sin(frame*.08+i)*8,sz=c.height*.12;
+      ctx.fillStyle=ch.col;ctx.shadowColor=ch.col;ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(px,py,sz/2,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;ctx.fillStyle='#fff';ctx.fillRect(px-sz*.22,py-sz*.1,sz*.18,sz*.18);ctx.fillRect(px+sz*.04,py-sz*.1,sz*.18,sz*.18);
+      ctx.fillStyle='#000';ctx.fillRect(px-sz*.14,py-sz*.04,sz*.1,sz*.1);ctx.fillRect(px+sz*.04,py-sz*.04,sz*.1,sz*.1);
     });
+    ctx.textAlign='center';ctx.fillStyle='rgba(255,255,100,.6)';ctx.font=`bold ${c.height*.07}px monospace`;
+    ctx.fillText('POOPATROPAS',c.width/2,c.height*.94);ctx.textAlign='left';
     frame++;requestAnimationFrame(loop);
   }
   loop();
 })();
 
-// ── Night Shift ──
+// ── NIGHT SHIFT preview ──
 (()=>{
-  const {c,ctx}=sc('cNS')||{};if(!c)return;
+  const s=sc('cNS');if(!s)return;const{c,ctx}=s;
+  let frame=0,alert=0;
+  function loop(){
+    ctx.fillStyle='rgba(2,4,2,.3)';ctx.fillRect(0,0,c.width,c.height);
+    if(frame%80===0){ctx.fillStyle='#010201';ctx.fillRect(0,0,c.width,c.height);}
+    const rooms=[[.05,.1,.42,.7],[.53,.1,.42,.7]];
+    rooms.forEach(([x,y,w,h],i)=>{
+      const rx=x*c.width,ry=y*c.height,rw=w*c.width,rh=h*c.height;
+      ctx.strokeStyle='#0a2a0a';ctx.lineWidth=2;ctx.strokeRect(rx,ry,rw,rh);
+      const bright=.05+Math.abs(Math.sin(frame*.03+i))*.08;
+      ctx.fillStyle=`rgba(0,${Math.floor(bright*255)},0,${bright})`;ctx.fillRect(rx+2,ry+2,rw-4,rh-4);
+      if(Math.random()<.005+alert*.02){ctx.fillStyle='rgba(255,0,0,.15)';ctx.fillRect(rx+2,ry+2,rw-4,rh-4);}
+    });
+    ctx.fillStyle='#0a2a0a';ctx.fillRect(0,c.height*.82,c.width,c.height*.18);
+    const pw=(c.width*.6)*(1-frame%300/300);
+    ctx.fillStyle='#1a4a1a';ctx.fillRect(c.width*.05,c.height*.88,c.width*.6,c.height*.06);
+    ctx.fillStyle='#00ff44';ctx.fillRect(c.width*.05,c.height*.88,pw,c.height*.06);
+    ctx.fillStyle='rgba(0,255,68,.7)';ctx.font=`${c.height*.055}px monospace`;ctx.fillText('POWER',c.width*.05,c.height*.97);
+    if(frame%60===0)alert=Math.random()<.3?1:0;
+    if(alert){ctx.fillStyle='rgba(255,0,0,.2)';ctx.fillRect(0,0,c.width,c.height);}
+    ctx.textAlign='center';ctx.fillStyle='rgba(0,200,50,.5)';ctx.font=`bold ${c.height*.06}px monospace`;
+    ctx.fillText('NIGHT SHIFT',c.width/2,c.height*.95);ctx.textAlign='left';
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// ── PIXEL DRIFT preview ──
+(()=>{
+  const s=sc('cPD');if(!s)return;const{c,ctx}=s;
+  let ship={x:.5,y:.7,a:0},enemies=[],frame=0,bullets=[];
+  function loop(){
+    ctx.fillStyle='rgba(0,5,20,.3)';ctx.fillRect(0,0,c.width,c.height);
+    if(frame%60===0){ctx.fillStyle='#000514';ctx.fillRect(0,0,c.width,c.height);}
+    if(Math.random()<.04&&enemies.length<8)enemies.push({x:Math.random(),y:Math.random()*.4,vx:(Math.random()-.5)*.01,vy:.005+Math.random()*.01,hp:1});
+    if(frame%20===0)bullets.push({x:ship.x,y:ship.y,vy:-.03});
+    bullets.forEach(b=>{b.y+=b.vy;});bullets=bullets.filter(b=>b.y>0);
+    enemies.forEach(e=>{e.x+=e.vx;e.y+=e.vy;if(e.x<0||e.x>1)e.vx*=-1;});
+    bullets.forEach(b=>{enemies=enemies.filter(e=>{if(Math.abs(e.x-b.x)*c.width<15&&Math.abs(e.y-b.y)*c.height<15){b.y=-1;return false;}return true;});});
+    enemies=enemies.filter(e=>e.y<1.1);
+    enemies.forEach(e=>{ctx.fillStyle='#ff2244';ctx.shadowColor='#ff2244';ctx.shadowBlur=8;ctx.fillRect(e.x*c.width-8,e.y*c.height-8,16,16);ctx.shadowBlur=0;});
+    bullets.forEach(b=>{ctx.fillStyle='#00ffaa';ctx.fillRect(b.x*c.width-2,b.y*c.height-6,4,12);});
+    ship.x=.3+Math.sin(frame*.025)*.35;
+    ctx.fillStyle='#00fff5';ctx.shadowColor='#00fff5';ctx.shadowBlur=12;
+    ctx.beginPath();ctx.moveTo(ship.x*c.width,ship.y*c.height-14);ctx.lineTo(ship.x*c.width-10,ship.y*c.height+10);ctx.lineTo(ship.x*c.width+10,ship.y*c.height+10);ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.textAlign='center';ctx.fillStyle='rgba(0,255,245,.4)';ctx.font=`bold ${c.height*.07}px monospace`;ctx.fillText('PIXEL DRIFT',c.width/2,c.height*.93);ctx.textAlign='left';
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// ── PIXEL DRIFT 2 preview ──
+(()=>{
+  const s=sc('cPD2');if(!s)return;const{c,ctx}=s;
+  let frame=0,particles=[];
+  function loop(){
+    ctx.fillStyle='rgba(20,0,10,.25)';ctx.fillRect(0,0,c.width,c.height);
+    if(frame%80===0){ctx.fillStyle='#140008';ctx.fillRect(0,0,c.width,c.height);}
+    if(Math.random()<.08)particles.push({x:Math.random()*c.width,y:0,vy:2+Math.random()*3,col:['#ff44aa','#ff2266','#ff0044'][Math.floor(Math.random()*3)],r:3+Math.random()*5});
+    particles.forEach(p=>{p.y+=p.vy;ctx.fillStyle=p.col;ctx.shadowColor=p.col;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;});
+    particles=particles.filter(p=>p.y<c.height+20);
+    ctx.textAlign='center';ctx.fillStyle='rgba(255,68,170,.6)';ctx.font=`bold ${c.height*.07}px monospace`;ctx.fillText('PIXEL DRIFT 2',c.width/2,c.height*.5);
+    ctx.fillStyle='rgba(255,100,180,.3)';ctx.font=`${c.height*.055}px monospace`;ctx.fillText('HARDER · FASTER · DEADLIER',c.width/2,c.height*.65);ctx.textAlign='left';
+    frame++;requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// ── BLOB PARTY preview ──
+(()=>{
+  const s=sc('cBP');if(!s)return;const{c,ctx}=s;
+  const blobs=[{x:.5,y:.5,r:.1,col:'#00fff5',vx:.008,vy:.006},{x:.2,y:.3,r:.06,col:'#ff1744',vx:-.006,vy:.008},{x:.7,y:.7,r:.07,col:'#39ff14',vx:.007,vy:-.007},{x:.4,y:.7,r:.05,col:'#ffe100',vx:-.009,vy:.005}];
   let frame=0;
-  const eyePairs=[{x:0,y:0},{x:0,y:0},{x:0,y:0}];
   function loop(){
-    if(eyePairs[0].x===0){eyePairs[0].x=c.width*.15;eyePairs[0].y=c.height*.38;eyePairs[1].x=c.width*.52;eyePairs[1].y=c.height*.42;eyePairs[2].x=c.width*.82;eyePairs[2].y=c.height*.36;}
-    ctx.fillStyle='rgba(2,1,6,.22)';ctx.fillRect(0,0,c.width,c.height);
-    const vg=ctx.createRadialGradient(c.width/2,c.height/2,20,c.width/2,c.height/2,c.width*.7);
-    vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(0,0,0,.75)');ctx.fillStyle=vg;ctx.fillRect(0,0,c.width,c.height);
-    eyePairs.forEach((e,i)=>{
-      const blink=(frame+i*50)%130>6;
-      if(blink){const gl=.6+Math.sin(frame*.04+i)*.4;ctx.shadowColor='#ffe100';ctx.shadowBlur=18*gl;ctx.fillStyle=`rgba(255,225,0,${gl*.9})`;ctx.beginPath();ctx.ellipse(e.x-10,e.y,7,5,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(e.x+10,e.y,7,5,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#000';ctx.beginPath();ctx.arc(e.x-10,e.y,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(e.x+10,e.y,3,0,Math.PI*2);ctx.fill();}
-    });
-    const night=Math.floor(frame/180)%7+1;
-    ctx.fillStyle='rgba(0,220,255,.8)';ctx.font='bold 10px monospace';ctx.textAlign='left';ctx.fillText(`NIGHT ${night}/7`,6,16);
-    const pwr=Math.max(0,100-((frame*.25)%100));
-    ctx.fillStyle='rgba(255,23,68,.7)';ctx.fillRect(6,22,pwr*.5,5);ctx.strokeStyle='rgba(255,23,68,.4)';ctx.strokeRect(6,22,50,5);
-    frame++;requestAnimationFrame(loop);
-  }
-  loop();
-})();
-
-// ── Pixel Drift ──
-(()=>{
-  const {c,ctx}=sc('cPD')||{};if(!c)return;
-  let frame=0;
-  const asts=Array.from({length:7},()=>({x:Math.random()*400,y:Math.random()*200,vx:(Math.random()-.5)*1.8,vy:(Math.random()-.5)*1.8,r:8+Math.random()*12,ang:Math.random()*6.28,av:(Math.random()-.5)*.04}));
-  const bullets=[];let ship={x:0,y:0};
-  function loop(){
-    if(ship.x===0){ship.x=c.width/2;ship.y=c.height/2;}
-    ctx.fillStyle='rgba(6,3,0,.2)';ctx.fillRect(0,0,c.width,c.height);
-    for(let i=0;i<15;i++){const sx=((i*137)%c.width+c.width)%c.width,sy=((i*71)%c.height+c.height)%c.height;ctx.fillStyle='rgba(255,180,80,.3)';ctx.fillRect(sx,sy,1,1);}
-    asts.forEach(a=>{
-      a.x+=a.vx;a.y+=a.vy;a.ang+=a.av;
-      if(a.x<-a.r)a.x=c.width+a.r;if(a.x>c.width+a.r)a.x=-a.r;if(a.y<-a.r)a.y=c.height+a.r;if(a.y>c.height+a.r)a.y=-a.r;
-      ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.ang);ctx.fillStyle='#1e0a00';ctx.strokeStyle='#ff6d00';ctx.lineWidth=1.5;ctx.shadowColor='#ff6d00';ctx.shadowBlur=6;
-      ctx.beginPath();for(let i=0;i<7;i++){const ag=i/7*Math.PI*2,rd=a.r*(.7+Math.sin(i*2.3+a.ang)*.3);i===0?ctx.moveTo(Math.cos(ag)*rd,Math.sin(ag)*rd):ctx.lineTo(Math.cos(ag)*rd,Math.sin(ag)*rd);}ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.restore();
-    });
-    ship.x=c.width/2+Math.sin(frame*.025)*55;ship.y=c.height/2+Math.sin(frame*.018)*28;
-    if(frame%18===0)bullets.push({x:ship.x,y:ship.y-14,vy:-6});
-    for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.y+=b.vy;ctx.fillStyle='#ffe100';ctx.shadowColor='#ffe100';ctx.shadowBlur=6;ctx.fillRect(b.x-1.5,b.y-4,3,8);ctx.shadowBlur=0;if(b.y<-10)bullets.splice(i,1);}
-    ctx.save();ctx.translate(ship.x,ship.y);ctx.shadowColor='#ff6d00';ctx.shadowBlur=12;ctx.fillStyle='#ff6d00';ctx.beginPath();ctx.moveTo(0,-12);ctx.lineTo(9,10);ctx.lineTo(-9,10);ctx.closePath();ctx.fill();ctx.fillStyle='#ffe100';ctx.fillRect(-3,-4,6,6);if(frame%6<3){ctx.fillStyle='rgba(255,100,0,.8)';ctx.beginPath();ctx.moveTo(-5,10);ctx.lineTo(5,10);ctx.lineTo(0,16+Math.random()*5);ctx.closePath();ctx.fill();}ctx.shadowBlur=0;ctx.restore();
-    frame++;requestAnimationFrame(loop);
-  }
-  loop();
-})();
-
-// ── Blob Party ──
-(()=>{
-  const {c,ctx}=sc('cBL')||{};if(!c)return;
-  const blobs=Array.from({length:8},()=>({x:Math.random()*200,y:Math.random()*120,vx:(Math.random()-.5)*2.5,vy:(Math.random()-.5)*2.5,r:10+Math.random()*12,h:Math.random()*360,w:0,wv:.06+Math.random()*.04}));
-  let frame=0,init2=false;
-  function loop(){
-    if(!init2){blobs.forEach(b=>{b.x=30+Math.random()*(c.width-60);b.y=20+Math.random()*(c.height-40);});init2=true;}
-    ctx.fillStyle='rgba(10,3,18,.2)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='rgba(0,8,15,.2)';ctx.fillRect(0,0,c.width,c.height);
+    if(frame%100===0){ctx.fillStyle='#00080f';ctx.fillRect(0,0,c.width,c.height);}
     blobs.forEach(b=>{
-      b.x+=b.vx;b.y+=b.vy;b.w+=b.wv;
-      if(b.x<b.r||b.x>c.width-b.r)b.vx*=-1;if(b.y<b.r||b.y>c.height-b.r)b.vy*=-1;
-      const wx=Math.sin(b.w)*4,wy=Math.cos(b.w)*4;
-      ctx.shadowColor=`hsl(${b.h},85%,60%)`;ctx.shadowBlur=16;ctx.fillStyle=`hsla(${b.h},85%,62%,.9)`;
-      ctx.beginPath();ctx.ellipse(b.x,b.y,b.r+wx,b.r+wy,b.w,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-      ctx.fillStyle='rgba(0,0,0,.4)';ctx.beginPath();ctx.ellipse(b.x-3,b.y-2,2.5,2,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(b.x+4,b.y-2,2.5,2,0,0,Math.PI*2);ctx.fill();
+      b.x+=b.vx;b.y+=b.vy;if(b.x<b.r||b.x>1-b.r)b.vx*=-1;if(b.y<b.r||b.y>1-b.r)b.vy*=-1;
+      ctx.fillStyle=b.col;ctx.shadowColor=b.col;ctx.shadowBlur=14;
+      ctx.beginPath();ctx.arc(b.x*c.width,b.y*c.height,b.r*Math.min(c.width,c.height),0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
     });
+    ctx.textAlign='center';ctx.fillStyle='rgba(0,255,245,.5)';ctx.font=`bold ${c.height*.07}px monospace`;ctx.fillText('BLOB PARTY',c.width/2,c.height*.93);ctx.textAlign='left';
     frame++;requestAnimationFrame(loop);
   }
   loop();
 })();
 
-// ── Sound Balls ──
+// ── GOOFY CARDS preview ──
 (()=>{
-  const {c,ctx}=sc('cSB')||{};if(!c)return;
-  const balls=Array.from({length:7},()=>({x:0,y:0,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,r:9+Math.random()*10,h:Math.random()*360,trail:[]}));
-  let init3=false;
-  function loop(){
-    if(!init3){balls.forEach(b=>{b.x=30+Math.random()*(c.width-60);b.y=20+Math.random()*(c.height-40);});init3=true;}
-    ctx.fillStyle='rgba(2,7,3,.18)';ctx.fillRect(0,0,c.width,c.height);
-    ctx.beginPath();ctx.strokeStyle='rgba(57,255,20,.12)';ctx.lineWidth=1;
-    for(let x2=0;x2<c.width;x2+=3){const y2=c.height/2+Math.sin(x2*.05+Date.now()*.002)*15+Math.sin(x2*.12+Date.now()*.003)*8;x2===0?ctx.moveTo(x2,y2):ctx.lineTo(x2,y2);}ctx.stroke();
-    balls.forEach(b=>{
-      b.trail.push({x:b.x,y:b.y});if(b.trail.length>18)b.trail.shift();
-      b.x+=b.vx;b.y+=b.vy;
-      if(b.x<b.r||b.x>c.width-b.r)b.vx*=-1;if(b.y<b.r||b.y>c.height-b.r)b.vy*=-1;
-      b.trail.forEach((t,i)=>{ctx.globalAlpha=i/b.trail.length*.25;ctx.fillStyle=`hsl(${b.h},90%,60%)`;ctx.beginPath();ctx.arc(t.x,t.y,b.r*(i/b.trail.length),0,Math.PI*2);ctx.fill();});
-      ctx.globalAlpha=1;ctx.shadowColor=`hsl(${b.h},90%,60%)`;ctx.shadowBlur=18;ctx.fillStyle=`hsl(${b.h},90%,60%)`;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-      ctx.font='8px serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText('♪',b.x,b.y+3);
-    });
-    requestAnimationFrame(loop);
-  }
-  loop();
-})();
-
-// ── Pixel Drift 2 preview ──
-(()=>{
-  const {c,ctx}=sc('cPD2')||{};if(!c)return;
+  const s=sc('cGC');if(!s)return;const{c,ctx}=s;
+  const cards=[{x:.15,y:.25,col:'#ff1744',rot:-.15},{x:.35,y:.2,col:'#00fff5',rot:.05},{x:.55,y:.22,col:'#39ff14',rot:-.08},{x:.72,y:.18,col:'#ffe100',rot:.12}];
   let frame=0;
-  const asts=Array.from({length:5},(_,i)=>({x:Math.random()*400,y:Math.random()*200,vx:(Math.random()-.5)*1.4,vy:(Math.random()-.5)*1.4,r:6+Math.random()*14,ang:Math.random()*6.28,av:(Math.random()-.5)*.05,hp:2}));
-  const bullets=[],powerups=[];let ship={x:0,y:0},shieldAng=0;
   function loop(){
-    if(ship.x===0){ship.x=c.width/2;ship.y=c.height/2;}
-    ctx.fillStyle='rgba(0,5,12,.2)';ctx.fillRect(0,0,c.width,c.height);
-    for(let i=0;i<20;i++){const sx=((i*113+frame*.5)%c.width+c.width)%c.width,sy=((i*59+frame*.3)%c.height+c.height)%c.height;ctx.fillStyle='rgba(0,255,245,.25)';ctx.fillRect(sx,sy,1,1);}
-    // Wave label
-    ctx.font='bold 8px monospace';ctx.fillStyle='rgba(0,255,245,.6)';ctx.textAlign='right';ctx.fillText('WAVE '+(Math.floor(frame/300)+1),c.width-4,12);
-    // Power-up
-    if(frame%80===0)powerups.push({x:Math.random()*(c.width-40)+20,y:Math.random()*(c.height-40)+20,t:Math.random()>.5?'shield':'spread',life:120});
-    for(let i=powerups.length-1;i>=0;i--){const p=powerups[i];p.life--;ctx.shadowColor='#ffe100';ctx.shadowBlur=10;ctx.fillStyle='#ffe100';ctx.font='14px serif';ctx.textAlign='center';ctx.fillText(p.t==='shield'?'🛡️':'💥',p.x,p.y+5);ctx.shadowBlur=0;if(p.life<=0)powerups.splice(i,1);}
-    asts.forEach(a=>{
-      a.x+=a.vx;a.y+=a.vy;a.ang+=a.av;
-      if(a.x<-a.r)a.x=c.width+a.r;if(a.x>c.width+a.r)a.x=-a.r;if(a.y<-a.r)a.y=c.height+a.r;if(a.y>c.height+a.r)a.y=-a.r;
-      ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.ang);ctx.fillStyle='#001820';ctx.strokeStyle='#00fff5';ctx.lineWidth=1.5;ctx.shadowColor='#00fff5';ctx.shadowBlur=8;
-      ctx.beginPath();for(let i=0;i<7;i++){const ag=i/7*Math.PI*2,rd=a.r*(.7+Math.sin(i*2.3+a.ang)*.3);i===0?ctx.moveTo(Math.cos(ag)*rd,Math.sin(ag)*rd):ctx.lineTo(Math.cos(ag)*rd,Math.sin(ag)*rd);}ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.restore();
-    });
-    ship.x=c.width/2+Math.sin(frame*.02)*60;ship.y=c.height/2+Math.sin(frame*.015)*30;
-    shieldAng+=0.06;
-    // Shield ring
-    ctx.strokeStyle='rgba(0,255,245,.35)';ctx.lineWidth=2;ctx.shadowColor='#00fff5';ctx.shadowBlur=8;ctx.beginPath();ctx.arc(ship.x,ship.y,24,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
-    if(frame%14===0)bullets.push({x:ship.x,y:ship.y-14,vy:-5.5},{x:ship.x-8,y:ship.y-10,vy:-5,vx:-1.2},{x:ship.x+8,y:ship.y-10,vy:-5,vx:1.2});
-    for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.y+=b.vy;if(b.vx)b.x+=b.vx;ctx.fillStyle='#00fff5';ctx.shadowColor='#00fff5';ctx.shadowBlur=5;ctx.fillRect(b.x-1.5,b.y-4,3,8);ctx.shadowBlur=0;if(b.y<-10||b.x<0||b.x>c.width)bullets.splice(i,1);}
-    ctx.save();ctx.translate(ship.x,ship.y);ctx.shadowColor='#00fff5';ctx.shadowBlur=14;ctx.fillStyle='#00fff5';ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(10,10);ctx.lineTo(-10,10);ctx.closePath();ctx.fill();ctx.fillStyle='#ffe100';ctx.fillRect(-4,-4,8,7);if(frame%5<2){ctx.fillStyle='rgba(0,255,245,.7)';ctx.beginPath();ctx.moveTo(-6,10);ctx.lineTo(6,10);ctx.lineTo(0,18+Math.random()*5);ctx.closePath();ctx.fill();}ctx.shadowBlur=0;ctx.restore();
-    frame++;requestAnimationFrame(loop);
-  }
-  loop();
-})();
-
-// ── Goofy Cards preview ──
-(()=>{
-  const {c,ctx}=sc('cGC')||{};if(!c)return;
-  let frame=0;
-  const cards=[{x:0,y:0,col:'#ffd700',rot:0,scale:1},{x:0,y:0,col:'#ff1744',rot:0,scale:1},{x:0,y:0,col:'#d500f9',rot:0,scale:1}];
-  function loop(){
-    ctx.fillStyle='rgba(10,5,0,.2)';ctx.fillRect(0,0,c.width,c.height);
-    if(cards[0].x===0){cards[0].x=c.width*.25;cards[0].y=c.height*.5;cards[1].x=c.width*.5;cards[1].y=c.height*.45;cards[2].x=c.width*.75;cards[2].y=c.height*.5;}
+    ctx.fillStyle='rgba(5,3,0,.25)';ctx.fillRect(0,0,c.width,c.height);
+    if(frame%90===0){ctx.fillStyle='#050300';ctx.fillRect(0,0,c.width,c.height);}
     cards.forEach((cd,i)=>{
-      const bob=Math.sin(frame*.05+i*1.2)*6;cd.rot=Math.sin(frame*.03+i*1.5)*.15;
-      ctx.save();ctx.translate(cd.x,cd.y+bob);ctx.rotate(cd.rot);
-      const cw=50,ch=72;ctx.shadowColor=cd.col;ctx.shadowBlur=15;
-      ctx.fillStyle='#1a0a00';ctx.roundRect(-cw/2,-ch/2,cw,ch,6);ctx.fill();
-      ctx.strokeStyle=cd.col;ctx.lineWidth=2;ctx.roundRect(-cw/2,-ch/2,cw,ch,6);ctx.stroke();
-      ctx.shadowBlur=0;
-      ctx.fillStyle=cd.col;ctx.font='22px serif';ctx.textAlign='center';ctx.fillText(['😜','🤖','🧙'][i],-0,12);
-      ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='5px monospace';ctx.fillText(['LEGENDARY','MYTHIC','EPIC'][i],0,ch/2-6);
-      ctx.restore();
+      const px=cd.x*c.width,py=cd.y*c.height+Math.sin(frame*.05+i)*5;
+      const cw=c.width*.15,ch=c.height*.55;
+      ctx.save();ctx.translate(px+cw/2,py+ch/2);ctx.rotate(cd.rot+Math.sin(frame*.03+i)*.03);
+      ctx.fillStyle=cd.col;ctx.shadowColor=cd.col;ctx.shadowBlur=10;
+      ctx.fillRect(-cw/2,-ch/2,cw,ch);ctx.shadowBlur=0;
+      ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(-cw/2+4,-ch/2+4,cw-8,ch-8);
+      ctx.fillStyle=cd.col;ctx.font=`bold ${cw*.45}px monospace`;ctx.textAlign='center';
+      ctx.fillText('?',0,cw*.2);ctx.restore();
     });
-    // Coin particles
-    if(frame%25===0){const cx2=c.width/2,cy2=c.height/2;ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(cx2+(Math.random()-.5)*c.width*.6,cy2+(Math.random()-.5)*c.height*.6,2,0,Math.PI*2);ctx.fill();}
-    ctx.fillStyle='rgba(255,215,0,.7)';ctx.font='bold 9px monospace';ctx.textAlign='center';ctx.fillText('GOOFY CARDS',c.width/2,c.height-8);
+    ctx.textAlign='center';ctx.fillStyle='rgba(255,215,0,.6)';ctx.font=`bold ${c.height*.07}px monospace`;ctx.fillText('GOOFY CARDS',c.width/2,c.height*.93);ctx.textAlign='left';
     frame++;requestAnimationFrame(loop);
   }
   loop();
@@ -933,53 +1008,44 @@ function sc(id){const c=document.getElementById(id);if(!c)return null;const ctx=
 
 // ── SCOREBOARD SYSTEM ──
 (function(){
-  const PLAYER_KEY = 'pfg_player_name';
-  const SCORES_KEY = 'pfg_scores';
+  const PLAYER_KEY='pfg_player_name';
+  const SCORES_KEY='pfg_scores';
+  function getPlayer(){return localStorage.getItem(PLAYER_KEY)||'';}
+  function getScores(){try{return JSON.parse(localStorage.getItem(SCORES_KEY)||'[]');}catch(e){return[];}}
+  function saveScores(s){localStorage.setItem(SCORES_KEY,JSON.stringify(s));}
 
-  function getPlayer(){ return localStorage.getItem(PLAYER_KEY)||''; }
-  function getScores(){ try{ return JSON.parse(localStorage.getItem(SCORES_KEY)||'[]'); }catch(e){return[];} }
-  function saveScores(s){ localStorage.setItem(SCORES_KEY, JSON.stringify(s)); }
-
-  // Show name modal if no name saved
-  window.saveName = function(){
-    const val = document.getElementById('nameInput').value.trim().toUpperCase();
-    if(!val){ document.getElementById('nameInput').style.borderColor='#ff4444'; return; }
-    localStorage.setItem(PLAYER_KEY, val);
+  window.saveName=function(){
+    const val=document.getElementById('nameInput').value.trim().toUpperCase();
+    if(!val){document.getElementById('nameInput').style.borderColor='#ff4444';return;}
+    localStorage.setItem(PLAYER_KEY,val);
     document.getElementById('nameModal').style.display='none';
     renderScoreboard();
   };
 
-  window.clearScores = function(){
-    if(confirm('Clear all your scores?')){ saveScores([]); renderScoreboard(); }
+  window.clearScores=function(){
+    if(confirm('Clear all your scores?')){saveScores([]);renderScoreboard();}
   };
 
-  // Called by games to post a score
-  window.PFG_postScore = function(game, score){
-    const player = getPlayer(); if(!player) return;
-    const scores = getScores();
-    // Update if better
-    const existing = scores.find(s=>s.player===player && s.game===game);
-    if(existing){
-      if(score > existing.score){ existing.score=score; existing.ts=Date.now(); }
-    } else {
-      scores.push({player, game, score, ts:Date.now()});
-    }
-    saveScores(scores);
-    renderScoreboard();
+  window.PFG_postScore=function(game,score){
+    const player=getPlayer();if(!player)return;
+    const scores=getScores();
+    const existing=scores.find(s=>s.player===player&&s.game===game);
+    if(existing){if(score>existing.score){existing.score=score;existing.ts=Date.now();}}
+    else{scores.push({player,game,score,ts:Date.now()});}
+    saveScores(scores);renderScoreboard();
   };
 
   function renderScoreboard(){
-    const scores = getScores();
-    const rows = document.getElementById('sb-rows');
-    if(!rows) return;
+    const scores=getScores();
+    const rows=document.getElementById('sb-rows');
+    if(!rows)return;
     if(scores.length===0){
       rows.innerHTML='<div style="padding:24px;text-align:center;color:#444;font-size:12px;letter-spacing:2px;">NO SCORES YET — PLAY SOME GAMES!</div>';
       return;
     }
-    // Sort by score desc, take top 7
-    const sorted = [...scores].sort((a,b)=>b.score-a.score).slice(0,7);
-    const medals = ['🥇','🥈','🥉','4','5','6','7'];
-    rows.innerHTML = sorted.map((s,i)=>`
+    const sorted=[...scores].sort((a,b)=>b.score-a.score).slice(0,7);
+    const medals=['🥇','🥈','🥉','4','5','6','7'];
+    rows.innerHTML=sorted.map((s,i)=>`
       <div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;${i===0?'background:rgba(255,215,0,.05);':''}">
         <span style="color:${i<3?'#ffd700':'#555'}">${medals[i]}</span>
         <span style="color:#eeeeff;font-weight:bold">${s.player}</span>
@@ -988,17 +1054,15 @@ function sc(id){const c=document.getElementById(id);if(!c)return null;const ctx=
       </div>`).join('');
   }
 
-  // Init on load
-  document.addEventListener('DOMContentLoaded', function(){
-    const modal = document.getElementById('nameModal');
+  document.addEventListener('DOMContentLoaded',function(){
+    const modal=document.getElementById('nameModal');
     if(!getPlayer()){
       modal.style.display='flex';
-      setTimeout(()=>document.getElementById('nameInput').focus(), 100);
+      setTimeout(()=>document.getElementById('nameInput').focus(),100);
     }
     renderScoreboard();
   });
 })();
-
 </script>
 </body>
 </html>
