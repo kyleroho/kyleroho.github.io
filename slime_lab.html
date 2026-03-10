@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Slime Lab</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a1a0a;overflow:hidden;height:100vh;width:100vw;font-family:'Nunito',sans-serif;color:#ccffcc;}
+#app{display:flex;height:100vh;}
+#lab{flex:1;position:relative;}
+canvas{display:block;width:100%;height:100%;}
+#sidebar{width:260px;background:#051005;border-left:2px solid #1a4a1a;display:flex;flex-direction:column;overflow:hidden;}
+#sid-top{padding:12px;border-bottom:1px solid #1a4a1a;}
+#sid-top h2{font-family:'Fredoka One',cursive;color:#88ff88;font-size:20px;margin-bottom:4px;}
+#coins{font-size:12px;color:#ffcc44;letter-spacing:1px;}
+#recipes{padding:8px;overflow-y:auto;flex:1;}
+#recipes h3{font-size:10px;letter-spacing:3px;color:#1a6a1a;margin-bottom:6px;}
+.recipe{background:#0d1e0d;border:1px solid #1a4a1a;border-radius:5px;padding:6px 8px;margin-bottom:4px;font-size:11px;cursor:pointer;transition:all .15s;}
+.recipe:hover{border-color:#44ff44;background:#112211;}
+.recipe.locked{opacity:.35;cursor:default;}
+.recipe .rname{font-weight:900;color:#88ff88;margin-bottom:2px;}
+.recipe .rmix{color:#33aa33;}
+.recipe .runlock{color:#ffcc44;font-size:10px;}
+#shop{padding:8px;border-top:1px solid #1a4a1a;}
+#shop h3{font-size:10px;letter-spacing:3px;color:#1a6a1a;margin-bottom:6px;}
+.sbtn{display:block;width:100%;background:#0a180a;border:1px solid #1a5a1a;color:#66ff66;padding:6px 8px;font-size:11px;cursor:pointer;border-radius:4px;margin-bottom:4px;text-align:left;transition:all .15s;}
+.sbtn:hover{border-color:#44ff44;background:#112211;}
+.sbtn span{float:right;color:#ffcc44;}
+#notif{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#0d2a0d;border:1px solid #44ff44;padding:8px 20px;font-size:13px;color:#88ff88;pointer-events:none;opacity:0;transition:opacity .3s;z-index:20;font-family:'Fredoka One',cursive;}
+#msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a1a0aee;z-index:30;}
+#msg h1{font-family:'Fredoka One',cursive;font-size:52px;color:#88ff88;margin-bottom:8px;}
+#msg p{color:#336633;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.2;}
+.gbtn{background:transparent;border:2px solid #44ff44;color:#88ff88;padding:12px 36px;font-family:'Fredoka One',cursive;font-size:18px;cursor:pointer;border-radius:8px;transition:all .2s;}
+.gbtn:hover{background:#44ff4422;box-shadow:0 0 20px #44ff4444;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="lab"><canvas id="cv"></canvas></div>
+  <div id="sidebar">
+    <div id="sid-top">
+      <h2>🧪 SLIME LAB</h2>
+      <div id="coins">💰 <b id="coinVal">0</b> goo-coins/sec: <b id="gps">0</b></div>
+    </div>
+    <div id="recipes">
+      <h3>RECIPES</h3>
+      <div id="recipeList"></div>
+    </div>
+    <div id="shop">
+      <h3>UPGRADES</h3>
+      <button class="sbtn" onclick="buyUpgrade('tank')">Bigger Tank<span id="tankCost">50🪙</span></button>
+      <button class="sbtn" onclick="buyUpgrade('speed')">Faster Mix<span id="speedCost">120🪙</span></button>
+      <button class="sbtn" onclick="buyUpgrade('auto')">Auto-Mixer<span id="autoCost">300🪙</span></button>
+      <button class="sbtn" onclick="buyUpgrade('magnet')">Coin Magnet<span id="magnetCost">500🪙</span></button>
+    </div>
+  </div>
+</div>
+<div id="notif"></div>
+<div id="msg">
+  <h1>SLIME LAB</h1>
+  <p>Click slimes to merge them.<br>Discover all 18 slime species!<br>Sell rare slimes for coins.</p>
+  <button class="gbtn" onclick="startGame()">START EXPERIMENT</button>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var W,H;
+function resize(){
+  var rect=cv.getBoundingClientRect();
+  W=cv.width=rect.width||cv.parentElement.clientWidth||600;
+  H=cv.height=rect.height||cv.parentElement.clientHeight||500;
+}
+window.addEventListener('load',resize);
+window.addEventListener('resize',resize);
+
+var SLIMES=[
+  {id:'red',   name:'Red Slime',    color:'#ff4444',glow:'#ff0000',value:1, gps:.5, desc:'Base'},
+  {id:'blue',  name:'Blue Slime',   color:'#4488ff',glow:'#0044ff',value:1, gps:.5, desc:'Base'},
+  {id:'green', name:'Green Slime',  color:'#44ff44',glow:'#00cc00',value:1, gps:.5, desc:'Base'},
+  {id:'yellow',name:'Yellow Slime', color:'#ffff44',glow:'#ffcc00',value:2, gps:1,  desc:'Base'},
+  {id:'purple',name:'Purple Slime', color:'#aa44ff',glow:'#8800ff',value:3, gps:1.5,mix:['red','blue']},
+  {id:'orange',name:'Orange Slime', color:'#ff8844',glow:'#ff5500',value:3, gps:1.5,mix:['red','yellow']},
+  {id:'teal',  name:'Teal Slime',   color:'#44ffcc',glow:'#00ccaa',value:3, gps:1.5,mix:['blue','green']},
+  {id:'lime',  name:'Lime Slime',   color:'#aaff44',glow:'#88ff00',value:4, gps:2,  mix:['green','yellow']},
+  {id:'pink',  name:'Pink Slime',   color:'#ff88cc',glow:'#ff0088',value:5, gps:2.5,mix:['red','purple']},
+  {id:'cyan',  name:'Cyan Slime',   color:'#44ffff',glow:'#00ccff',value:5, gps:2.5,mix:['blue','teal']},
+  {id:'gold',  name:'Gold Slime',   color:'#ffdd00',glow:'#ffaa00',value:8, gps:4,  mix:['yellow','orange']},
+  {id:'toxic', name:'Toxic Slime',  color:'#88ff00',glow:'#44cc00',value:8, gps:4,  mix:['green','lime']},
+  {id:'void',  name:'Void Slime',   color:'#220044',glow:'#8800ff',value:12,gps:6,  mix:['purple','pink']},
+  {id:'crystal',name:'Crystal Slime',color:'#ccffff',glow:'#88ffff',value:12,gps:6, mix:['cyan','teal']},
+  {id:'magma', name:'Magma Slime',  color:'#ff2200',glow:'#ff8800',value:15,gps:8,  mix:['orange','gold']},
+  {id:'cosmos',name:'Cosmos Slime', color:'#8844ff',glow:'#4400ff',value:20,gps:10, mix:['void','crystal']},
+  {id:'prism', name:'Prism Slime',  color:'#ffffff',glow:'#ffccff',value:25,gps:12, mix:['cosmos','gold']},
+  {id:'omega', name:'OMEGA SLIME',  color:'#ffaa00',glow:'#ff4400',value:50,gps:25, mix:['prism','magma']},
+];
+var SLIME_MAP={};SLIMES.forEach(function(s){SLIME_MAP[s.id]=s;});
+
+var coins=0,gps=0,discovered=new Set(['red','blue','green','yellow']);
+var slimes=[]; // active slime objects on canvas
+var selected=null;
+var autoMixTimer=0;
+var upgrades={tank:0,speed:0,auto:false,magnet:false};
+var upgCosts={tank:50,speed:120,auto:300,magnet:500};
+var maxSlimes=12;
+var mixSpeed=1;
+var frame=0;
+var notifTimer=0;
+
+function startGame(){
+  document.getElementById('msg').style.display='none';
+  // spawn starter slimes
+  spawnSlime('red');spawnSlime('blue');spawnSlime('green');spawnSlime('yellow');
+  renderRecipes();
+  loop();
+}
+
+function spawnSlime(id,x,y){
+  if(slimes.length>=maxSlimes) return;
+  var def=SLIME_MAP[id];if(!def) return;
+  var sx=x||80+Math.random()*(W-160),sy=y||H*.2+Math.random()*H*.55;
+  slimes.push({id:id,x:sx,y:sy,r:22+def.value*1.2,vx:(Math.random()-.5)*1.5,vy:(Math.random()-.5)*1.5,
+    color:def.color,glow:def.glow,wobble:Math.random()*Math.PI*2,wspd:.04+Math.random()*.03,
+    selected:false,dragging:false,merging:false,mergeTimer:0,sparkle:0});
+  discovered.add(id);
+}
+
+function getGPS(){
+  var g=0;slimes.forEach(function(s){g+=SLIME_MAP[s.id].gps||0;});
+  return g;
+}
+
+function tryMerge(a,b){
+  if(a===b||a.merging||b.merging) return false;
+  // find recipe that uses both
+  var result=null;
+  for(var i=0;i<SLIMES.length;i++){
+    var s=SLIMES[i];
+    if(s.mix&&((s.mix[0]===a.id&&s.mix[1]===b.id)||(s.mix[0]===b.id&&s.mix[1]===a.id))){result=s;break;}
+  }
+  if(!result) return false;
+  // animate merge
+  a.merging=true;b.merging=true;
+  var mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+  a.mergeTarget={x:mx,y:my};b.mergeTarget={x:mx,y:my};
+  setTimeout(function(){
+    var idxA=slimes.indexOf(a),idxB=slimes.indexOf(b);
+    if(idxA>=0)slimes.splice(idxA,1);
+    var idxB2=slimes.indexOf(b);
+    if(idxB2>=0)slimes.splice(idxB2,1);
+    spawnSlime(result.id,mx,my);
+    if(!discovered.has(result.id)){discovered.add(result.id);showNotif('NEW: '+result.name+' discovered! 🎉');}
+    renderRecipes();
+  },600/mixSpeed);
+  return true;
+}
+
+function showNotif(txt){
+  var el=document.getElementById('notif');
+  el.textContent=txt;el.style.opacity='1';
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(function(){el.style.opacity='0';},2500);
+}
+
+function buyUpgrade(type){
+  var cost=upgCosts[type];
+  if(coins<cost){showNotif('Need '+cost+' coins!');return;}
+  coins-=cost;
+  if(type==='tank'){upgrades.tank++;maxSlimes=12+upgrades.tank*3;upgCosts.tank=Math.floor(cost*2.5);document.getElementById('tankCost').textContent=upgCosts.tank+'🪙';}
+  if(type==='speed'){upgrades.speed++;mixSpeed=1+upgrades.speed*.8;upgCosts.speed=Math.floor(cost*2.2);document.getElementById('speedCost').textContent=upgCosts.speed+'🪙';}
+  if(type==='auto'){upgrades.auto=true;document.getElementById('autoCost').textContent='✓';}
+  if(type==='magnet'){upgrades.magnet=true;document.getElementById('magnetCost').textContent='✓';}
+  updateCoinsUI();
+}
+
+function renderRecipes(){
+  var el=document.getElementById('recipeList');el.innerHTML='';
+  SLIMES.forEach(function(s){
+    if(!s.mix) return;
+    var unlocked=discovered.has(s.mix[0])&&discovered.has(s.mix[1]);
+    var found=discovered.has(s.id);
+    var d=document.createElement('div');d.className='recipe'+(unlocked?'':' locked');
+    if(unlocked){
+      var a=SLIME_MAP[s.mix[0]],b=SLIME_MAP[s.mix[1]];
+      d.innerHTML='<div class="rname" style="color:'+s.color+'">'+s.name+'</div>'+
+        '<div class="rmix"><span style="color:'+a.color+'">'+a.name+'</span> + <span style="color:'+b.color+'">'+b.name+'</span></div>'+
+        (found?'<div style="color:#ffcc44;font-size:10px">✓ Discovered · '+s.gps+'/s</div>':'');
+    } else {
+      d.innerHTML='<div class="rname">???</div><div class="rmix" style="color:#1a5a1a">Locked</div>';
+    }
+    el.appendChild(d);
+  });
+}
+
+function updateCoinsUI(){
+  document.getElementById('coinVal').textContent=Math.floor(coins);
+  document.getElementById('gps').textContent=getGPS().toFixed(1);
+}
+
+// auto-sell rarest slimes when over limit
+function autoManage(){
+  if(slimes.length>=maxSlimes){
+    // sell lowest value non-base slime or just a base one
+    var sorted=slimes.slice().sort(function(a,b){return SLIME_MAP[a.id].value-SLIME_MAP[b.id].value;});
+    if(sorted.length>0){
+      var s=sorted[0];coins+=SLIME_MAP[s.id].value;
+      var idx=slimes.indexOf(s);if(idx>=0)slimes.splice(idx,1);
+      updateCoinsUI();
+    }
+  }
+}
+
+var dragSlime=null,dragOffX=0,dragOffY=0;
+cv.addEventListener('mousedown',function(e){
+  var r=cv.getBoundingClientRect();
+  var mx=e.clientX-r.left,my=e.clientY-r.top;
+  for(var i=slimes.length-1;i>=0;i--){
+    if(Math.hypot(slimes[i].x-mx,slimes[i].y-my)<slimes[i].r+6){
+      dragSlime=slimes[i];dragOffX=mx-slimes[i].x;dragOffY=my-slimes[i].y;
+      dragSlime.dragging=true;break;
+    }
+  }
+});
+cv.addEventListener('mousemove',function(e){
+  if(!dragSlime) return;
+  var r=cv.getBoundingClientRect();
+  dragSlime.x=e.clientX-r.left-dragOffX;
+  dragSlime.y=e.clientY-r.top-dragOffY;
+  dragSlime.vx=0;dragSlime.vy=0;
+});
+cv.addEventListener('mouseup',function(e){
+  if(!dragSlime) return;
+  dragSlime.dragging=false;
+  // check overlap with another slime
+  for(var i=0;i<slimes.length;i++){
+    if(slimes[i]!==dragSlime&&!slimes[i].merging&&
+       Math.hypot(slimes[i].x-dragSlime.x,slimes[i].y-dragSlime.y)<slimes[i].r+dragSlime.r-10){
+      if(tryMerge(dragSlime,slimes[i])) break;
+    }
+  }
+  dragSlime=null;
+});
+
+function update(){
+  frame++;
+  coins+=getGPS()/60;
+  if(frame%60===0) updateCoinsUI();
+
+  // auto mixer
+  if(upgrades.auto&&frame%120===0){
+    outer:for(var i=0;i<slimes.length;i++){
+      for(var j=i+1;j<slimes.length;j++){
+        if(tryMerge(slimes[i],slimes[j])) break outer;
+      }
+    }
+  }
+
+  // auto spawn when low
+  if(frame%200===0&&slimes.length<Math.min(6,maxSlimes)){
+    var bases=['red','blue','green','yellow'];
+    spawnSlime(bases[Math.floor(Math.random()*bases.length)]);
+  }
+
+  slimes.forEach(function(s){
+    if(s.dragging||s.merging) return;
+    // wobble
+    s.wobble+=s.wspd;
+    // bounce around canvas
+    s.x+=s.vx;s.y+=s.vy;
+    s.vx*=.99;s.vy*=.99;
+    if(s.x-s.r<0){s.x=s.r;s.vx=Math.abs(s.vx);}
+    if(s.x+s.r>W){s.x=W-s.r;s.vx=-Math.abs(s.vx);}
+    if(s.y-s.r<0){s.y=s.r;s.vy=Math.abs(s.vy);}
+    if(s.y+s.r>H){s.y=H-s.r;s.vy=-Math.abs(s.vy);}
+    if(s.sparkle>0)s.sparkle--;
+    // merging animation: move toward target
+    if(s.merging&&s.mergeTarget){
+      s.x+=(s.mergeTarget.x-s.x)*.15;s.y+=(s.mergeTarget.y-s.y)*.15;
+    }
+  });
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // bg
+  ctx.fillStyle='#0a1a0a';ctx.fillRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='#0d1e0d';ctx.lineWidth=.5;
+  for(var x=0;x<W;x+=40)ctx.strokeRect(x,0,40,H);
+
+  slimes.forEach(function(s){
+    var pulse=.7+Math.sin(s.wobble)*.3;
+    var rx=s.r*(1+Math.sin(s.wobble)*.08);
+    var ry=s.r*(1+Math.cos(s.wobble*.9)*.08);
+    ctx.shadowColor=s.glow;ctx.shadowBlur=18*pulse*(s.dragging?2:1);
+    ctx.fillStyle=s.color;
+    ctx.beginPath();ctx.ellipse(s.x,s.y,rx,ry,s.wobble*.1,0,Math.PI*2);ctx.fill();
+    // eyes
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(s.x-rx*.28,s.y-ry*.15,rx*.18,ry*.2,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(s.x+rx*.28,s.y-ry*.15,rx*.18,ry*.2,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(s.x-rx*.24,s.y-ry*.15,rx*.08,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(s.x+rx*.32,s.y-ry*.15,rx*.08,0,Math.PI*2);ctx.fill();
+    // smile
+    ctx.strokeStyle='#00000066';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(s.x,s.y+ry*.1,rx*.25,0,Math.PI);ctx.stroke();
+    ctx.shadowBlur=0;
+  });
+
+  // hint
+  if(slimes.length>1){
+    ctx.fillStyle='#1a5a1a55';ctx.font='11px Nunito,sans-serif';ctx.textAlign='center';
+    ctx.fillText('Drag slimes together to merge!',W/2,H-12);ctx.textAlign='left';
+  }
+}
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+</script>
+</body>
+</html>
