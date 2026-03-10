@@ -46,7 +46,7 @@ var arrows=[];
 var particles=[];
 var mouseX=0,mouseY=0,dragging=false,dragStart={x:0,y:0};
 var aimLine={active:false,angle:0,power:0};
-var turnTimer=0,eTurn=false,eTurnDelay=0;
+var turnTimer=0,eTurn=false,eTurnDelay=0,enemyTurnScheduled=false;
 var groundY;
 var bgObjs=[];
 
@@ -100,7 +100,7 @@ function initRound(){
   enemy=makeRagdoll(W*.8,true);
   initRagdollPos(player);
   initRagdollPos(enemy);
-  eTurn=false; eTurnDelay=0; turnTimer=0;
+  eTurn=false; eTurnDelay=0; turnTimer=0; enemyTurnScheduled=false;
   dragging=false; aimLine.active=false;
   wind=(Math.random()-.5)*2.5;
   updateUI();
@@ -135,7 +135,7 @@ function updateArrow(a){
 }
 
 function checkHit(a,r){
-  if(r.dead||a.fromEnemy===r.isEnemy) return false; // wait — fix ownership
+  if(r.dead) return false;
   var cx=r.joints.torso.x, cy=r.joints.torso.y;
   var hx=r.joints.head.x, hy=r.joints.head.y;
   if(Math.hypot(a.x-hx,a.y-hy)<18){a.stuck=true;hitRagdoll(r,true);return true;}
@@ -228,21 +228,30 @@ function update(){
     if(p.life<=0)particles.splice(i2,1);
   }
 
-  // enemy turn
+  // enemy turn per-frame tick
   if(eTurn) doEnemyTurn();
 
-  // auto-trigger enemy turn when player arrows used up
-  if(!eTurn&&arrowsLeft<=0&&!player.dead){
-    // check all player arrows are settled
+  // trigger enemy turn once when player arrows used up and all settled
+  if(!eTurn&&!enemyTurnScheduled&&arrowsLeft<=0&&!player.dead){
     var settled=arrows.filter(function(a){return!a.fromEnemy;}).every(function(a){return a.stuck;});
-    if(settled&&eArrowsLeft>0&&!enemy.dead){
-      eTurn=true;eTurnDelay=60+Math.floor(Math.random()*60);
-      var capturedRound=round;
-      // fire multiple arrows with delay, checking round hasn't changed
-      for(var s=0;s<3;s++){
-        (function(delay){setTimeout(function(){
-          if(round===capturedRound&&!enemy.dead&&!player.dead&&eArrowsLeft>0) doEnemyTurn();
-        },delay);})(s*800+500);
+    if(settled&&!enemy.dead){
+      if(eArrowsLeft>0){
+        enemyTurnScheduled=true;
+        var capturedRound=round;
+        // fire up to 3 arrows with staggered delays, each sets eTurn=true independently
+        var shotsToFire=Math.min(3,eArrowsLeft);
+        for(var s=0;s<shotsToFire;s++){
+          (function(delay){setTimeout(function(){
+            if(round!==capturedRound||enemy.dead||player.dead) return;
+            eTurn=true;
+            eTurnDelay=0;
+          },delay);})(s*900+400);
+        }
+      } else {
+        // both sides out of arrows and nobody dead — force new round
+        enemyTurnScheduled=true;
+        setTimeout(function(){if(round===capturedRound2)initRound();},1500);
+        var capturedRound2=round;
       }
     }
   }
@@ -268,67 +277,67 @@ function draw(){
     ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();
   }ctx.globalAlpha=1;
 
-  // wind indicator
-  ctx.fillStyle='#33336688';
-  ctx.font='11px sans-serif';ctx.textAlign='center';
-  ctx.fillText('WIND '+(wind>0?'→':'←')+' '+Math.abs(wind).toFixed(1),W/2,32);
-  ctx.textAlign='left';
+  if(gameState==='play'||gameState==='over'){
+    // wind indicator
+    ctx.fillStyle='#33336688';
+    ctx.font='11px sans-serif';ctx.textAlign='center';
+    ctx.fillText('WIND '+(wind>0?'→':'←')+' '+Math.abs(wind).toFixed(1),W/2,32);
+    ctx.textAlign='left';
 
-  // ground
-  var gg=ctx.createLinearGradient(0,groundY,0,H);
-  gg.addColorStop(0,'#2a1a3a');gg.addColorStop(1,'#1a0a2a');
-  ctx.fillStyle=gg;ctx.fillRect(0,groundY,W,H-groundY);
-  ctx.strokeStyle='#6633aa';ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(0,groundY);ctx.lineTo(W,groundY);ctx.stroke();
+    // ground
+    var gg=ctx.createLinearGradient(0,groundY,0,H);
+    gg.addColorStop(0,'#2a1a3a');gg.addColorStop(1,'#1a0a2a');
+    ctx.fillStyle=gg;ctx.fillRect(0,groundY,W,H-groundY);
+    ctx.strokeStyle='#6633aa';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,groundY);ctx.lineTo(W,groundY);ctx.stroke();
 
-  // particles
-  for(var i2=0;i2<particles.length;i2++){
-    var p=particles[i2];
-    ctx.globalAlpha=p.life/p.ml;ctx.fillStyle=p.col;
-    ctx.beginPath();ctx.arc(p.x,p.y,2.5,0,Math.PI*2);ctx.fill();
-  }ctx.globalAlpha=1;
+    // particles
+    for(var i2=0;i2<particles.length;i2++){
+      var p=particles[i2];
+      ctx.globalAlpha=p.life/p.ml;ctx.fillStyle=p.col;
+      ctx.beginPath();ctx.arc(p.x,p.y,2.5,0,Math.PI*2);ctx.fill();
+    }ctx.globalAlpha=1;
 
-  // arrows
-  for(var i3=0;i3<arrows.length;i3++){
-    var a=arrows[i3];
-    // trail
-    if(!a.stuck&&a.trail.length>1){
-      ctx.globalAlpha=.3;ctx.strokeStyle=a.fromEnemy?'#ff6644':'#44aaff';
-      ctx.lineWidth=1.5;ctx.beginPath();
-      ctx.moveTo(a.trail[0].x,a.trail[0].y);
-      for(var t=1;t<a.trail.length;t++)ctx.lineTo(a.trail[t].x,a.trail[t].y);
-      ctx.stroke();ctx.globalAlpha=1;
+    // arrows
+    for(var i3=0;i3<arrows.length;i3++){
+      var a=arrows[i3];
+      if(!a.stuck&&a.trail.length>1){
+        ctx.globalAlpha=.3;ctx.strokeStyle=a.fromEnemy?'#ff6644':'#44aaff';
+        ctx.lineWidth=1.5;ctx.beginPath();
+        ctx.moveTo(a.trail[0].x,a.trail[0].y);
+        for(var t=1;t<a.trail.length;t++)ctx.lineTo(a.trail[t].x,a.trail[t].y);
+        ctx.stroke();ctx.globalAlpha=1;
+      }
+      var ang=a.stuck?-Math.PI/6:Math.atan2(a.vy,a.vx);
+      ctx.save();ctx.translate(a.x,a.y);ctx.rotate(ang);
+      ctx.strokeStyle=a.fromEnemy?'#ff8844':'#88ccff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(14,0);ctx.stroke();
+      ctx.fillStyle=a.fromEnemy?'#ff4422':'#4488ff';
+      ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(6,-5);ctx.lineTo(6,5);ctx.closePath();ctx.fill();
+      ctx.restore();
     }
-    var ang=a.stuck?-Math.PI/6:Math.atan2(a.vy,a.vx);
-    ctx.save();ctx.translate(a.x,a.y);ctx.rotate(ang);
-    ctx.strokeStyle=a.fromEnemy?'#ff8844':'#88ccff';ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(14,0);ctx.stroke();
-    ctx.fillStyle=a.fromEnemy?'#ff4422':'#4488ff';
-    ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(6,-5);ctx.lineTo(6,5);ctx.closePath();ctx.fill();
-    ctx.restore();
+
+    // ragdolls
+    if(player) drawRagdoll(player,false);
+    if(enemy)  drawRagdoll(enemy,true);
+
+    // aim line
+    if(aimLine.active&&player&&!player.dead){
+      var ax=player.flip?(player.x-22):(player.x+22);
+      var ay=player.joints.head.y-10;
+      var endX=ax+Math.cos(aimLine.angle)*aimLine.power*12;
+      var endY=ay+Math.sin(aimLine.angle)*aimLine.power*12;
+      ctx.strokeStyle='#ffffff33';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(endX,endY);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle='rgba(255,200,100,'+aimLine.power/20+')';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(ax,ay,aimLine.power*2,0,Math.PI*2);ctx.stroke();
+    }
+
+    // HP bars
+    if(player) drawHP(player,W*.1);
+    if(enemy)  drawHP(enemy,W*.75);
   }
-
-  // ragdolls
-  drawRagdoll(player,false);
-  drawRagdoll(enemy,true);
-
-  // aim line
-  if(aimLine.active&&!player.dead){
-    var ax=player.flip?(player.x-22):(player.x+22);
-    var ay=player.joints.head.y-10;
-    var endX=ax+Math.cos(aimLine.angle)*aimLine.power*12;
-    var endY=ay+Math.sin(aimLine.angle)*aimLine.power*12;
-    ctx.strokeStyle='#ffffff33';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
-    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(endX,endY);ctx.stroke();
-    ctx.setLineDash([]);
-    // power ring
-    ctx.strokeStyle='rgba(255,200,100,'+aimLine.power/20+')';ctx.lineWidth=2;
-    ctx.beginPath();ctx.arc(ax,ay,aimLine.power*2,0,Math.PI*2);ctx.stroke();
-  }
-
-  // HP bars
-  drawHP(player,W*.1);
-  drawHP(enemy,W*.75);
 }
 
 function drawRagdoll(r,isEnemy){
