@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Speed Typer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#050810;overflow:hidden;height:100vh;width:100vw;font-family:'Space Mono',monospace;color:#88ffcc;}
+canvas{position:absolute;top:0;left:0;}
+#ui{position:fixed;top:0;left:0;right:0;pointer-events:none;z-index:10;}
+#topbar{height:52px;background:#050810ee;border-bottom:1px solid #0a2a1a;display:flex;align-items:center;justify-content:space-between;padding:0 24px;}
+.hv{font-size:20px;font-weight:700;color:#00ffaa;}
+.hl{font-size:8px;letter-spacing:3px;color:#1a4a2a;margin-top:2px;}
+#inputArea{position:fixed;bottom:0;left:0;right:0;padding:16px 24px;background:#050810ee;border-top:1px solid #0a2a1a;z-index:10;display:none;}
+#typeBox{width:100%;background:transparent;border:none;border-bottom:2px solid #00ffaa44;color:#88ffcc;font-family:'Space Mono',monospace;font-size:22px;outline:none;padding:8px 0;caret-color:#00ffaa;letter-spacing:2px;}
+#wordDisplay{font-size:14px;color:#1a4a2a;margin-top:6px;letter-spacing:1px;}
+#msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#050810ee;z-index:20;}
+#msg h1{font-size:56px;font-weight:700;letter-spacing:4px;color:#00ffaa;margin-bottom:8px;text-align:center;text-shadow:0 0 40px #00ffaa44;}
+#msg p{color:#1a4a2a;font-size:13px;margin-bottom:24px;text-align:center;line-height:2.5;}
+.btn{background:transparent;border:2px solid #00ffaa;color:#00ffaa;padding:12px 38px;font-family:'Space Mono',monospace;font-size:13px;letter-spacing:4px;cursor:pointer;transition:all .2s;}
+.btn:hover{background:#00ffaa22;box-shadow:0 0 20px #00ffaa44;}
+#combo{position:fixed;top:60px;right:20px;text-align:right;pointer-events:none;z-index:10;}
+#comboVal{font-size:32px;font-weight:700;color:#00ffaa;opacity:0;transition:opacity .3s;}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="ui">
+  <div id="topbar">
+    <div><div class="hv" id="scoreV">0</div><div class="hl">SCORE</div></div>
+    <div style="text-align:center"><div class="hv" id="wpmV">0</div><div class="hl">WPM</div></div>
+    <div style="text-align:right"><div class="hv" id="livesV">♥♥♥</div><div class="hl">LIVES</div></div>
+  </div>
+</div>
+<div id="combo"><div id="comboVal">x1</div></div>
+<div id="inputArea">
+  <input id="typeBox" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type here...">
+  <div id="wordDisplay">Loading words...</div>
+</div>
+<div id="msg">
+  <h1>SPEED<br>TYPER</h1>
+  <p>Type falling words before they hit the bottom.<br>Combo multiplier up to x8!<br>Miss 3 words and it's over.</p>
+  <button class="btn" onclick="startGame()">▶ START TYPING</button>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+var WORDS=['abandon','ability','above','absence','absolute','accept','access','account','achieve','action',
+'address','advance','advice','affect','afford','agency','agent','agree','alarm','alert','align',
+'allow','ancient','answer','appeal','apply','armor','array','arrow','asset','assign','attack',
+'badge','beacon','blast','blend','block','bonus','boost','brave','breach','break','bright',
+'build','burst','cabal','cache','cargo','chain','chaos','charge','chasm','clash','clear',
+'climb','clone','cloud','codec','comet','combo','craft','crash','cross','crowd','crush',
+'cyber','cycle','dance','dartz','debug','decay','delta','demon','depth','descend','detect',
+'device','ditch','dodge','dominate','drain','dream','drive','drone','elite','ember','empty',
+'energy','engine','error','escape','evade','event','exact','exhaust','exile','exist','expand',
+'exploit','expose','extract','fable','faith','false','fatal','fever','field','fight','final',
+'flame','flash','fleet','float','focus','force','forge','found','frame','front','frost','fuel',
+'ghost','glide','glyph','grace','grasp','graze','grind','grip','group','guard','guide','haste',
+'hazard','heart','helix','hex','high','horde','hover','hyper','impact','index','infinite',
+'inject','intel','ionic','issue','karma','kill','knight','laser','latch','launch','legend',
+'level','limit','link','logic','lore','loyal','macro','magic','matrix','merge','might',
+'mission','modem','morph','neural','nexus','ninja','noble','node','noise','nullify','orbit',
+'order','origin','output','overload','pack','panic','parse','patch','pause','phase','pixel',
+'plasma','power','prime','probe','pulse','purge','query','queue','quick','quest','radar',
+'radiant','reach','reboot','recall','relay','remote','rogue','route','rush','sabotage','script',
+'sensor','shard','shield','shift','shock','signal','skill','slash','slice','snipe','solar',
+'solid','solve','sonic','spark','spawn','speed','spike','spiral','squad','star','static',
+'storm','surge','swift','system','target','tech','titan','track','trade','trait','trap',
+'turbo','ultra','unity','unlock','vault','vector','void','valor','virus','wave','wired','zero'];
+
+var gameState='menu';
+var wordObjs=[],score=0,lives=3,combo=1,wpm=0,frame=0;
+var typed='';
+var wpmWords=0,wpmTime=0;
+var comboTimer=0;
+var particles=[];
+var level=1,spawnTimer=0,spawnInterval=120;
+
+function startGame(){
+  document.getElementById('msg').style.display='none';
+  document.getElementById('inputArea').style.display='block';
+  document.getElementById('typeBox').focus();
+  score=0;lives=3;combo=1;wpm=0;frame=0;wpmWords=0;
+  wordObjs=[];particles=[];level=1;spawnTimer=0;spawnInterval=120;
+  typed='';
+  document.getElementById('typeBox').value='';
+  updateUI();
+  gameState='play';
+}
+
+function spawnWord(){
+  var w=WORDS[Math.floor(Math.random()*WORDS.length)];
+  var spd=0.6+level*.12+Math.random()*.4;
+  var x=60+Math.random()*(W-120);
+  var col=['#00ffaa','#44ffcc','#88ff88','#00ccff','#44ff44'][Math.floor(Math.random()*5)];
+  wordObjs.push({word:w,typed:'',x:x,y:52,spd:spd,col:col,shake:0,matched:false,deleteTimer:0});
+}
+
+function updateUI(){
+  document.getElementById('scoreV').textContent=score;
+  document.getElementById('livesV').textContent='♥'.repeat(lives)+'♡'.repeat(Math.max(0,3-lives));
+  document.getElementById('wpmV').textContent=wpm;
+  // update word display: show closest word
+  var close=wordObjs.filter(function(w){return!w.matched;}).sort(function(a,b){return b.y-a.y;})[0];
+  var disp=close?('<span style="color:#1a4a2a">Target: </span><span style="color:'+close.col+'">'+
+    '<span style="color:#00ffaa">'+close.typed+'</span>'+close.word.slice(close.typed.length)+'</span>'):'';
+  document.getElementById('wordDisplay').innerHTML=disp||'<span style="color:#1a4a2a">Keep going...</span>';
+}
+
+function checkTyped(input){
+  if(!input) return;
+  // find best match
+  var best=null,bestScore=-1;
+  for(var i=0;i<wordObjs.length;i++){
+    var w=wordObjs[i];
+    if(w.matched) continue;
+    if(w.word.startsWith(input)){
+      var s=input.length;
+      if(s>bestScore){bestScore=s;best=w;}
+    }
+  }
+  // update all
+  wordObjs.forEach(function(w){if(!w.matched) w.typed='';});
+  if(best){
+    best.typed=input;
+    if(best.typed===best.word){
+      // completed!
+      best.matched=true;
+      combo=Math.min(8,combo+1);
+      var pts=(best.word.length*10+level*5)*combo;
+      score+=pts;
+      wpmWords++;
+      spawnParticles(best.x,best.y,best.col);
+      showCombo();
+      document.getElementById('typeBox').value='';
+      typed='';
+      comboTimer=0;
+      updateUI();
+    }
+  } else {
+    // no match — partial mismatch, allow
+  }
+}
+
+function showCombo(){
+  var el=document.getElementById('comboVal');
+  el.textContent='x'+combo;el.style.opacity='1';
+  el.style.color=combo>=4?'#ffdd00':combo>=2?'#44ffcc':'#00ffaa';
+  el.style.fontSize=(20+combo*4)+'px';
+  clearTimeout(el._t);el._t=setTimeout(function(){el.style.opacity='0';},800);
+}
+
+function spawnParticles(x,y,col){
+  for(var i=0;i<18;i++){var a=Math.random()*Math.PI*2,s=2+Math.random()*5;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,col,life:30+Math.random()*20,r:2+Math.random()*3});}
+}
+
+function update(){
+  if(gameState!=='play') return;
+  frame++;
+  // WPM calc
+  if(frame%60===0){wpmTime++;wpm=Math.round((wpmWords*60)/Math.max(1,wpmTime));}
+  // combo decay
+  comboTimer++;
+  if(comboTimer>300){combo=Math.max(1,combo-1);comboTimer=0;}
+  // level up
+  if(frame%1200===0){level++;spawnInterval=Math.max(40,spawnInterval-12);}
+  // spawn
+  spawnTimer++;
+  if(spawnTimer>=spawnInterval){spawnTimer=0;spawnWord();}
+  if(wordObjs.length<2)spawnWord();
+  // update words
+  for(var i=wordObjs.length-1;i>=0;i--){
+    var w=wordObjs[i];
+    if(w.matched){w.deleteTimer++;if(w.deleteTimer>40)wordObjs.splice(i,1);continue;}
+    w.y+=w.spd;
+    if(w.shake>0)w.shake--;
+    // hit bottom
+    if(w.y>H-100){
+      lives--;
+      combo=1;comboTimer=0;
+      w.shake=10;
+      spawnParticles(w.x,w.y,'#ff4444');
+      wordObjs.splice(i,1);
+      updateUI();
+      if(lives<=0){gameDead();return;}
+    }
+  }
+  // particles
+  for(var i2=particles.length-1;i2>=0;i2--){
+    var p=particles[i2];p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life--;
+    if(p.life<=0)particles.splice(i2,1);
+  }
+  if(frame%8===0)updateUI();
+}
+
+function gameDead(){
+  gameState='over';
+  document.getElementById('inputArea').style.display='none';
+  document.getElementById('msg').style.display='flex';
+  document.getElementById('msg').innerHTML=
+    '<h1 style="color:#ff4444">GAME OVER</h1>'+
+    '<p style="color:#1a4a2a">Score: '+score+'<br>WPM: '+wpm+'<br>Level: '+level+'</p>'+
+    '<button class="btn" onclick="startGame()">TRY AGAIN</button>';
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#050810';ctx.fillRect(0,0,W,H);
+  // matrix bg rain
+  if(frame%3===0){
+    ctx.fillStyle='rgba(0,255,170,0.013)';
+    for(var i=0;i<4;i++){
+      var x=Math.random()*W,y=Math.random()*H;
+      ctx.font='10px Space Mono,monospace';
+      ctx.fillText(String.fromCharCode(0x30a0+Math.random()*96),x,y);
+    }
+  }
+  // grid
+  ctx.strokeStyle='#0a1a12';ctx.lineWidth=.4;
+  for(var x=0;x<W;x+=50)ctx.strokeRect(x,0,50,H);
+
+  // particles
+  particles.forEach(function(p){
+    ctx.globalAlpha=p.life/50;ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  });ctx.globalAlpha=1;
+
+  if(gameState!=='play') return;
+  // danger zone
+  ctx.fillStyle='rgba(255,50,50,0.04)';ctx.fillRect(0,H-100,W,100);
+  ctx.strokeStyle='rgba(255,50,50,0.2)';ctx.lineWidth=1;ctx.setLineDash([8,6]);
+  ctx.beginPath();ctx.moveTo(0,H-100);ctx.lineTo(W,H-100);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // words
+  wordObjs.forEach(function(w){
+    var sx=w.shake>0?(Math.random()*4-2):0;
+    var alpha=w.matched?Math.max(0,1-w.deleteTimer/20):1;
+    ctx.globalAlpha=alpha;
+    ctx.font='bold 20px Space Mono,monospace';
+    ctx.textAlign='center';
+    // glow
+    ctx.shadowColor=w.col;ctx.shadowBlur=12;
+    // typed part
+    if(w.typed){
+      ctx.fillStyle='#ffffff';
+      var tw=ctx.measureText(w.word).width;
+      ctx.fillText(w.typed,w.x+sx-tw/2+ctx.measureText(w.typed).width/2,w.y);
+    }
+    // remaining
+    var remain=w.word.slice(w.typed.length);
+    ctx.fillStyle=w.col;
+    if(w.typed){
+      var typedW=ctx.measureText(w.typed).width;
+      var totalW=ctx.measureText(w.word).width;
+      ctx.fillText(remain,w.x+sx+typedW-totalW/2,w.y);
+    } else {
+      ctx.fillText(w.word,w.x+sx,w.y);
+    }
+    ctx.shadowBlur=0;
+    // danger pulse
+    var danger=(w.y-52)/(H-152);
+    if(danger>.7){ctx.fillStyle='rgba(255,50,50,'+((danger-.7)/.3*.4)+')';ctx.fillRect(w.x-80,w.y-20,160,24);}
+    ctx.globalAlpha=1;
+  });
+  ctx.textAlign='left';
+}
+
+document.getElementById('typeBox').addEventListener('input',function(e){
+  typed=e.target.value.trim().toLowerCase();
+  checkTyped(typed);
+});
+document.getElementById('typeBox').addEventListener('keydown',function(e){
+  if(e.key===' '||e.key==='Enter'){e.preventDefault();
+    if(typed){
+      // force submit current word
+      var found=false;
+      for(var i=0;i<wordObjs.length;i++){
+        if(!wordObjs[i].matched&&wordObjs[i].word===typed){found=true;break;}
+      }
+      document.getElementById('typeBox').value='';typed='';
+    }
+  }
+});
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
