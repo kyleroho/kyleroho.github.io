@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flip Master</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a1a;overflow:hidden;height:100vh;width:100vw;font-family:'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;}
+#wrap{position:relative;width:520px;height:600px;}
+canvas{display:block;}
+#hud{position:absolute;top:0;left:0;right:0;height:48px;background:#07071455;display:flex;align-items:center;justify-content:space-between;padding:0 14px;pointer-events:none;}
+.hb{text-align:center;}
+.hl{font-size:8px;letter-spacing:2px;color:#2a2a55;}
+.hv{font-size:17px;font-weight:700;color:#ffcc44;}
+#trickLog{position:absolute;left:10px;top:50px;pointer-events:none;width:200px;}
+.tlog{font-size:11px;color:#ffcc44;letter-spacing:1px;animation:fadeup .8s forwards;}
+@keyframes fadeup{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-30px);}}
+#msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a1aee;z-index:20;}
+#msg h1{font-size:48px;font-weight:900;letter-spacing:4px;color:#ffcc44;margin-bottom:8px;text-align:center;}
+#msg p{color:#2a2a55;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.4;}
+.btn{background:transparent;border:2px solid #ffcc44;color:#ffcc44;padding:11px 34px;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .2s;}
+.btn:hover{background:#ffcc4422;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="520" height="600"></canvas>
+  <div id="hud">
+    <div class="hb"><div class="hv" id="scoreV">0</div><div class="hl">SCORE</div></div>
+    <div class="hb"><div class="hv" id="comboV">x1</div><div class="hl">COMBO</div></div>
+    <div class="hb"><div class="hv" id="bestV">0</div><div class="hl">BEST</div></div>
+    <div class="hb"><div class="hv" id="livesV">♥♥♥</div><div class="hl">LIVES</div></div>
+  </div>
+  <div id="trickLog"></div>
+  <div id="msg">
+    <h1>FLIP<br>MASTER</h1>
+    <p>← → to move · SPACE to jump<br>Hold ← or → in air to flip!<br>Land safely to score combos.<br>Land on back = lose a life!</p>
+    <button class="btn" onclick="startGame()">▶ BOUNCE</button>
+  </div>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var W=520,H=600;
+var keys={};
+var gameState='menu';
+var frame=0,score=0,combo=1,lives=3,best=0;
+var man,trampoline,particles=[];
+var bgObjs=[];
+
+function makeBG(){bgObjs=[];for(var i=0;i<20;i++)bgObjs.push({x:Math.random()*W,y:Math.random()*H,r:1+Math.random()*2,a:.1+Math.random()*.15});}
+
+function startGame(){
+  document.getElementById('msg').style.display='none';
+  frame=0;score=0;combo=1;lives=3;
+  makeBG();
+  trampoline={x:W/2-80,y:H-50,w:160,h:16};
+  man={x:W/2,y:H-200,vx:0,vy:0,angle:0,angularV:0,onTramp:false,landed:false,airTime:0,flips:0};
+  gameState='play';
+  updateHUD();
+}
+
+function trickScore(man){
+  var flips=Math.floor(Math.abs(man.flips));
+  if(flips===0) return{pts:10,name:'BOUNCE'};
+  if(flips===1) return{pts:100,name:man.flips>0?'FRONTFLIP!':'BACKFLIP!'};
+  if(flips===2) return{pts:300,name:'DOUBLE FLIP!'};
+  if(flips===3) return{pts:600,name:'TRIPLE FLIP!'};
+  return{pts:flips*250,name:flips+'x MEGA FLIP!'};
+}
+
+function showTrick(name,pts){
+  var el=document.createElement('div');el.className='tlog';
+  el.textContent=name+' +'+pts;
+  document.getElementById('trickLog').appendChild(el);
+  setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},900);
+}
+
+function update(){
+  if(gameState!=='play') return;
+  frame++;
+  var GRAV=0.38;
+  var running=keys['ArrowLeft']||keys['a']||keys['ArrowRight']||keys['d'];
+
+  // Move
+  if((keys['ArrowLeft']||keys['a'])&&man.landed)man.vx=Math.max(-5,man.vx-.3);
+  if((keys['ArrowRight']||keys['d'])&&man.landed)man.vx=Math.min(5,man.vx+.3);
+  if(!running&&man.landed)man.vx*=.8;
+
+  // In-air rotation
+  if(!man.landed){
+    if(keys['ArrowLeft']||keys['a'])man.angularV-=.015;
+    if(keys['ArrowRight']||keys['d'])man.angularV+=.015;
+    man.angularV*=.995;
+    man.angle+=man.angularV;
+    man.airTime++;
+    man.flips=man.angle/(Math.PI*2);
+  }
+
+  man.vy+=GRAV;man.x+=man.vx;man.y+=man.vy;
+
+  // Wall bounce
+  if(man.x<18){man.x=18;man.vx=Math.abs(man.vx)*.7;}
+  if(man.x>W-18){man.x=W-18;man.vx=-Math.abs(man.vx)*.7;}
+
+  // Trampoline collision
+  var tx=trampoline.x,ty=trampoline.y,tw=trampoline.w;
+  var onTramp=man.x>=tx&&man.x<=tx+tw&&man.y+12>=ty&&man.y+12<ty+trampoline.h+10&&man.vy>=0;
+  if(onTramp&&!man.landed){
+    // check landing orientation
+    var normAngle=((man.angle%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+    var badLanding=(normAngle>Math.PI*.5&&normAngle<Math.PI*1.5); // upside down
+    if(badLanding){
+      // crashed
+      lives--;showTrick('CRASH!',-50);
+      for(var i=0;i<20;i++){var a=Math.random()*Math.PI*2,s=3+Math.random()*4;particles.push({x:man.x,y:man.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-3,col:'#ff4444',life:30,r:3});}
+      updateHUD();
+      if(lives<=0){gameDead();return;}
+      man.angle=0;man.angularV=0;man.vy=-4;combo=1;
+    } else {
+      // Good landing!
+      var tr=trickScore(man);
+      var pts=tr.pts*combo;
+      score+=pts;
+      showTrick(tr.name,'x'+combo+'='+pts);
+      combo++;
+      man.angle=0;man.angularV=0;
+      man.vy=-9.5-Math.random()*2;
+      // bounce particles
+      for(var i=0;i<12;i++){var a2=Math.random()*Math.PI,s2=2+Math.random()*3;particles.push({x:man.x,y:ty,vx:(Math.random()-.5)*s2*2,vy:-Math.random()*s2,col:'#ffcc44',life:20,r:2});}
+    }
+    man.y=ty-12;man.airTime=0;man.flips=0;
+    man.landed=true;
+    // Move trampoline slightly
+    trampoline.x=Math.max(20,Math.min(W-tw-20,trampoline.x+(Math.random()-.5)*60));
+  } else {man.landed=false;}
+
+  // Fall off
+  if(man.y>H+40){
+    lives--;combo=1;showTrick('OUT OF BOUNDS!',0);
+    man.x=trampoline.x+trampoline.w/2;man.y=trampoline.y-80;
+    man.vx=0;man.vy=0;man.angle=0;man.angularV=0;man.airTime=0;man.flips=0;man.landed=false;
+    updateHUD();
+    if(lives<=0){gameDead();return;}
+  }
+
+  for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.2;p.life--;if(p.life<=0)particles.splice(i,1);}
+  if(frame%4===0)updateHUD();
+}
+
+function gameDead(){
+  gameState='over';
+  if(score>best)best=score;
+  document.getElementById('msg').style.display='flex';
+  document.getElementById('msg').innerHTML=
+    '<h1 style="color:#ff4444">WIPEOUT</h1>'+
+    '<p style="color:#2a2a55">Score: '+score+'<br>Best: '+Math.max(score,best)+'</p>'+
+    '<button class="btn" onclick="startGame()">TRY AGAIN</button>';
+}
+
+function updateHUD(){
+  document.getElementById('scoreV').textContent=score;
+  document.getElementById('comboV').textContent='x'+combo;
+  document.getElementById('bestV').textContent=Math.max(score,best);
+  document.getElementById('livesV').textContent='♥'.repeat(lives)+'♡'.repeat(Math.max(0,3-lives));
+}
+
+function drawMan(x,y,angle){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  ctx.strokeStyle='#ffcc44';ctx.lineWidth=3;ctx.lineCap='round';
+  // body
+  ctx.beginPath();ctx.moveTo(0,-14);ctx.lineTo(0,4);ctx.stroke();
+  // arms
+  var airF=man.landed?0:Math.sin(frame*.18)*0.6;
+  ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(-14,0+airF*4);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(14,0-airF*4);ctx.stroke();
+  // legs
+  ctx.beginPath();ctx.moveTo(0,4);ctx.lineTo(-10,14+Math.abs(airF)*3);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,4);ctx.lineTo(10,14-Math.abs(airF)*3);ctx.stroke();
+  // head
+  ctx.strokeStyle='#ffcc44';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,-18,7,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // bg gradient
+  var bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#0a0a1a');bg.addColorStop(1,'#0d0520');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  // stars
+  bgObjs.forEach(function(s){ctx.globalAlpha=s.a+Math.sin(frame*.02+s.x)*.06;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
+
+  if(gameState!=='play'){return;}
+
+  // trampoline
+  var tp=.5+Math.sin(frame*.08)*.12;
+  ctx.shadowColor='#ff8844';ctx.shadowBlur=14*tp;
+  ctx.fillStyle='#441100';ctx.fillRect(trampoline.x,trampoline.y,trampoline.w,trampoline.h);
+  ctx.strokeStyle='#ff8844';ctx.lineWidth=2;ctx.strokeRect(trampoline.x,trampoline.y,trampoline.w,trampoline.h);
+  // springs
+  for(var s=0;s<6;s++){var sx=trampoline.x+s*(trampoline.w/5);ctx.strokeStyle='#cc5500';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx,trampoline.y+trampoline.h);ctx.lineTo(sx,trampoline.y+trampoline.h+12);ctx.stroke();}
+  ctx.shadowBlur=0;
+
+  // particles
+  particles.forEach(function(p){ctx.globalAlpha=p.life/30;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
+
+  // flip counter
+  if(!man.landed&&Math.abs(man.flips)>.1){
+    var fStr=(man.flips>0?'+':'')+man.flips.toFixed(1)+' flips';
+    ctx.fillStyle='#ffcc44aa';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+    ctx.fillText(fStr,man.x,man.y-35);ctx.textAlign='left';
+  }
+
+  drawMan(man.x,man.y,man.angle);
+}
+
+document.addEventListener('keydown',function(e){keys[e.key]=true;if(e.key===' '){e.preventDefault();}});
+document.addEventListener('keyup',function(e){keys[e.key]=false;});
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
