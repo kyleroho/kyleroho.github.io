@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Crowd Crusher</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a050f;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;}
+#app{display:flex;gap:16px;align-items:flex-start;}
+#sidebar{width:140px;display:flex;flex-direction:column;gap:12px;}
+#sidebar h2{font-size:22px;font-weight:900;letter-spacing:3px;color:#aa44ff;text-align:center;}
+.sbox{background:#0d0618;border:1px solid #2a0a4a;padding:12px;text-align:center;}
+.sl{font-size:8px;letter-spacing:2px;color:#2a0a4a;margin-bottom:4px;}
+.sv{font-size:22px;font-weight:700;color:#dd88ff;}
+.sbtn{width:100%;background:transparent;border:2px solid #aa44ff;color:#aa44ff;padding:9px;font-size:12px;letter-spacing:2px;cursor:pointer;margin-top:6px;transition:all .2s;}
+.sbtn:hover{background:#aa44ff22;}
+#grid{position:relative;cursor:pointer;}
+#notif{position:absolute;top:40%;left:50%;transform:translateX(-50%);font-size:20px;font-weight:700;color:#ffdd44;pointer-events:none;opacity:0;text-align:center;white-space:nowrap;letter-spacing:2px;}
+#msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a050fee;z-index:20;}
+#msg h1{font-size:48px;font-weight:900;letter-spacing:4px;color:#aa44ff;margin-bottom:8px;text-align:center;}
+#msg p{color:#2a0a4a;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.4;}
+.btn{background:transparent;border:2px solid #aa44ff;color:#aa44ff;padding:11px 34px;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .2s;}
+.btn:hover{background:#aa44ff22;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <h2>CROWD<br>CRUSH</h2>
+    <div class="sbox"><div class="sl">SCORE</div><div class="sv" id="scoreV">0</div></div>
+    <div class="sbox"><div class="sl">MOVES</div><div class="sv" id="movesV">25</div></div>
+    <div class="sbox"><div class="sl">LEVEL</div><div class="sv" id="levelV">1</div></div>
+    <div class="sbox"><div class="sl">TARGET</div><div class="sv" id="targetV">500</div></div>
+    <button class="sbtn" onclick="shuffle()">🔀 SHUFFLE</button>
+  </div>
+  <div id="grid">
+    <canvas id="cv" width="420" height="560"></canvas>
+    <div id="notif"></div>
+  </div>
+</div>
+<div id="msg">
+  <h1>CROWD<br>CRUSHER</h1>
+  <p>Click a mob to select it.<br>Click an adjacent mob to swap.<br>Match 3+ in a row to crush them!<br>Hit the target score to advance.</p>
+  <button class="btn" onclick="startGame()">CRUSH EM</button>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var T=60,COLS=7,ROWS=9,W=COLS*T,H=ROWS*T; // 420x540, bottom 20 is padding
+cv.width=W;cv.height=H;
+
+var TYPES=6;
+var COLORS=['#ff4444','#4488ff','#44ff88','#ffcc00','#ff44ff','#ff8844'];
+var EMOJIS=['👹','👾','🧟','🤖','💀','👻'];
+var gameState='menu';
+var grid=[],selected=null,animCells=[],particles=[];
+var score=0,moves=0,maxMoves=25,level=1,target=500;
+var frame=0;
+var notifTimer=null;
+
+function startGame(){
+  document.getElementById('msg').style.display='none';
+  score=0;level=1;target=500;maxMoves=25;moves=maxMoves;
+  fillGrid();
+  while(findMatches().length>0)fillGrid(); // avoid starting with matches
+  gameState='play';
+  updateUI();
+  loop();
+}
+
+function fillGrid(){
+  grid=[];
+  for(var r=0;r<ROWS;r++){grid.push([]);for(var c=0;c<COLS;c++)grid[r].push(randCell());}
+}
+
+function randCell(){return{type:Math.floor(Math.random()*TYPES),y_anim:0,dead:false,scale:1};}
+
+function findMatches(){
+  var matches=[];
+  // horizontal
+  for(var r=0;r<ROWS;r++){
+    var streak=1;
+    for(var c=1;c<COLS;c++){
+      if(grid[r][c].type===grid[r][c-1].type&&!grid[r][c].dead){streak++;}
+      else{if(streak>=3)for(var k=0;k<streak;k++)matches.push([r,c-1-k]);streak=1;}
+    }
+    if(streak>=3)for(var k2=0;k2<streak;k2++)matches.push([r,COLS-1-k2]);
+  }
+  // vertical
+  for(var c2=0;c2<COLS;c2++){
+    var vs=1;
+    for(var r2=1;r2<ROWS;r2++){
+      if(grid[r2][c2].type===grid[r2-1][c2].type&&!grid[r2][c2].dead){vs++;}
+      else{if(vs>=3)for(var k3=0;k3<vs;k3++)matches.push([r2-1-k3,c2]);vs=1;}
+    }
+    if(vs>=3)for(var k4=0;k4<vs;k4++)matches.push([ROWS-1-k4,c2]);
+  }
+  // dedupe
+  var seen=new Set();var out=[];
+  matches.forEach(function(m){var k=m[0]+','+m[1];if(!seen.has(k)){seen.add(k);out.push(m);}});
+  return out;
+}
+
+function processMatches(){
+  var matches=findMatches();
+  if(matches.length===0)return false;
+  var pts=matches.length*50*(matches.length>5?2:1);
+  score+=pts;
+  if(matches.length>=5) showNotif('MEGA CRUSH! +'+pts+'✨');
+  else if(matches.length>=3) showNotif('CRUSH! +'+pts);
+  matches.forEach(function(m){
+    var r=m[0],c=m[1];
+    spawnParts(c*T+T/2,r*T+T/2,COLORS[grid[r][c].type]);
+    grid[r][c].dead=true;
+  });
+  // gravity: drop cells down
+  setTimeout(function(){
+    for(var c=0;c<COLS;c++){
+      var col=[];
+      for(var r=ROWS-1;r>=0;r--)if(!grid[r][c].dead)col.unshift(grid[r][c]);
+      while(col.length<ROWS)col.unshift(randCell());
+      for(var r2=0;r2<ROWS;r2++)grid[r2][c]=col[r2];
+    }
+    updateUI();
+    // check for cascades
+    setTimeout(function(){processMatches();},250);
+  },300);
+  return true;
+}
+
+function swap(r1,c1,r2,c2){
+  var tmp=grid[r1][c1];grid[r1][c1]=grid[r2][c2];grid[r2][c2]=tmp;
+}
+
+function trySwap(r1,c1,r2,c2){
+  swap(r1,c1,r2,c2);
+  var matches=findMatches();
+  if(matches.length>0){
+    moves--;updateUI();
+    processMatches();
+    if(moves<=0){setTimeout(checkGameOver,600);}
+  } else {
+    // swap back
+    swap(r1,c1,r2,c2);
+    showNotif('No match!');
+  }
+  selected=null;
+}
+
+function shuffle(){
+  if(moves<=0)return;
+  moves--;
+  fillGrid();
+  while(findMatches().length>0)fillGrid();
+  updateUI();
+}
+
+function showNotif(txt){
+  var el=document.getElementById('notif');
+  el.textContent=txt;el.style.opacity='1';
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(function(){el.style.opacity='0';},900);
+}
+
+function checkGameOver(){
+  if(score>=target){
+    level++;target=Math.floor(target*1.8);maxMoves=25;moves=maxMoves;
+    showNotif('LEVEL '+level+'! ⭐');fillGrid();while(findMatches().length>0)fillGrid();
+    updateUI();
+  } else if(moves<=0){
+    gameState='over';
+    document.getElementById('msg').style.display='flex';
+    document.getElementById('msg').innerHTML=
+      '<h1 style="color:#ff4444">GAME OVER</h1>'+
+      '<p style="color:#2a0a4a">Score: '+score+'<br>Level: '+level+'</p>'+
+      '<button class="btn" onclick="startGame()">PLAY AGAIN</button>';
+  }
+}
+
+function updateUI(){
+  document.getElementById('scoreV').textContent=score;
+  document.getElementById('movesV').textContent=moves;
+  document.getElementById('levelV').textContent=level;
+  document.getElementById('targetV').textContent=target;
+}
+
+function spawnParts(x,y,col){
+  for(var i=0;i<12;i++){var a=Math.random()*Math.PI*2,s=2+Math.random()*5;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,col,life:20+Math.random()*15,r:2+Math.random()*3});}
+}
+
+cv.addEventListener('click',function(e){
+  if(gameState!=='play') return;
+  var rect=cv.getBoundingClientRect();
+  var mx=(e.clientX-rect.left)*(cv.width/rect.width)|0;
+  var my=(e.clientY-rect.top)*(cv.height/rect.height)|0;
+  var c=mx/T|0,r=my/T|0;
+  if(c<0||c>=COLS||r<0||r>=ROWS)return;
+  if(!selected){selected={r,c};return;}
+  // check adjacent
+  var dr=Math.abs(r-selected.r),dc=Math.abs(c-selected.c);
+  if(dr+dc===1){trySwap(selected.r,selected.c,r,c);}
+  else if(r===selected.r&&c===selected.c){selected=null;}
+  else{selected={r,c};}
+});
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0a050f';ctx.fillRect(0,0,W,H);
+
+  for(var r=0;r<ROWS;r++){
+    for(var c=0;c<COLS;c++){
+      var cell=grid[r][c];
+      if(cell.dead)continue;
+      var sel=selected&&selected.r===r&&selected.c===c;
+      var pulse=.8+Math.sin(frame*.08+r*.4+c*.3)*.2;
+      ctx.globalAlpha=cell.dead?0:1;
+      // bg
+      ctx.fillStyle=sel?COLORS[cell.type]+'44':'#120820';
+      ctx.fillRect(c*T+1,r*T+1,T-2,T-2);
+      // border
+      ctx.strokeStyle=sel?COLORS[cell.type]:COLORS[cell.type]+'55';
+      ctx.lineWidth=sel?2:1;ctx.strokeRect(c*T+2,r*T+2,T-4,T-4);
+      // glow
+      if(sel){ctx.shadowColor=COLORS[cell.type];ctx.shadowBlur=18;}
+      // emoji
+      ctx.font=(T*.56)+'px sans-serif';ctx.textAlign='center';
+      ctx.fillText(EMOJIS[cell.type],c*T+T/2,r*T+T*.68);
+      ctx.shadowBlur=0;ctx.globalAlpha=1;
+    }
+  }
+  ctx.textAlign='left';
+
+  // particles
+  for(var i=particles.length-1;i>=0;i--){
+    var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life--;
+    ctx.globalAlpha=p.life/35;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  }ctx.globalAlpha=1;
+  frame++;
+}
+
+function loop(){draw();requestAnimationFrame(loop);}
+</script>
+</body>
+</html>
