@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DEAD STATIC — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:"Courier New",monospace;color:#eee;overflow:hidden;}
+canvas{display:block;}
+#ui{display:flex;gap:16px;padding:8px 16px;font-size:12px;color:#888;align-items:center;flex-wrap:wrap;justify-content:center;}
+#ui b{color:#eee;} a{color:#44ff88;text-decoration:none;font-size:11px;}a:hover{color:#fff;}
+</style>
+</head>
+<body>
+<div id="ui">
+  <span>🔦 <b id="h-battery">100%</b></span>
+  <span>❤️ <b id="h-hp">100</b></span>
+  <span>🔑 <b id="h-keys">0/3</b></span>
+  <span>⏱️ NIGHT <b id="h-night">1</b></span>
+  <span style="color:#555;">WASD: Move · Mouse: Aim flashlight · E: Interact · Click: Stun</span>
+  <a href="index.html">← Back</a>
+</div>
+<canvas id="c" width="640" height="480"></canvas>
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=640,H=480;
+const MAPW=1600,MAPH=1200,TS=40;
+const COLS=MAPW/TS,ROWS=MAPH/TS;
+
+// Map tiles
+const T={WALL:1,FLOOR:0,DOOR:2,EXIT:3,KEY:4,MED:5};
+let map=[];
+let camX=0,camY=0;
+
+// Build map
+function buildMap(){
+  map=Array.from({length:ROWS},()=>Array(COLS).fill(T.WALL));
+  // Rooms
+  const rooms=[
+    {x:1,y:1,w:8,h:6},{x:11,y:1,w:10,h:7},{x:23,y:1,w:8,h:5},
+    {x:1,y:10,w:6,h:8},{x:9,y:9,w:12,h:6},{x:23,y:9,w:9,h:8},
+    {x:1,y:21,w:10,h:6},{x:13,y:20,w:8,h:7},{x:23,y:20,w:9,h:7},
+  ];
+  rooms.forEach(r=>{
+    for(let y=r.y;y<r.y+r.h;y++) for(let x=r.x;x<r.x+r.w;x++) map[y][x]=T.FLOOR;
+  });
+  // Corridors
+  [[5,6,5,10],[5,10,1,18],[15,7,15,15],[15,15,23,15],[9,15,9,21],[27,8,27,20]].forEach(([x1,y1,x2,y2])=>{
+    if(x1===x2) for(let y=Math.min(y1,y2);y<=Math.max(y1,y2);y++) map[y][x1]=T.FLOOR;
+    else for(let x=Math.min(x1,x2);x<=Math.max(x1,x2);x++) map[y1][x]=T.FLOOR;
+  });
+  // Items
+  map[2][3]=T.KEY; map[12][25]=T.KEY; map[22][5]=T.KEY;
+  map[5][15]=T.MED; map[18][20]=T.MED;
+  map[24][25]=T.EXIT;
+}
+
+let px=80,py=80;
+let hp=100,battery=100,keys_found=0,night=1;
+let state='menu',tick=0;
+let enemies=[],particles=[];
+let flashAngle=0,flashDist=120;
+let stunParticles=[];
+let mx=W/2,my=H/2;
+let noise=0;
+
+function spawnEnemies(){
+  enemies=[];
+  const n=3+night*2;
+  const spots=[[27*TS,5*TS],[5*TS,22*TS],[24*TS,22*TS],[15*TS,15*TS],[10*TS,10*TS]];
+  for(let i=0;i<Math.min(n,spots.length);i++){
+    enemies.push({x:spots[i][0],y:spots[i][1],
+      vx:0,vy:0,hp:3,state:'roam',
+      dir:Math.random()*Math.PI*2,dirTimer:60+Math.random()*60,
+      stun:0,alert:false,alertTimer:0,
+      speed:0.8+night*0.2,dead:false
+    });
+  }
+}
+
+function tileAt(wx,wy){
+  const tc=Math.floor(wx/TS),tr=Math.floor(wy/TS);
+  if(tc<0||tc>=COLS||tr<0||tr>=ROWS) return T.WALL;
+  return map[tr][tc];
+}
+
+const keys={};
+function updatePlayer(){
+  const spd=2.5;
+  let nx=px,ny=py;
+  if(keys['KeyW']||keys['ArrowUp']) ny-=spd;
+  if(keys['KeyS']||keys['ArrowDown']) ny+=spd;
+  if(keys['KeyA']||keys['ArrowLeft']) nx-=spd;
+  if(keys['KeyD']||keys['ArrowRight']) nx+=spd;
+  if(tileAt(nx,py)!==T.WALL&&tileAt(nx+14,py)!==T.WALL&&tileAt(nx,py+14)!==T.WALL&&tileAt(nx+14,py+14)!==T.WALL) px=nx;
+  if(tileAt(px,ny)!==T.WALL&&tileAt(px+14,ny)!==T.WALL&&tileAt(px,ny+14)!==T.WALL&&tileAt(px+14,ny+14)!==T.WALL) py=ny;
+
+  px=Math.max(0,Math.min(MAPW-16,px));py=Math.max(0,Math.min(MAPH-16,py));
+
+  // Battery drain
+  battery=Math.max(0,battery-0.015);
+
+  // Pick up items
+  const tc=Math.floor((px+8)/TS),tr=Math.floor((py+8)/TS);
+  if(map[tr]?.[tc]===T.KEY){map[tr][tc]=T.FLOOR;keys_found++;updHUD();
+    showMsg('🔑 KEY FOUND!','#ffd700');}
+  if(map[tr]?.[tc]===T.MED){map[tr][tc]=T.FLOOR;hp=Math.min(100,hp+30);updHUD();
+    showMsg('💊 +30 HP','#44ff88');}
+  if(map[tr]?.[tc]===T.EXIT&&keys_found>=3){
+    night++;keys_found=0;battery=Math.min(100,battery+40);
+    buildMap();spawnEnemies();updHUD();
+    showMsg(`🌙 NIGHT ${night}!`,'#4488ff');
+  }
+  updHUD();
+}
+
+function updateEnemies(){
+  const wx=px+8,wy=py+8;
+  enemies.forEach(e=>{
+    if(e.dead) return;
+    if(e.stun>0){e.stun--;return;}
+    const dx=wx-e.x,dy=wy-e.y,dist=Math.hypot(dx,dy);
+
+    // Check if in flashlight
+    const fa=Math.atan2(my+camY-(e.y),mx+camX-(e.x));
+    const playerAngle=Math.atan2(my+camY-wy,mx+camX-wx);
+    let angleDiff=Math.abs(fa-playerAngle);
+    if(angleDiff>Math.PI) angleDiff=Math.PI*2-angleDiff;
+    const inFlash=dist<flashDist*(battery/100)&&angleDiff<0.5;
+
+    if(inFlash||dist<60) e.alert=true;
+
+    if(e.alert){
+      e.alertTimer=120;
+      if(dist>10){
+        const spd=e.speed*(e.alert?1.5:1);
+        const ndx=dx/dist,ndy=dy/dist;
+        const nx=e.x+ndx*spd,ny=e.y+ndy*spd;
+        if(tileAt(nx,e.y)!==T.WALL) e.x=nx;
+        if(tileAt(e.x,ny)!==T.WALL) e.y=ny;
+      }
+      if(dist<20){hp-=0.3;if(hp<=0){hp=0;state='dead';}updHUD();}
+    } else {
+      e.alertTimer=Math.max(0,e.alertTimer-1);
+      if(e.alertTimer===0) e.alert=false;
+      // Roam
+      e.dirTimer--;
+      if(e.dirTimer<=0){e.dir=Math.random()*Math.PI*2;e.dirTimer=60+Math.random()*80;}
+      const nx=e.x+Math.cos(e.dir)*e.speed,ny=e.y+Math.sin(e.dir)*e.speed;
+      if(tileAt(nx,e.y)!==T.WALL) e.x=nx; else {e.dir+=Math.PI;e.dirTimer=20;}
+      if(tileAt(e.x,ny)!==T.WALL) e.y=ny;
+    }
+    e.x=Math.max(0,Math.min(MAPW-16,e.x));e.y=Math.max(0,Math.min(MAPH-16,e.y));
+  });
+}
+
+function stun(e){
+  e.stun=180;e.alert=false;
+  for(let i=0;i<15;i++) stunParticles.push({x:e.x-camX,y:e.y-camY,vx:(Math.random()-.5)*5,vy:-2-Math.random()*3,col:'#88ccff',life:30});
+}
+
+function showMsg(t,col){
+  const d=document.createElement('div');
+  d.style.cssText=`position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);color:${col};font-size:22px;font-family:"Courier New",monospace;font-weight:bold;text-shadow:0 0 10px ${col};pointer-events:none;z-index:99;`;
+  d.textContent=t;document.body.appendChild(d);
+  setTimeout(()=>d.remove(),2000);
+}
+
+function updHUD(){
+  document.getElementById('h-battery').textContent=Math.floor(battery)+'%';
+  document.getElementById('h-hp').textContent=Math.floor(hp);
+  document.getElementById('h-keys').textContent=keys_found+'/3';
+  document.getElementById('h-night').textContent=night;
+}
+
+// ── DRAW ──
+function drawMap(){
+  const startC=Math.floor(camX/TS),startR=Math.floor(camY/TS);
+  const endC=Math.min(COLS,startC+Math.ceil(W/TS)+2);
+  const endR=Math.min(ROWS,startR+Math.ceil(H/TS)+2);
+
+  for(let r=startR;r<endR;r++) for(let c=startC;c<endC;c++){
+    const t=map[r]?.[c];const sx=c*TS-camX,sy=r*TS-camY;
+    if(t===T.WALL){ctx.fillStyle='#0a0a0a';ctx.fillRect(sx,sy,TS,TS);
+      ctx.fillStyle='#111';ctx.fillRect(sx+1,sy+1,TS-2,TS-2);}
+    else if(t===T.FLOOR){ctx.fillStyle='#0d0d0d';ctx.fillRect(sx,sy,TS,TS);
+      if((r+c)%3===0){ctx.fillStyle='rgba(255,255,255,0.015)';ctx.fillRect(sx+2,sy+2,TS-4,TS-4);}}
+    else if(t===T.KEY){ctx.fillStyle='#0d0d0d';ctx.fillRect(sx,sy,TS,TS);
+      ctx.font='20px serif';ctx.textAlign='center';ctx.fillText('🔑',sx+TS/2,sy+TS/2+7);}
+    else if(t===T.MED){ctx.fillStyle='#0d0d0d';ctx.fillRect(sx,sy,TS,TS);
+      ctx.font='20px serif';ctx.textAlign='center';ctx.fillText('💊',sx+TS/2,sy+TS/2+7);}
+    else if(t===T.EXIT){ctx.fillStyle='#001100';ctx.fillRect(sx,sy,TS,TS);
+      ctx.font='20px serif';ctx.textAlign='center';
+      ctx.fillText(keys_found>=3?'🚪':'🔒',sx+TS/2,sy+TS/2+7);}
+  }
+}
+
+function drawFlashlight(){
+  // Dark overlay
+  ctx.fillStyle='rgba(0,0,0,0.94)';ctx.fillRect(0,0,W,H);
+
+  const lx=px+8-camX,ly=py+8-camY;
+  const angle=Math.atan2(my-ly,mx-lx);
+  const range=flashDist*(battery/100);
+  const spread=0.55;
+
+  const g=ctx.createRadialGradient(lx,ly,0,lx,ly,range);
+  g.addColorStop(0,'rgba(255,240,180,0.85)');
+  g.addColorStop(0.4,'rgba(255,220,120,0.4)');
+  g.addColorStop(1,'rgba(0,0,0,0)');
+
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  ctx.beginPath();ctx.moveTo(lx,ly);
+  ctx.arc(lx,ly,range,angle-spread,angle+spread);
+  ctx.closePath();ctx.fillStyle=g;ctx.fill();
+  // Ambient glow
+  const g2=ctx.createRadialGradient(lx,ly,0,lx,ly,30);
+  g2.addColorStop(0,'rgba(255,220,120,0.3)');g2.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath();ctx.arc(lx,ly,30,0,Math.PI*2);ctx.fillStyle=g2;ctx.fill();
+  ctx.restore();
+}
+
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+
+  // Camera
+  camX=Math.max(0,Math.min(MAPW-W,px+8-W/2));
+  camY=Math.max(0,Math.min(MAPH-H,py+8-H/2));
+
+  if(state==='menu'){drawMenu();return;}
+  if(state==='dead'){drawDead();return;}
+
+  drawMap();
+
+  // Enemies
+  enemies.forEach(e=>{
+    if(e.dead) return;
+    const sx=e.x-camX,sy=e.y-camY;
+    if(sx<-40||sx>W+40||sy<-40||sy>H+40) return;
+    ctx.fillStyle=e.stun>0?'#88ccff':e.alert?'#ff2200':'#550000';
+    ctx.shadowColor=e.alert?'#ff0000':'#220000';ctx.shadowBlur=e.alert?15:5;
+    ctx.beginPath();ctx.arc(sx+8,sy+8,12,0,Math.PI*2);ctx.fill();
+    ctx.font='16px serif';ctx.textAlign='center';
+    ctx.fillText(e.stun>0?'😵':e.alert?'👹':'👁️',sx+8,sy+14);
+    ctx.shadowBlur=0;
+  });
+
+  // Player
+  const ppx=px-camX,ppy=py-camY;
+  ctx.fillStyle='#334466';ctx.shadowColor='#4488ff';ctx.shadowBlur=8;
+  ctx.fillRect(ppx,ppy,16,20);ctx.shadowBlur=0;
+  ctx.fillStyle='#ffccaa';ctx.fillRect(ppx+2,ppy-8,12,10);
+
+  // Flashlight cone
+  drawFlashlight();
+
+  // Stun particles (drawn OVER flashlight)
+  stunParticles=stunParticles.filter(p=>{
+    ctx.globalAlpha=p.life/30;ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.life-=2;return p.life>0;
+  });ctx.globalAlpha=1;
+
+  // Battery bar
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(W-120,8,110,14);
+  const bcol=battery>50?'#ffee00':battery>25?'#ff8800':'#ff2200';
+  ctx.fillStyle=bcol;ctx.fillRect(W-118,10,106*(battery/100),10);
+  ctx.fillStyle='#fff';ctx.font='9px monospace';ctx.textAlign='left';ctx.fillText('🔦 BATTERY',W-116,19);
+
+  // HP bar
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(8,8,110,14);
+  ctx.fillStyle='#44ff44';ctx.fillRect(10,10,106*(hp/100),10);
+  ctx.fillStyle='#fff';ctx.font='9px monospace';ctx.fillText('❤️ HP',12,19);
+
+  // Static noise when hp low
+  if(hp<40){
+    noise=Math.min(1,(40-hp)/40);
+    for(let i=0;i<noise*200;i++){
+      ctx.fillStyle=`rgba(255,255,255,${Math.random()*noise*0.2})`;
+      ctx.fillRect(Math.random()*W,Math.random()*H,Math.random()*4,1);
+    }
+  }
+
+  // Exit hint
+  if(keys_found>=3){
+    ctx.fillStyle='rgba(0,255,0,.8)';ctx.font='bold 11px monospace';ctx.textAlign='center';
+    ctx.fillText('ALL KEYS FOUND — FIND THE EXIT 🚪',W/2,H-14);
+  }
+}
+
+function drawMenu(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  for(let i=0;i<200;i++){ctx.fillStyle=`rgba(255,255,255,${Math.random()*.4})`;ctx.fillRect(Math.random()*W,Math.random()*H,Math.random()*3,1);}
+  ctx.shadowColor='#44ff88';ctx.shadowBlur=30;
+  ctx.fillStyle='#44ff88';ctx.font='bold 52px monospace';ctx.textAlign='center';
+  ctx.fillText('DEAD',W/2,H/2-60);ctx.fillText('STATIC',W/2,H/2-4);
+  ctx.shadowBlur=0;ctx.fillStyle='#555';ctx.font='13px monospace';
+  ctx.fillText('Collect 3 keys each night. Stun monsters with flashlight click.',W/2,H/2+50);
+  ctx.fillStyle='#ffe600';ctx.font='bold 15px monospace';ctx.fillText('PRESS ENTER',W/2,H/2+100);
+}
+
+function drawDead(){
+  ctx.fillStyle='rgba(0,0,0,.9)';ctx.fillRect(0,0,W,H);
+  for(let i=0;i<300;i++){ctx.fillStyle=`rgba(255,0,0,${Math.random()*.15})`;ctx.fillRect(Math.random()*W,Math.random()*H,Math.random()*4,1);}
+  ctx.fillStyle='#f00';ctx.font='bold 52px monospace';ctx.textAlign='center';
+  ctx.fillText('YOU DIED',W/2,H/2-30);ctx.fillStyle='#888';ctx.font='14px monospace';
+  ctx.fillText(`Night ${night} · ${keys_found} keys found`,W/2,H/2+20);
+  ctx.fillStyle='#ffe600';ctx.font='bold 14px monospace';ctx.fillText('PRESS ENTER',W/2,H/2+70);
+}
+
+C.addEventListener('mousemove',e=>{const r=C.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;});
+C.addEventListener('click',()=>{
+  if(state!=='playing') return;
+  // Stun enemy in flashlight
+  const lx=px+8,ly=py+8;
+  const angle=Math.atan2(my+camY-ly,mx+camX-lx);
+  enemies.forEach(e=>{
+    if(e.dead||e.stun>0) return;
+    const ea=Math.atan2(e.y-ly,e.x-lx);
+    let diff=Math.abs(ea-angle);if(diff>Math.PI)diff=Math.PI*2-diff;
+    if(diff<0.5&&Math.hypot(e.x-lx,e.y-ly)<flashDist*(battery/100)){stun(e);battery=Math.max(0,battery-12);}
+  });
+});
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(['Space','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
+  if(e.code==='Enter'){
+    if(state==='menu'||state==='dead'){
+      hp=100;battery=100;keys_found=0;night=1;
+      buildMap();spawnEnemies();stunParticles=[];state='playing';updHUD();
+    }
+  }
+});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+
+function loop(){
+  tick++;
+  if(state==='playing'){updatePlayer();updateEnemies();}
+  draw();requestAnimationFrame(loop);
+}
+
+buildMap();loop();
+</script>
+</body>
+</html>
