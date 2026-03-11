@@ -263,8 +263,8 @@ function drawChar(x,y,faceDir,ch,invincible,onGround){
   ctx.fillRect(s/2+1,s-14+Math.sin(walk)*4,8,14);
   // Body
   ctx.fillStyle=ch.color;ctx.beginPath();ctx.roundRect(4,s*0.35,s-8,s*0.45,6);ctx.fill();
-  // Poop on Liam's shirt
-  if(ch.name==='Liam'){ctx.fillStyle='#654321';ctx.beginPath();ctx.arc(s/2,s*0.6,5,0,Math.PI*2);ctx.arc(s/2-3,s*0.53,3,0,Math.PI*2);ctx.arc(s/2+3,s*0.53,3,0,Math.PI*2);ctx.fill();}
+  // Liam shirt logo (star)
+  if(ch.name==='Liam'){ctx.fillStyle='#fff8';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText('★',s/2,s*0.63);}
   // Glasses for Sammy
   if(ch.name==='Sammy'){ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.beginPath();ctx.arc(s/2-8,s*0.22,5,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(s/2+8,s*0.22,5,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s/2-3,s*0.22);ctx.lineTo(s/2+3,s*0.22);ctx.stroke();}
   // Head
@@ -278,8 +278,8 @@ function drawChar(x,y,faceDir,ch,invincible,onGround){
   ctx.fillStyle='white';ctx.beginPath();ctx.arc(s/2-6,s*0.23,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(s/2+6,s*0.23,4,0,Math.PI*2);ctx.fill();
   ctx.fillStyle=ch.eyeColor;ctx.beginPath();ctx.arc(s/2-6,s*0.23,2.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(s/2+6,s*0.23,2.5,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='white';ctx.beginPath();ctx.arc(s/2-4.5,s*0.21,1,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(s/2+7.5,s*0.21,1,0,Math.PI*2);ctx.fill();
-  // Smile
-  ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.beginPath();ctx.arc(s/2,s*0.3,5,0,Math.PI);ctx.stroke();
+  // Tiny neutral mouth line (no bread shape)
+  ctx.strokeStyle='#333';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(s/2-3,s*0.31);ctx.lineTo(s/2+3,s*0.31);ctx.stroke();
   // Arms
   const armSwing=onGround&&Math.abs(player.vx)>0.3?Math.sin(t*0.015)*20:0;
   ctx.fillStyle=skin;
