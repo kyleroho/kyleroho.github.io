@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GRAVITY SHIFT — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:"Courier New",monospace;overflow:hidden;}
+canvas{display:block;}
+#ui{display:flex;gap:20px;padding:6px 16px;font-size:12px;color:#aaa;align-items:center;flex-wrap:wrap;justify-content:center;}
+#ui b{color:#fff;} a{color:#a0ff60;text-decoration:none;font-size:11px;}a:hover{color:#fff;}
+</style>
+</head>
+<body>
+<div id="ui">
+  <span>🌍 LEVEL <b id="h-level">1</b></span>
+  <span>💀 DEATHS <b id="h-deaths">0</b></span>
+  <span>⭐ STARS <b id="h-stars">0</b></span>
+  <span style="color:#555;">A/D or ←/→: Move · Space/W: Flip Gravity · R: Restart</span>
+  <a href="index.html">← Back</a>
+</div>
+<canvas id="c" width="640" height="420"></canvas>
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=640,H=420,TS=32;
+
+let level=0,deaths=0,totalStars=0,state='menu',tick=0;
+let particles=[],gravDir=1; // 1=down, -1=up
+let gravFlipCd=0;
+
+// Level definitions: tile map + player start + objects
+// Tiles: 0=air, 1=floor, 2=spike(down), 3=spike(up), 4=star, 5=exit, 6=antigrav(platform)
+const LEVELS=[
+  {
+    name:"FIRST FLIP",col:'#a0ff60',
+    map:[
+      "####################",
+      "#                  #",
+      "#  *               #",
+      "#  ####     ####   #",
+      "#               E  #",
+      "#   ^^^    ####    #",
+      "####################",
+    ],
+    start:[2,2]
+  },{
+    name:"UPSIDE DOWN",col:'#00fff5',
+    map:[
+      "####################",
+      "#         *        #",
+      "#  ####   ###      #",
+      "#     ^   ^    *   #",
+      "#  ###      ###    #",
+      "#        E         #",
+      "####################",
+    ],
+    start:[1,5]
+  },{
+    name:"ZIGZAG",col:'#ff6cfc',
+    map:[
+      "####################",
+      "#   *              #",
+      "# ###  ^^^  ###    #",
+      "#       *       *  #",
+      "# ###      ###     #",
+      "#         E   ###  #",
+      "####################",
+    ],
+    start:[1,1]
+  },{
+    name:"THE GAUNTLET",col:'#ff8800',
+    map:[
+      "####################",
+      "#*  ^  ^  ^  ^  * #",
+      "####  ####  ####   #",
+      "#  *    *     *    #",
+      "#  ## ^^## ^^##    #",
+      "#               E  #",
+      "####################",
+    ],
+    start:[1,5]
+  },{
+    name:"MAZE OF DOOM",col:'#ff3344',
+    map:[
+      "####################",
+      "# *  ##  ^^ ##  *  #",
+      "#    ##     ##     #",
+      "####    ##    #### #",
+      "#  ^^   ##   ^^^   #",
+      "#     *      *  E  #",
+      "####################",
+    ],
+    start:[1,1]
+  },{
+    name:"FINAL SHIFT",col:'#ffd700',
+    map:[
+      "####################",
+      "#* ^ * ^ * ^ * ^ *##",
+      "##  ##  ##  ##  ## #",
+      "#                  #",
+      "## ##  ##  ##  ## ##",
+      "#*                E#",
+      "####################",
+    ],
+    start:[1,5]
+  }
+];
+
+let tiles=[],objects=[],px,py,pvx=0,pvy=0,ponGround=false,pDead=false,pDeadTimer=0;
+
+function charToTile(c){
+  return{'#':1,' ':0,'^':2,'v':3,'*':4,'E':5,'~':6}[c]??0;
+}
+
+function loadLevel(idx){
+  const lv=LEVELS[idx];
+  tiles=[];objects=[];gravDir=1;gravFlipCd=0;
+  const rows=lv.map;
+  // Pad all rows to same length
+  const maxW=Math.max(...rows.map(r=>r.length));
+  tiles=rows.map(r=>{
+    const row=[];
+    for(let i=0;i<maxW;i++) row.push(charToTile(r[i]??'#'));
+    return row;
+  });
+  // Extract objects
+  rows.forEach((r,ri)=>{
+    for(let ci=0;ci<r.length;ci++){
+      const c=r[ci];
+      if(c==='*') objects.push({type:'star',x:ci*TS+TS/2,y:ri*TS+TS/2,col:lv.col,collected:false});
+      if(c==='E') objects.push({type:'exit',x:ci*TS,y:ri*TS});
+    }
+  });
+  const s=lv.start;px=s[0]*TS+8;py=s[1]*TS;pvx=0;pvy=0;ponGround=false;pDead=false;particles=[];
+  document.getElementById('h-level').textContent=idx+1;
+}
+
+function tileAt(tx,ty){return tiles[ty]?.[tx]??1;}
+function solidAt(tx,ty){const t=tileAt(tx,ty);return t===1||t===6;}
+function spikeAt(tx,ty){const t=tileAt(tx,ty);return t===2||t===3;}
+
+const keys={};
+function update(){
+  if(pDead){pDeadTimer--;if(pDeadTimer<=0){deaths++;loadLevel(level);document.getElementById('h-deaths').textContent=deaths;}return;}
+  gravFlipCd=Math.max(0,gravFlipCd-1);
+
+  const spd=3.2;
+  if(keys['KeyA']||keys['ArrowLeft']) pvx=-spd;
+  else if(keys['KeyD']||keys['ArrowRight']) pvx=spd;
+  else pvx*=0.8;
+
+  pvy+=0.55*gravDir;
+  pvy=Math.max(-12,Math.min(12,pvy));
+
+  // X move
+  px+=pvx;
+  const L=Math.floor(px/TS),R=Math.floor((px+14)/TS);
+  const midY=Math.floor((py+16)/TS);
+  if(pvx<0&&solidAt(L,midY)){px=L*TS+TS;pvx=0;}
+  if(pvx>0&&solidAt(R,midY)){px=R*TS-16;pvx=0;}
+
+  // Y move
+  py+=pvy;
+  ponGround=false;
+  const T2=Math.floor(py/TS),B=Math.floor((py+26)/TS);
+  const midX=Math.floor((px+8)/TS);
+  if(gravDir>0&&pvy>0&&solidAt(midX,B)){py=B*TS-28;pvy=0;ponGround=true;}
+  if(gravDir>0&&pvy<0&&solidAt(midX,T2)){py=T2*TS+TS;pvy=0;}
+  if(gravDir<0&&pvy<0&&solidAt(midX,T2)){py=T2*TS+TS;pvy=0;ponGround=true;}
+  if(gravDir<0&&pvy>0&&solidAt(midX,B)){py=B*TS-28;pvy=0;}
+
+  // Spike death
+  [T2,B].forEach(ty=>{[L,R].forEach(tx=>{if(spikeAt(tx,ty)){die();}});});
+  // OOB
+  if(px<0||px>tiles[0].length*TS||py<0||py>tiles.length*TS) die();
+
+  // Objects
+  objects.forEach(o=>{
+    if(o.type==='star'&&!o.collected&&Math.hypot(px+8-o.x,py+14-o.y)<22){
+      o.collected=true;totalStars++;document.getElementById('h-stars').textContent=totalStars;
+      for(let i=0;i<12;i++) particles.push({x:o.x,y:o.y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,col:o.col,life:40,sz:3});
+    }
+    if(o.type==='exit'&&Math.hypot(px+8-o.x-TS/2,py+14-o.y-TS/2)<24){
+      // Next level
+      for(let i=0;i<30;i++) particles.push({x:o.x+TS/2,y:o.y+TS/2,vx:(Math.random()-.5)*10,vy:(Math.random()-.5)*10,col:'#ffd700',life:50,sz:4});
+      level++;
+      if(level>=LEVELS.length){state='win';}
+      else setTimeout(()=>loadLevel(level),400);
+    }
+  });
+}
+
+function die(){pDead=true;pDeadTimer=40;for(let i=0;i<20;i++) particles.push({x:px+8,y:py+14,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,col:'#ff4488',life:35,sz:3});}
+
+function draw(){
+  const lv=LEVELS[Math.min(level,LEVELS.length-1)];
+  ctx.fillStyle='#05050f';ctx.fillRect(0,0,W,H);
+
+  // Stars BG
+  if(tick%4===0){ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillRect(Math.random()*W,Math.random()*H,1,1);}
+
+  if(state==='menu'){drawMenu();return;}
+  if(state==='win'){drawWin();return;}
+
+  // Tiles
+  tiles.forEach((row,ri)=>row.forEach((t,ci)=>{
+    const sx=ci*TS,sy=ri*TS;
+    if(t===1){
+      ctx.fillStyle='#1a1a2e';ctx.fillRect(sx,sy,TS,TS);
+      ctx.fillStyle=lv.col;ctx.fillRect(sx,sy,TS,3);
+      ctx.fillRect(sx,sy+TS-3,TS,3);
+      ctx.fillStyle='rgba(255,255,255,0.04)';ctx.fillRect(sx+2,sy+4,TS-4,TS-8);
+    }
+    if(t===2){ // spike up (kills from above)
+      ctx.fillStyle='#f44';
+      ctx.beginPath();ctx.moveTo(sx+4,sy+TS);ctx.lineTo(sx+TS/2,sy+4);ctx.lineTo(sx+TS-4,sy+TS);ctx.closePath();ctx.fill();
+    }
+    if(t===3){ // spike down
+      ctx.fillStyle='#f44';
+      ctx.beginPath();ctx.moveTo(sx+4,sy);ctx.lineTo(sx+TS/2,sy+TS-4);ctx.lineTo(sx+TS-4,sy);ctx.closePath();ctx.fill();
+    }
+  }));
+
+  // Objects
+  objects.forEach(o=>{
+    if(o.type==='star'&&!o.collected){
+      ctx.shadowColor=o.col;ctx.shadowBlur=12;
+      ctx.fillStyle=o.col;
+      const bob=Math.sin(tick*0.06)*4;
+      // Star shape
+      ctx.save();ctx.translate(o.x,o.y+bob);ctx.rotate(tick*0.02);
+      ctx.beginPath();
+      for(let i=0;i<5;i++){
+        const a=i/5*Math.PI*2-Math.PI/2;const ai=a+Math.PI/5;
+        if(i===0)ctx.moveTo(Math.cos(a)*10,Math.sin(a)*10);
+        else ctx.lineTo(Math.cos(a)*10,Math.sin(a)*10);
+        ctx.lineTo(Math.cos(ai)*5,Math.sin(ai)*5);
+      }ctx.closePath();ctx.fill();ctx.restore();ctx.shadowBlur=0;
+    }
+    if(o.type==='exit'){
+      ctx.shadowColor='#ffd700';ctx.shadowBlur=20;
+      ctx.fillStyle='rgba(255,215,0,0.15)';ctx.fillRect(o.x,o.y,TS,TS);
+      ctx.strokeStyle='#ffd700';ctx.lineWidth=2;ctx.strokeRect(o.x+2,o.y+2,TS-4,TS-4);
+      ctx.fillStyle='#ffd700';ctx.font='18px serif';ctx.textAlign='center';
+      ctx.fillText('🚪',o.x+TS/2,o.y+TS/2+7);ctx.shadowBlur=0;
+    }
+  });
+
+  // Gravity indicator
+  ctx.fillStyle='rgba(255,255,255,0.06)';
+  for(let x=0;x<W;x+=80){
+    ctx.font='14px monospace';ctx.textAlign='center';
+    ctx.fillText(gravDir>0?'▼':'▲',x+40,gravDir>0?H-8:16);
+  }
+
+  // Particles
+  particles=particles.filter(p=>{
+    ctx.globalAlpha=p.life/40;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();
+    p.x+=p.vx;p.y+=p.vy;p.life-=2;return p.life>0;
+  });ctx.globalAlpha=1;
+
+  // Player
+  if(!pDead){
+    ctx.shadowColor=lv.col;ctx.shadowBlur=10;
+    ctx.fillStyle=lv.col;
+    const flip=gravDir<0;
+    ctx.save();ctx.translate(px+8,py+14);if(flip)ctx.scale(1,-1);
+    // Body
+    ctx.fillStyle='#4060cc';ctx.fillRect(-8,-14,16,14);
+    // Head
+    ctx.fillStyle='#ffcc88';ctx.beginPath();ctx.arc(0,-20,8,0,Math.PI*2);ctx.fill();
+    // Eyes
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(3,-21,2,0,Math.PI*2);ctx.fill();
+    // Legs
+    ctx.fillStyle='#2244aa';
+    const legSwing=pvx!==0?Math.sin(tick*0.3)*8:0;
+    ctx.fillRect(-7,0,6,12+legSwing);ctx.fillRect(1,0,6,12-legSwing);
+    ctx.restore();ctx.shadowBlur=0;
+
+    // Gravity flip indicator
+    if(gravFlipCd>0){
+      ctx.fillStyle='rgba(255,255,255,0.3)';
+      ctx.fillRect(px-2,py-4,20*(1-gravFlipCd/25),3);
+    }
+  }
+
+  // HUD level name
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,W,20);
+  ctx.fillStyle=lv.col;ctx.font='bold 12px monospace';ctx.textAlign='center';
+  ctx.fillText(`LEVEL ${level+1}: ${lv.name}`,W/2,14);
+  ctx.textAlign='right';ctx.fillStyle='#666';ctx.font='10px monospace';
+  ctx.fillText(`SPACE = FLIP GRAVITY  ${gravFlipCd>0?'⏳':'✅'}`,W-8,14);
+}
+
+function drawMenu(){
+  ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(0,0,W,H);
+  ctx.shadowColor='#a0ff60';ctx.shadowBlur=30;
+  ctx.fillStyle='#a0ff60';ctx.font='bold 52px monospace';ctx.textAlign='center';
+  ctx.fillText('GRAVITY',W/2,H/2-60);ctx.fillText('SHIFT',W/2,H/2-8);
+  ctx.shadowBlur=0;ctx.fillStyle='#555';ctx.font='13px monospace';
+  ctx.fillText('6 mind-bending levels · flip gravity to survive',W/2,H/2+44);
+  ctx.fillText('Collect stars · reach the door',W/2,H/2+64);
+  ctx.fillStyle='#ffe600';ctx.font='bold 15px monospace';ctx.fillText('PRESS ENTER',W/2,H/2+110);
+}
+
+function drawWin(){
+  ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(0,0,W,H);
+  ctx.shadowColor='#ffd700';ctx.shadowBlur=40;
+  ctx.fillStyle='#ffd700';ctx.font='bold 48px monospace';ctx.textAlign='center';
+  ctx.fillText('YOU WIN! 🏆',W/2,H/2-40);ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';ctx.font='18px monospace';
+  ctx.fillText(`Stars: ${totalStars} · Deaths: ${deaths}`,W/2,H/2+10);
+  ctx.fillStyle='#ffe600';ctx.font='14px monospace';ctx.fillText('PRESS ENTER TO REPLAY',W/2,H/2+70);
+}
+
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(['Space','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
+  if(e.code==='Enter'){
+    if(state==='menu'||state==='win'){level=0;deaths=0;totalStars=0;loadLevel(0);state='playing';document.getElementById('h-deaths').textContent=0;document.getElementById('h-stars').textContent=0;}
+  }
+  if(e.code==='KeyR'&&state==='playing'){loadLevel(level);}
+  if((e.code==='Space'||e.code==='KeyW')&&state==='playing'&&gravFlipCd===0){
+    gravDir*=-1;gravFlipCd=25;pvy*=-0.3;
+    for(let i=0;i<10;i++) particles.push({x:px+8,y:py+14,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,col:'#a0ff60',life:25,sz:2});
+  }
+});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+
+function loop(){tick++;if(state==='playing')update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
