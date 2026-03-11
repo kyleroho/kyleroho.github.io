@@ -417,10 +417,26 @@ body {
     </div>
   </div>
   <div class="battle-log" id="battleLog"></div>
+  <!-- Main action buttons -->
   <div class="battle-btns" id="battleBtns">
-    <button class="btn" onclick="doAttack()">⚡ ATTACK</button>
+    <button class="btn" onclick="showAttackChoices()">⚡ ATTACK</button>
     <button class="btn" onclick="doDefend()">🛡️ DEFEND</button>
-    <button class="btn" id="abilBtn" onclick="doAbility()">✨ ABILITY</button>
+    <button class="btn" id="abilBtn" onclick="showAbilChoices()">✨ ABILITY</button>
+  </div>
+  <!-- Attack choices (3 options) -->
+  <div class="battle-btns" id="attackChoices" style="display:none;flex-wrap:wrap;gap:6px;">
+    <div style="width:100%;font-size:10px;color:var(--dim);letter-spacing:2px;text-align:center;margin-bottom:4px;">CHOOSE YOUR ATTACK:</div>
+    <button class="btn" style="font-size:11px;padding:8px 16px;" onclick="doAttackChoice('normal')">🗡️ NORMAL STRIKE<br><span style="font-size:9px;color:var(--dim);">Full damage</span></button>
+    <button class="btn" style="font-size:11px;padding:8px 16px;" onclick="doAttackChoice('heavy')">🔨 HEAVY STRIKE<br><span style="font-size:9px;color:var(--dim);">2x dmg, +1 cpu ATK this turn</span></button>
+    <button class="btn" style="font-size:11px;padding:8px 16px;" onclick="doAttackChoice('combo')">⚡ COMBO HIT<br><span style="font-size:9px;color:var(--dim);">1.5x dmg + pushback debuff</span></button>
+    <button class="btn" style="font-size:11px;padding:8px 16px;border-color:var(--dim);color:var(--dim);" onclick="cancelChoices()">✕ CANCEL</button>
+  </div>
+  <!-- Ability choices (2 options) -->
+  <div class="battle-btns" id="abilChoices" style="display:none;flex-wrap:wrap;gap:6px;">
+    <div style="width:100%;font-size:10px;color:var(--dim);letter-spacing:2px;text-align:center;margin-bottom:4px;">USE ABILITY:</div>
+    <button class="btn" style="font-size:11px;padding:8px 16px;" onclick="doAbilChoice('attack')">💥 POWER BLAST<br><span style="font-size:9px;color:var(--dim);">2x dmg + heal 20HP</span></button>
+    <button class="btn" style="font-size:11px;padding:8px 16px;" onclick="doAbilChoice('shield')">🛡️ FORTIFY<br><span style="font-size:9px;color:var(--dim);">+30 shield, no damage</span></button>
+    <button class="btn" style="font-size:11px;padding:8px 16px;border-color:var(--dim);color:var(--dim);" onclick="cancelChoices()">✕ CANCEL</button>
   </div>
   <div class="cooldown-note" id="cdNote" style="display:none"></div>
   <div class="btn-row" id="battleBackBtn" style="display:none;margin-top:12px;">
@@ -812,6 +828,8 @@ function startBattle(playerCard, cpuCardOverride=null) {
   updateBattle();
   addLog('⚔️ Battle begins!', 'sys');
   document.getElementById('battleBtns').style.display='flex';
+  document.getElementById('attackChoices').style.display='none';
+  document.getElementById('abilChoices').style.display='none';
   document.getElementById('battleBackBtn').style.display='none';
   document.getElementById('battleResult').style.display='none';
 }
@@ -851,9 +869,9 @@ function addLog(msg, type='') {
   log.scrollTop=log.scrollHeight;
 }
 
-function cpuTurn(halfDamage=false) {
+function cpuTurn(halfDamage=false, bonusDmg=0) {
   if(battleOver) return;
-  let dmg = halfDamage ? Math.floor(battleCpu.atk/2) : battleCpu.atk;
+  let dmg = halfDamage ? Math.floor(battleCpu.atk/2) : battleCpu.atk + bonusDmg;
   if(pShield>0){ const blk=Math.min(pShield,dmg); pShield-=blk; dmg-=blk; }
   pHp-=dmg;
   addLog(`Enemy dealt ${dmg} dmg!${halfDamage?' (blocked half)':''}`, 'enemy');
@@ -868,6 +886,8 @@ function checkBattleEnd() {
     document.getElementById('battleResult').textContent = won ? '🎉 VICTORY!' : '💀 DEFEAT';
     document.getElementById('battleResult').className = 'battle-result '+(won?'win':'lose');
     document.getElementById('battleBtns').style.display='none';
+    document.getElementById('attackChoices').style.display='none';
+    document.getElementById('abilChoices').style.display='none';
     document.getElementById('battleBackBtn').style.display='flex';
 
     if(won){
@@ -889,6 +909,67 @@ function checkBattleEnd() {
   }
 }
 
+function showAttackChoices() {
+  if(battleOver) return;
+  document.getElementById('battleBtns').style.display='none';
+  document.getElementById('attackChoices').style.display='flex';
+  document.getElementById('abilChoices').style.display='none';
+}
+function showAbilChoices() {
+  if(battleOver||abilityCooldown>0) return;
+  document.getElementById('battleBtns').style.display='none';
+  document.getElementById('attackChoices').style.display='none';
+  document.getElementById('abilChoices').style.display='flex';
+}
+function cancelChoices() {
+  document.getElementById('battleBtns').style.display='flex';
+  document.getElementById('attackChoices').style.display='none';
+  document.getElementById('abilChoices').style.display='none';
+}
+function doAttackChoice(type) {
+  if(battleOver) return;
+  cancelChoices();
+  let dmg = battlePlayer.atk;
+  let cpuBonus = 0;
+  if(type==='normal'){
+    // full damage, nothing extra
+  } else if(type==='heavy'){
+    dmg = Math.floor(dmg*2);
+    cpuBonus = Math.floor(battleCpu.atk*0.5); // cpu hits harder back
+    addLog(`💪 Heavy Strike! +${cpuBonus} CPU attack this turn`, 'sys');
+  } else if(type==='combo'){
+    dmg = Math.floor(dmg*1.5);
+    // pushback: reduce cpu atk by 1 for next hit
+    cShield = Math.max(0, cShield-5); // break a bit of shield too
+    addLog(`⚡ Combo Hit! Pushed enemy back!`, 'sys');
+  }
+  if(cShield>0){ const blk=Math.min(cShield,dmg); cShield-=blk; dmg-=blk; }
+  cHp-=dmg;
+  addLog(`You dealt ${dmg} dmg! (${type})`, 'player');
+  spawnParticles(window.innerWidth*.7, window.innerHeight*.4, '#ff6600', 8);
+  if(abilityCooldown>0) abilityCooldown--;
+  cpuTurn(false, cpuBonus);
+  updateBattle(); checkBattleEnd();
+}
+function doAbilChoice(type) {
+  if(battleOver||abilityCooldown>0) return;
+  cancelChoices();
+  abilityCooldown=3;
+  if(type==='attack'){
+    const heal=20; pHp=Math.min(pMaxHp,pHp+heal);
+    let dmg=battlePlayer.atk*2;
+    if(cShield>0){ const blk=Math.min(cShield,dmg); cShield-=blk; dmg-=blk; }
+    cHp-=dmg;
+    addLog(`✨ Power Blast! Healed ${heal}HP, dealt ${dmg} dmg!`, 'player');
+    spawnParticles(window.innerWidth/2, window.innerHeight*.4, '#cc66ff', 20);
+  } else if(type==='shield'){
+    pShield+=30;
+    addLog(`🛡️ Fortify! +30 shield!`, 'player');
+    spawnParticles(window.innerWidth*.3, window.innerHeight*.4, '#4488ff', 15);
+  }
+  cpuTurn();
+  updateBattle(); checkBattleEnd();
+}
 function doAttack() {
   if(battleOver) return;
   let dmg = battlePlayer.atk;
