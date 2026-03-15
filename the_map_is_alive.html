@@ -38,6 +38,7 @@ canvas{display:block;}
     <h1 style="color:#3388cc">THE MAP<br>IS ALIVE</h1>
     <p>Walls slide. Doors open and close.<br>Reach the exit — <span style="color:#ffcc00">before it escapes.</span><br><br>WASD or Arrow Keys</p>
     <button class="sbtn" onclick="startGame()">ENTER THE MAP</button>
+    <a href="index.html" style="display:inline-block;margin-top:10px;color:#2a5a7a;font-size:10px;letter-spacing:2px;text-decoration:none;font-family:monospace;">← BACK TO ARCADE</a>
   </div>
 </div>
 
@@ -63,6 +64,7 @@ cv.style.marginTop='42px';
 const K={};
 let gameState = 'menu';
 let level=1, found=0, moves=0;
+let bestLevel=parseInt(localStorage.getItem('maplevel_best')||0);
 let timeLeft=30, maxTime=30, gameFrame=0;
 let px=2, py=2;        // player grid coords
 let grid=null;         // ROWS×COLS array, 1=solid
@@ -270,7 +272,8 @@ function gameWin(){
     document.getElementById('msg').innerHTML=
       '<h1 style="color:#44ffcc;font-size:42px;font-weight:900;margin-bottom:10px;">MAP ESCAPED!</h1>'+
       '<p style="color:#2a5a7a">All 12 levels cleared!<br>Exits Found: '+found+'</p>'+
-      '<button class="sbtn" onclick="level=1;found=0;startGame()">PLAY AGAIN</button>';
+      '<button class="sbtn" onclick="level=1;found=0;startGame()">PLAY AGAIN</button>'+
+      '<br><a href="index.html" style="display:inline-block;margin-top:8px;color:#2a5a7a;font-size:10px;letter-spacing:2px;text-decoration:none;font-family:monospace;">← BACK</a>';
     return;
   }
   setTimeout(loadLevel,500);
@@ -278,11 +281,13 @@ function gameWin(){
 
 function gameDead(reason){
   gameState='over';
+  if(level>bestLevel){bestLevel=level;localStorage.setItem('maplevel_best',bestLevel);}
   document.getElementById('msg').style.display='flex';
   document.getElementById('msg').innerHTML=
     '<h1 style="color:#ff4422;font-size:46px;font-weight:900;margin-bottom:10px;">'+reason+'</h1>'+
-    '<p style="color:#2a5a7a">Level '+level+' | Moves: '+moves+'<br>Exits Found: '+found+'</p>'+
-    '<button class="sbtn" onclick="level=1;found=0;startGame()">TRY AGAIN</button>';
+    '<p style="color:#2a5a7a">Level '+level+(level>=bestLevel&&level>1?' 🏆 DEEPEST YET!':'<br>Best: '+bestLevel)+'<br>Moves: '+moves+'</p>'+
+    '<button class="sbtn" onclick="level=1;found=0;startGame()">TRY AGAIN</button>'+
+    '<br><a href="index.html" style="display:inline-block;margin-top:8px;color:#2a5a7a;font-size:10px;letter-spacing:2px;text-decoration:none;font-family:monospace;">← BACK</a>';
 }
 
 function burst(x,y,n,col){
