@@ -38,6 +38,7 @@ body{background:#0d0520;display:flex;flex-direction:column;align-items:center;ju
     <h1 style="color:#cc88ff">BUTTON<br>FACTORY</h1>
     <p>Buttons do <b style="color:#ffdd44">weird things.</b><br>Reach the <span style="color:#ffdd44">✦ EXIT ✦</span> to escape!<br>WASD / Arrows to move, Space to jump.</p>
     <button class="sbtn" onclick="startGame()">PRESS START</button>
+    <a href="index.html" style="display:inline-block;margin-top:8px;color:#6644aa;font-size:10px;letter-spacing:2px;text-decoration:none;font-family:monospace;">← BACK TO ARCADE</a>
   </div>
 </div>
 
@@ -289,7 +290,7 @@ function nextLevel() {
   if (level > 15) {
     state = 'win';
     document.getElementById('msg').style.display = 'flex';
-    document.getElementById('msg').innerHTML = `<h1 style="color:#ffdd44;font-family:'Fredoka One',cursive;">YOU ESCAPED!</h1><p style="color:#bb88ff">All 15 levels cleared! 🎉</p><button class="sbtn" onclick="level=1;startGame()">PLAY AGAIN</button>`;
+    document.getElementById('msg').innerHTML = `<h1 style="color:#ffdd44;font-family:'Fredoka One',cursive;">YOU ESCAPED!</h1><p style="color:#bb88ff">All 15 levels cleared! 🎉</p><button class="sbtn" onclick="level=1;startGame()">PLAY AGAIN</button><br><a href="index.html" style="display:inline-block;margin-top:8px;color:#6644aa;font-size:10px;letter-spacing:2px;text-decoration:none;font-family:monospace;">← BACK TO ARCADE</a>`;
     return;
   }
   initLevel(); notif('LEVEL ' + level + '! 🎉');
