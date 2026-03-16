@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RUN KID RUN — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#020208;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;overflow:hidden;user-select:none;}
+canvas{display:block;border:2px solid #111122;}
+#ui{width:600px;display:flex;gap:14px;padding:5px 0;font-size:10px;color:#555;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+#ui b{color:#aaa;} a{color:#44ffaa;text-decoration:none;font-size:9px;}a:hover{color:#fff;}
+/* SHOP */
+#shopOverlay{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:20px;}
+#shopOverlay h2{font-size:18px;color:#44aaff;letter-spacing:4px;margin-bottom:4px;}
+#shopOverlay .sub{font-size:8px;color:#223;letter-spacing:3px;margin-bottom:10px;}
+#shopOverlay .bank{font-size:14px;color:#ffd700;margin-bottom:14px;}
+#shopItems{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:560px;}
+.shop-item{background:#030310;border:2px solid #111133;padding:12px 8px;width:95px;text-align:center;cursor:pointer;transition:all .12s;}
+.shop-item:hover:not(.owned){border-color:#44aaff;background:#050520;}
+.shop-item.owned{border-color:#44ffaa;cursor:default;}
+.shop-item .si{font-size:20px;margin-bottom:4px;}
+.shop-item .sn{font-size:8px;color:#44aaff;letter-spacing:1px;margin-bottom:2px;}
+.shop-item .sd{font-size:6px;color:#334;line-height:1.4;margin-bottom:5px;}
+.shop-item .sc{font-size:9px;color:#ffd700;}
+#shopOverlay .play-btn{margin-top:12px;background:transparent;border:2px solid #44aaff;color:#44aaff;font-family:'Courier New',monospace;font-size:12px;letter-spacing:3px;padding:10px 36px;cursor:pointer;transition:all .15s;}
+#shopOverlay .play-btn:hover{background:#44aaff22;}
+</style>
+</head>
+<body>
+<div id="ui">
+  <span>🏃 <b id="h-dist">0</b>m</span>
+  <span>💰 Bank: <b id="h-coins">0</b></span>
+  <span>🏆 Best: <b id="h-best">0</b>m</span>
+  <span>⚡ <b id="h-power">—</b></span>
+  <a href="index.html">← Back</a>
+</div>
+<canvas id="c" width="600" height="380"></canvas>
+
+<div id="shopOverlay">
+  <h2>🏪 UPGRADE SHOP</h2>
+  <div class="sub">SPEND YOUR COINS · UPGRADES PERSIST BETWEEN RUNS</div>
+  <div class="bank">💰 <span id="shopBank">0</span> coins</div>
+  <div id="shopItems"></div>
+  <button class="play-btn" onclick="closeShopAndRun()">▶ RUN!</button>
+</div>
+
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=600,H=380,GY=310;
+const keys={};
+
+let hiDist=parseInt(localStorage.getItem('runkid_hi')||0);
+let totalCoins=parseInt(localStorage.getItem('runkid_total')||0);
+
+const SHOP=[
+  {id:'dj',    name:'Double Jump', cost:50,  icon:'2️⃣', desc:'Jump again mid-air'},
+  {id:'magnet',name:'Coin Magnet', cost:80,  icon:'🧲', desc:'Attract nearby coins'},
+  {id:'shield',name:'Shield',      cost:100, icon:'🛡', desc:'Start with 1 extra HP'},
+  {id:'slow',  name:'Slow-Mo',     cost:120, icon:'🐌', desc:'Collect Slow-Mo pickups'},
+  {id:'revive',name:'Revive',      cost:200, icon:'💚', desc:'Revive once per run'},
+  {id:'xtra',  name:'Speed Nerf',  cost:150, icon:'🧊', desc:'World speeds up slower'},
+];
+SHOP.forEach(u=>u.bought=localStorage.getItem('runkid_'+u.id)==='1');
+
+const POWERUP_TYPES=[
+  {id:'star',   icon:'⭐',col:'#ffd700',label:'STAR ×2',   dur:300},
+  {id:'magnet2',icon:'🧲',col:'#cc44cc',label:'MAGNET',     dur:400},
+  {id:'slow',   icon:'🐌',col:'#44ccff',label:'SLOW MO',    dur:250},
+  {id:'shield2',icon:'🛡',col:'#4488ff',label:'SHIELD +1',  dur:1},
+  {id:'shrink', icon:'🔵',col:'#44ff88',label:'SMALL',      dur:200},
+];
+
+let state='menu',tick=0;
+let P,obstacles=[],coinObjs=[],powerups=[],particles=[],bgObjs=[];
+let dist=0,runCoins=0,speed=0,spawnTimer=0;
+let activePowerup=null,powerupTimer=0,reviveUsed=false;
+let spd=3.5;
+let chunkX=0; // for chunked level generation
+let combo=0,comboTimer=0;
+
+// ── PARALLAX BG LAYERS ──
+const BG_LAYERS=[
+  {speed:.05,items:[]}, // far stars
+  {speed:.15,items:[]}, // distant mountains
+  {speed:.3, items:[]}, // mid buildings
+  {speed:.55,items:[]}, // near buildings
+];
+
+function initBg(){
+  BG_LAYERS.forEach((l,i)=>{l.items=[];});
+  // Far stars
+  for(let i=0;i<60;i++) BG_LAYERS[0].items.push({x:Math.random()*W*3,y:Math.random()*H*.6,r:Math.random()*1.5+.5});
+  // Mountains
+  for(let i=0;i<8;i++) BG_LAYERS[1].items.push({x:i*220+Math.random()*80,y:H-80-Math.random()*80,w:160+Math.random()*80,h:80+Math.random()*80});
+  // Mid buildings
+  for(let i=0;i<14;i++) BG_LAYERS[2].items.push({x:i*180+Math.random()*60,y:H-50-Math.random()*100,w:50+Math.random()*60,h:80+Math.random()*100});
+  // Near buildings
+  for(let i=0;i<10;i++) BG_LAYERS[3].items.push({x:i*140+Math.random()*40,y:H-20-Math.random()*60,w:40+Math.random()*40,h:40+Math.random()*60});
+}
+
+function renderShop(){
+  document.getElementById('shopBank').textContent=totalCoins;
+  document.getElementById('h-coins').textContent=totalCoins;
+  const el=document.getElementById('shopItems');el.innerHTML='';
+  SHOP.forEach(u=>{
+    const d=document.createElement('div');
+    d.className='shop-item'+(u.bought?' owned':'');
+    d.innerHTML=`<div class="si">${u.icon}</div>
+      <div class="sn">${u.name}</div>
+      <div class="sd">${u.desc}</div>
+      <div class="sc">${u.bought?'✅ OWNED':'💰 '+u.cost+(totalCoins<u.cost?' (need '+(u.cost-totalCoins)+')':'')}</div>`;
+    if(!u.bought) d.onclick=()=>{
+      if(totalCoins<u.cost){d.style.borderColor='#ff4444';setTimeout(()=>d.style.borderColor='',400);return;}
+      totalCoins-=u.cost;u.bought=true;
+      localStorage.setItem('runkid_'+u.id,'1');
+      localStorage.setItem('runkid_total',totalCoins);
+      renderShop();
+    };
+    el.appendChild(d);
+  });
+}
+
+function openShop(){renderShop();document.getElementById('shopOverlay').style.display='flex';}
+function closeShopAndRun(){document.getElementById('shopOverlay').style.display='none';startGame();}
+
+function startGame(){
+  initBg();
+  const hasDj=SHOP.find(s=>s.id==='dj').bought;
+  const hasShield=SHOP.find(s=>s.id==='shield').bought;
+  const hasRevive=SHOP.find(s=>s.id==='revive').bought;
+  const hasXtra=SHOP.find(s=>s.id==='xtra').bought;
+  P={x:90,y:GY,vy:0,onGround:true,animF:0,
+    hp:1+(hasShield?1:0),maxHp:1+(hasShield?1:0),
+    dj:hasDj,djUsed:false,invTimer:0,
+    small:false,smallTimer:0};
+  obstacles=[];coinObjs=[];powerups=[];particles=[];
+  dist=0;runCoins=0;tick=0;spd=3.5;speed=3.5;spawnTimer=60;
+  activePowerup=null;powerupTimer=0;
+  reviveUsed=!hasRevive;
+  combo=0;comboTimer=0;
+  chunkX=W;
+  state='playing';
+  document.getElementById('h-best').textContent=hiDist;
+}
+
+function jump(){
+  if(!P||state!=='playing')return;
+  if(P.onGround){
+    P.vy=-15;P.onGround=false;P.djUsed=false;
+    spawnJumpDust();
+  } else if(P.dj&&!P.djUsed){
+    P.vy=-13;P.djUsed=true;
+    for(let i=0;i<12;i++) particles.push({x:P.x+10,y:P.y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*4,col:'#44aaff',life:20,sz:3});
+  }
+}
+
+function spawnJumpDust(){
+  for(let i=0;i<8;i++) particles.push({x:P.x+10,y:P.y,vx:(Math.random()-.5)*4,vy:.5+Math.random()*2,col:'#aaaacc',life:16,sz:2});
+}
+
+// ── UPDATE ──
+function update(){
+  if(state!=='playing')return;
+  tick++;
+  const hasSlow=activePowerup==='slow';
+  const hasXtraUpg=SHOP.find(s=>s.id==='xtra').bought;
+  spd=hasSlow?speed*.4:speed;
+
+  dist+=spd*.5;
+  const speedMult=hasXtraUpg?.0005:.0008;
+  speed=3.5+dist*speedMult;
+  if(speed>14)speed=14;
+
+  if(powerupTimer>0){powerupTimer--;if(powerupTimer<=0){activePowerup=null;P.small=false;}}
+  if(comboTimer>0)comboTimer--;else combo=0;
+  if(P.invTimer>0)P.invTimer--;
+  if(P.small&&P.smallTimer>0){P.smallTimer--;if(P.smallTimer<=0){P.small=false;}}
+
+  // Physics
+  const grav=P.small?.5:.75;
+  P.vy+=grav;if(P.vy>22)P.vy=22;
+  P.y+=P.vy;P.onGround=false;
+  if(P.y>=GY){P.y=GY;P.vy=0;P.onGround=true;P.djUsed=false;}
+  if(P.onGround&&Math.abs(P.vx||0)>.5)P.animF=(P.animF+1)%8;
+
+  // Scroll BG layers
+  BG_LAYERS.forEach(l=>{
+    l.items.forEach(item=>{
+      item.x-=spd*l.speed;
+      if(item.x+( item.w||20)<-50) item.x+=W*3;
+    });
+  });
+
+  // Spawn obstacles/coins/powerups
+  spawnTimer--;
+  if(spawnTimer<=0){
+    spawnChunk();
+    spawnTimer=Math.max(22,68-dist*.012)+Math.random()*25;
+  }
+
+  // Move everything
+  const magRange=(SHOP.find(s=>s.id==='magnet').bought||activePowerup==='magnet2')?110:0;
+  obstacles.forEach(o=>o.x-=spd);
+  coinObjs.forEach(co=>{
+    co.x-=spd;co.bob+=.09;
+    if(!co.collected&&magRange>0&&Math.hypot(P.x+10-co.x,P.y-14-co.y)<magRange){
+      co.x+=(P.x-co.x)*.18;co.y+=(P.y-14-co.y)*.18;
+    }
+    if(!co.collected&&Math.hypot(P.x+10-co.x,P.y-14-co.y)<16){
+      co.collected=true;runCoins++;
+      combo++;comboTimer=90;
+      particles.push({x:co.x,y:co.y,vx:0,vy:-3,col:'#ffd700',life:20,sz:4});
+    }
+  });
+  powerups.forEach(pu=>{
+    pu.x-=spd;pu.bob=(pu.bob||0)+.08;
+    if(Math.hypot(P.x+10-pu.x,P.y-16-pu.y)<20){
+      activePowerup=pu.id;powerupTimer=pu.dur;
+      if(pu.id==='shield2'){P.hp=Math.min(P.maxHp+1,4);}
+      if(pu.id==='shrink'){P.small=true;P.smallTimer=pu.dur;}
+      for(let i=0;i<16;i++) particles.push({x:pu.x,y:pu.y,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8,col:pu.col,life:25,sz:5});
+      pu.x=-999;
+      document.getElementById('h-power').textContent=pu.label;
+    }
+  });
+
+  // Obstacle collision
+  const ph=P.small?16:28, pw=P.small?14:20;
+  obstacles.forEach(o=>{
+    const ot=o.type==='spike'?o.y-o.h:o.y-o.h;
+    const ob=o.y;
+    const ol=o.x, or2=o.x+o.w;
+    if(P.invTimer===0&&P.x+pw>ol&&P.x<or2&&P.y>ot&&P.y<=ob+4){
+      if(activePowerup==='star'){
+        // star power destroys obstacle
+        for(let i=0;i<14;i++) particles.push({x:o.x+o.w/2,y:ot,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8,col:'#ffd700',life:22,sz:4});
+        o.x=-999;return;
+      }
+      P.hp--;P.invTimer=90;
+      for(let i=0;i<14;i++) particles.push({x:P.x+10,y:P.y-14,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,col:'#ff4444',life:20,sz:4});
+      if(P.hp<=0){
+        if(!reviveUsed){reviveUsed=true;P.hp=1;P.invTimer=130;P.vy=-10;
+          for(let i=0;i<20;i++) particles.push({x:P.x+10,y:P.y,vx:(Math.random()-.5)*9,vy:(Math.random()-.5)*9,col:'#44ffaa',life:30,sz:5});
+        } else die();
+      }
+    }
+  });
+
+  obstacles=obstacles.filter(o=>o.x>-100);
+  coinObjs=coinObjs.filter(co=>co.x>-30);
+  powerups=powerups.filter(pu=>pu.x>-40);
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.life--;return p.life>0;});
+
+  if(tick%15===0){
+    document.getElementById('h-dist').textContent=Math.floor(dist);
+    document.getElementById('h-power').textContent=activePowerup?
+      (POWERUP_TYPES.find(p=>p.id===activePowerup)?.icon||'')+' '+(Math.ceil(powerupTimer/60))+'s':'—';
+  }
+}
+
+// ── CHUNK SPAWNER ── varied obstacle patterns
+function spawnChunk(){
+  const d=dist, r=Math.random();
+  if(d<300){
+    // Early: simple blocks and coins
+    if(r<.5) spawnBlock();
+    else spawnCoins(GY-20,3);
+  } else if(d<800){
+    if(r<.3) spawnBlock();
+    else if(r<.5) spawnSpike();
+    else if(r<.7) spawnCoins(GY-20,4);
+    else spawnPowerup();
+  } else if(d<1600){
+    if(r<.2) spawnBlock();
+    else if(r<.35) spawnSpike();
+    else if(r<.5) spawnHoverBlock();
+    else if(r<.65) spawnPattern();
+    else if(r<.8) spawnCoins(GY-20,5);
+    else spawnPowerup();
+  } else {
+    // Late: harder patterns
+    if(r<.15) spawnBlock();
+    else if(r<.28) spawnSpike();
+    else if(r<.42) spawnHoverBlock();
+    else if(r<.58) spawnPattern();
+    else if(r<.7) spawnGapCoins();
+    else if(r<.85) spawnCoins(GY-80,6);
+    else spawnPowerup();
+  }
+}
+
+function spawnBlock(){
+  const h=28+Math.random()*24;
+  obstacles.push({x:W+30,y:GY,w:22+Math.random()*18,h,type:'block'});
+}
+function spawnSpike(){
+  obstacles.push({x:W+30,y:GY,w:18,h:28,type:'spike'});
+  if(Math.random()<.4) obstacles.push({x:W+60,y:GY,w:18,h:28,type:'spike'});
+}
+function spawnHoverBlock(){
+  const yOff=60+Math.random()*60;
+  obstacles.push({x:W+30,y:GY-yOff+28,w:24+Math.random()*12,h:28,type:'hover'});
+}
+function spawnPattern(){
+  const pat=Math.floor(Math.random()*4);
+  if(pat===0){// block + coin above
+    const h=32; obstacles.push({x:W+30,y:GY,w:22,h,type:'block'});
+    spawnCoins(GY-60,3,W+24);
+  } else if(pat===1){// two spikes gap
+    obstacles.push({x:W+20,y:GY,w:18,h:26,type:'spike'});
+    obstacles.push({x:W+70,y:GY,w:18,h:26,type:'spike'});
+    spawnCoins(GY-50,2,W+44);
+  } else if(pat===2){// hover + spike under
+    obstacles.push({x:W+30,y:GY,w:18,h:22,type:'spike'});
+    obstacles.push({x:W+20,y:GY-70,w:28,h:28,type:'hover'});
+  } else {// coin arc
+    for(let i=0;i<6;i++){
+      const angle=(i/5)*Math.PI;
+      coinObjs.push({x:W+20+i*22,y:GY-40-Math.sin(angle)*60,r:7,collected:false,bob:i*.5});
+    }
+  }
+}
+function spawnGapCoins(){
+  for(let i=0;i<4;i++) coinObjs.push({x:W+20+i*28,y:GY-100-Math.random()*40,r:7,collected:false,bob:i*.6});
+}
+function spawnCoins(y,n,startX){
+  const sx=startX||W+20;
+  for(let i=0;i<n;i++) coinObjs.push({x:sx+i*22,y:y-Math.random()*30,r:7,collected:false,bob:i*.5});
+}
+function spawnPowerup(){
+  const pt=POWERUP_TYPES[Math.floor(Math.random()*POWERUP_TYPES.length)];
+  powerups.push({x:W+30,y:GY-55-Math.random()*40,r:14,...pt,bob:0});
+}
+
+function die(){
+  state='gameover';
+  const m=Math.floor(dist);
+  if(m>hiDist){hiDist=m;localStorage.setItem('runkid_hi',hiDist);}
+  totalCoins+=runCoins;
+  localStorage.setItem('runkid_total',totalCoins);
+  document.getElementById('h-coins').textContent=totalCoins;
+}
+
+// ── DRAW ──
+function draw(){
+  // Sky gradient — changes with distance
+  const skyT=Math.min(dist/3000,1);
+  const sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,`hsl(${240-skyT*40},${40+skyT*20}%,${6+skyT*4}%)`);
+  sky.addColorStop(1,`hsl(${240-skyT*30},30%,${10+skyT*6}%)`);
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+  // Stars (far layer)
+  ctx.fillStyle='rgba(255,255,255,.8)';
+  BG_LAYERS[0].items.forEach(s=>{
+    const x=((s.x%W)+W)%W;
+    ctx.beginPath();ctx.arc(x,s.y,s.r,0,Math.PI*2);ctx.fill();
+  });
+
+  // Mountains
+  ctx.fillStyle=`hsl(240,20%,${8+Math.min(dist/3000,1)*4}%)`;
+  BG_LAYERS[1].items.forEach(m=>{
+    const x=((m.x%(W*3+500))+(W*3+500))%(W*3+500)-200;
+    ctx.beginPath();ctx.moveTo(x,H-20);ctx.lineTo(x+m.w/2,m.y);ctx.lineTo(x+m.w,H-20);ctx.closePath();ctx.fill();
+  });
+
+  // Mid city buildings
+  BG_LAYERS[2].items.forEach((b,i)=>{
+    const x=((b.x%(W*3+200))+(W*3+200))%(W*3+200)-100;
+    const lum=7+i%3*2;
+    ctx.fillStyle=`hsl(240,18%,${lum}%)`;
+    ctx.fillRect(x,b.y,b.w,b.h);
+    // windows
+    for(let wy=b.y+6;wy<H-24;wy+=10)for(let wx=x+4;wx<x+b.w-4;wx+=9){
+      if(Math.sin(wx*7.3+wy*3.1+tick*.002)>.55){
+        ctx.fillStyle='rgba(255,220,100,.15)';ctx.fillRect(wx,wy,5,6);
+      }
+    }
+  });
+
+  // Near buildings (faster)
+  BG_LAYERS[3].items.forEach((b,i)=>{
+    const x=((b.x%(W*2+200))+(W*2+200))%(W*2+200)-80;
+    ctx.fillStyle=`hsl(240,15%,${5+i%2*2}%)`;
+    ctx.fillRect(x,b.y,b.w,b.h);
+  });
+
+  // Ground
+  const gGrad=ctx.createLinearGradient(0,GY,0,H);
+  gGrad.addColorStop(0,'#1a1a30');gGrad.addColorStop(.3,'#0f0f20');gGrad.addColorStop(1,'#08080f');
+  ctx.fillStyle=gGrad;ctx.fillRect(0,GY,W,H-GY);
+  // Ground line
+  ctx.fillStyle='#2a2a4a';ctx.fillRect(0,GY,W,3);
+  // Moving ground lines
+  for(let x=((-dist*spd*.3*2)%50+50)%50;x<W;x+=50){
+    ctx.fillStyle='rgba(255,255,255,.04)';ctx.fillRect(x,GY+4,25,3);
+  }
+
+  // Coins
+  coinObjs.forEach(co=>{
+    if(co.collected||co.x<-15||co.x>W+15)return;
+    const bob=Math.sin(co.bob)*4;
+    ctx.shadowColor='#ffd700';ctx.shadowBlur=8;
+    ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(co.x,co.y+bob,co.r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(co.x-2,co.y+bob-2,2.5,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    // Combo label
+    if(combo>1){
+      ctx.fillStyle='#ffd700';ctx.font='bold 9px monospace';ctx.textAlign='center';
+      ctx.fillText('x'+combo,co.x,co.y+bob-14);
+    }
+  });
+
+  // Powerups
+  powerups.forEach(pu=>{
+    if(pu.x<-30||pu.x>W+30)return;
+    const bob=Math.sin(pu.bob)*5;
+    ctx.shadowColor=pu.col;ctx.shadowBlur=16;
+    ctx.fillStyle=pu.col+'55';ctx.beginPath();ctx.arc(pu.x,pu.y+bob,pu.r,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=pu.col;ctx.lineWidth=2;ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.font='13px serif';ctx.textAlign='center';ctx.fillText(pu.icon,pu.x,pu.y+bob+5);
+  });
+
+  // Obstacles
+  obstacles.forEach(o=>{
+    if(o.x>W+60||o.x<-60)return;
+    if(o.type==='spike'){
+      const count=Math.max(1,Math.floor(o.w/18));
+      for(let i=0;i<count;i++){
+        ctx.fillStyle='#cc2200';
+        ctx.beginPath();ctx.moveTo(o.x+i*18,o.y);ctx.lineTo(o.x+i*18+9,o.y-o.h);ctx.lineTo(o.x+i*18+18,o.y);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#ff4400';ctx.fillRect(o.x+i*18+8,o.y-o.h,2,o.h);
+      }
+    } else if(o.type==='hover'){
+      // Glowing hover cube
+      ctx.shadowColor='#ff4400';ctx.shadowBlur=12;
+      ctx.fillStyle='#441100';ctx.fillRect(o.x,o.y-o.h,o.w,o.h);
+      ctx.fillStyle='#883300';ctx.fillRect(o.x,o.y-o.h,o.w,4);
+      ctx.fillStyle='#330000';ctx.fillRect(o.x,o.y-4,o.w,4);
+      ctx.shadowBlur=0;
+      // Flame particles underneath
+      if(tick%4===0) particles.push({x:o.x+Math.random()*o.w,y:o.y,vx:(Math.random()-.5)*1.5,vy:-1-Math.random()*2,col:'#ff8800',life:14,sz:2+Math.random()*2});
+    } else {
+      // Block with detail
+      ctx.fillStyle='#222244';ctx.fillRect(o.x,o.y-o.h,o.w,o.h);
+      ctx.fillStyle='#333366';ctx.fillRect(o.x,o.y-o.h,o.w,5);
+      ctx.fillStyle='#111133';ctx.fillRect(o.x,o.y-5,o.w,5);
+      ctx.fillStyle='#2a2a55';ctx.fillRect(o.x+3,o.y-o.h+7,5,5);ctx.fillRect(o.x+o.w-8,o.y-o.h+7,5,5);
+      ctx.strokeStyle='#444466';ctx.lineWidth=1;ctx.strokeRect(o.x,o.y-o.h,o.w,o.h);
+    }
+  });
+
+  // Player
+  if(state==='playing'||state==='gameover'){
+    const blink=P.invTimer>0&&Math.floor(tick/4)%2===0;
+    if(!blink&&P){
+      const py=P.y;
+      const sc=P.small?.65:1;
+      const starPow=activePowerup==='star';
+      ctx.save();ctx.translate(P.x+10,py);ctx.scale(sc,sc);
+      if(starPow){ctx.shadowColor='#ffd700';ctx.shadowBlur=24;}
+
+      // Shadow on ground
+      if(P.onGround){
+        ctx.globalAlpha=.25;ctx.fillStyle='#000';
+        ctx.beginPath();ctx.ellipse(0,2,12,4,0,0,Math.PI*2);ctx.fill();
+        ctx.globalAlpha=1;
+      }
+
+      // Cape/trail when star power
+      if(starPow){
+        ctx.fillStyle='rgba(255,215,0,.3)';
+        ctx.beginPath();ctx.moveTo(-8,0);ctx.lineTo(-18,20);ctx.lineTo(0,14);ctx.lineTo(18,20);ctx.lineTo(8,0);ctx.closePath();ctx.fill();
+      }
+
+      // Body
+      ctx.fillStyle=starPow?'#ffd700':'#2255cc';
+      ctx.fillRect(-10,-28,20,22);
+      // Chest stripe
+      ctx.fillStyle=starPow?'#ffaa00':'#3366ee';
+      ctx.fillRect(-6,-26,12,8);
+      ctx.fillStyle='#ffaa00';ctx.font='bold 7px serif';ctx.textAlign='center';
+      ctx.fillText('★',0,-20);
+
+      // Head
+      ctx.fillStyle='#ffcc88';ctx.beginPath();ctx.arc(0,-40,11,0,Math.PI*2);ctx.fill();
+      // Helmet
+      ctx.fillStyle=starPow?'#cc8800':'#1a3399';
+      ctx.fillRect(-11,-52,22,14);ctx.fillRect(-7,-56,14,6);
+      ctx.fillStyle='rgba(120,200,255,.7)';ctx.fillRect(-9,-50,18,8);
+      // Eye
+      ctx.fillStyle='#000';ctx.beginPath();ctx.arc(3,-42,2.5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.arc(4,-43,1,0,Math.PI*2);ctx.fill();
+
+      // Legs animated
+      const inAir=!P.onGround;
+      const ls=inAir?10:(Math.sin(tick*.28)*10);
+      ctx.fillStyle='#112266';
+      ctx.fillRect(-8,-6,7,16+ls);ctx.fillRect(1,-6,7,16-ls);
+      // Shoes
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(-10,10+ls,9,4);ctx.fillRect(-1,10-ls,9,4);
+
+      ctx.shadowBlur=0;ctx.restore();
+
+      // HP hearts above player
+      for(let i=0;i<P.hp;i++){
+        ctx.fillStyle='#ff4466';ctx.font='10px serif';ctx.textAlign='center';
+        ctx.fillText('❤',P.x-4+(i*12),py-62);
+      }
+    }
+  }
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/25;ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();
+  });ctx.globalAlpha=1;
+
+  // Speed lines when going fast
+  if(speed>8){
+    const alpha=(speed-8)/6*.15;
+    for(let i=0;i<8;i++){
+      const lx=Math.random()*W*.6+50, ly=Math.random()*H;
+      const len=20+Math.random()*40;
+      ctx.strokeStyle=`rgba(180,180,255,${alpha})`;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx-len,ly);ctx.stroke();
+    }
+  }
+
+  // HUD bar
+  ctx.fillStyle='rgba(0,0,0,.65)';ctx.fillRect(0,0,W,24);
+  ctx.fillStyle='#44aaff';ctx.font='bold 11px monospace';ctx.textAlign='left';
+  ctx.fillText('🏃 '+Math.floor(dist)+'m',8,15);
+  ctx.fillStyle='#ffd700';ctx.textAlign='center';
+  if(activePowerup){
+    const pu=POWERUP_TYPES.find(p=>p.id===activePowerup);
+    ctx.fillText((pu?.icon||'')+'  '+Math.ceil(powerupTimer/60)+'s',W/2,15);
+  }
+  ctx.fillStyle='#44ffaa';ctx.textAlign='right';
+  ctx.fillText('+'+runCoins+'💰',W-8,15);
+
+  // Speed meter
+  const sm=(speed-3.5)/10.5;
+  ctx.fillStyle='rgba(255,255,255,.1)';ctx.fillRect(0,H-4,W,4);
+  ctx.fillStyle=sm>.7?'#ff4444':sm>.4?'#ffaa00':'#44aaff';
+  ctx.fillRect(0,H-4,W*sm,4);
+
+  // ── MENU ──
+  if(state==='menu'){
+    ctx.fillStyle='rgba(0,0,0,.88)';ctx.fillRect(0,0,W,H);
+    ctx.shadowColor='#44aaff';ctx.shadowBlur=36;
+    ctx.fillStyle='#44aaff';ctx.font='bold 54px monospace';ctx.textAlign='center';
+    ctx.fillText('RUN KID',W/2,H/2-62);ctx.fillText('RUN',W/2,H/2-6);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#334';ctx.font='11px monospace';
+    ctx.fillText('Dodge obstacles · Collect coins · Buy upgrades',W/2,H/2+28);
+    ctx.fillStyle='#ffd700';ctx.font='10px monospace';
+    ctx.fillText('Best: '+hiDist+'m  ·  Bank: '+totalCoins+' coins',W/2,H/2+50);
+    ctx.fillStyle='#445';ctx.font='9px monospace';
+    ctx.fillText('SPACE: Jump  ·  Double-tap for double jump (if bought)',W/2,H/2+70);
+    ctx.fillStyle='#ffe600';ctx.font='bold 13px monospace';
+    ctx.fillText('PRESS ENTER — OPEN SHOP & RUN',W/2,H/2+100);
+  }
+
+  // ── GAME OVER ──
+  if(state==='gameover'){
+    ctx.fillStyle='rgba(0,0,0,.84)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#44aaff';ctx.font='bold 46px monospace';ctx.textAlign='center';
+    ctx.fillText('WIPED OUT',W/2,H/2-52);
+    ctx.fillStyle='#fff';ctx.font='16px monospace';
+    ctx.fillText(Math.floor(dist)+'m  ·  +'+runCoins+' coins',W/2,H/2-6);
+    const isNew=Math.floor(dist)>=hiDist&&dist>0;
+    ctx.fillStyle=isNew?'#ffd700':'#555';ctx.font='12px monospace';
+    ctx.fillText(isNew?'🏆 NEW BEST!':'Best: '+hiDist+'m',W/2,H/2+22);
+    ctx.fillStyle='#44ffaa';ctx.font='11px monospace';
+    ctx.fillText('Bank: '+totalCoins+' coins',W/2,H/2+46);
+    ctx.fillStyle='#ffe600';ctx.font='12px monospace';
+    ctx.fillText('ENTER: Shop & Retry    ESC: Menu',W/2,H/2+80);
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(['Space','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault();
+  if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')jump();
+  if(e.code==='Enter'){
+    if(state==='menu'||state==='gameover')openShop();
+  }
+  if(e.code==='Escape'){
+    if(state==='gameover')state='menu';
+    const sh=document.getElementById('shopOverlay');
+    if(sh.style.display==='flex')sh.style.display='none';
+  }
+});
+document.addEventListener('keyup',e=>delete keys[e.code]);
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+initBg();
+loop();
+</script>
+</body>
+</html>
