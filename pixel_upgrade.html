@@ -7,7 +7,941 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#0a0a12;font-family:'Courier New',monospace;color:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 canvas{display:block;border:2px solid #1a1a2a;}
+#topbar{width:640px;display:flex;gap:16px;pad<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PIXEL UPGRADE — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a12;font-family:'Courier New',monospace;color:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+canvas{display:block;border:2px solid #1a1a2a;}
 #topbar{width:640px;display:flex;gap:16px;padding:5px 0;font-size:10px;color:#555;align-items:center;flex-wrap:wrap;justify-content:space-between;}
+#topbar b{color:#fff;} a{color:#ff8800;text-decoration:none;font-size:9px;}a:hover{color:#fff;}
+/* UPGRADE PANEL */
+#upgPanel{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;overflow-y:auto;}
+#upgPanel h1{font-size:28px;color:#ff8800;letter-spacing:4px;margin-bottom:4px;}
+#upgPanel .subtitle{font-size:9px;color:#553300;letter-spacing:3px;margin-bottom:12px;}
+#upgPanel .coins{font-size:16px;color:#ffd700;margin-bottom:14px;}
+#upgGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:700px;width:100%;}
+.uc{background:#0d0a00;border:2px solid #332200;padding:12px 10px;cursor:pointer;transition:all .12s;text-align:center;position:relative;}
+.uc:hover:not(.locked):not(.maxed){border-color:#ff8800;background:#1a0f00;}
+.uc.maxed{border-color:#ffd700;background:#0f0a00;cursor:default;}
+.uc.locked{opacity:.25;cursor:default;}
+.uc .ui{font-size:24px;margin-bottom:5px;}
+.uc .un{font-size:9px;color:#ff8800;letter-spacing:1px;margin-bottom:3px;}
+.uc .ud{font-size:8px;color:#443300;line-height:1.4;margin-bottom:6px;min-height:24px;}
+.uc .ubar{display:flex;gap:2px;justify-content:center;margin-bottom:5px;}
+.uc .ubar span{width:12px;height:6px;background:#222;}
+.uc .ubar span.filled{background:#ff8800;}
+.uc .ubar span.maxfilled{background:#ffd700;}
+.uc .ucost{font-size:10px;color:#ffd700;}
+#upgPanel .run-btn{margin-top:14px;background:transparent;border:2px solid #ff8800;color:#ff8800;font-family:'Courier New',monospace;font-size:13px;letter-spacing:3px;padding:12px 44px;cursor:pointer;transition:all .2s;}
+#upgPanel .run-btn:hover{background:#ff880022;}
+#upgPanel .run-btn:disabled{opacity:.4;cursor:default;}
+/* ACHIEVEMENTS */
+#achPanel{max-width:700px;width:100%;margin-top:10px;}
+#achPanel h3{font-size:9px;color:#553300;letter-spacing:3px;margin-bottom:8px;}
+#achGrid{display:flex;flex-wrap:wrap;gap:6px;}
+.ach-badge{padding:4px 8px;border:1px solid;font-size:8px;letter-spacing:1px;}
+.ach-badge.unlocked{border-color:#ffd700;color:#ffd700;background:#0f0a00;}
+.ach-badge.locked{border-color:#222;color:#222;}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span>🏃 RUN <b id="h-run">1</b></span>
+  <span>💰 <b id="h-coins">0</b> coins</span>
+  <span>📏 BEST <b id="h-best">0</b>m</span>
+  <span>🔫 AMMO <b id="h-ammo">—</b></span>
+  <span>❤ HP <b id="h-hp">—</b></span>
+  <a href="index.html">← Back</a>
+</div>
+<canvas id="c" width="640" height="400"></canvas>
+
+<div id="upgPanel">
+  <h1>⬆ UPGRADE SHOP</h1>
+  <div class="subtitle">BUY UPGRADES TO IMPROVE YOUR NEXT RUN</div>
+  <div class="coins">💰 <span id="shopCoins">0</span> coins</div>
+  <div id="upgGrid"></div>
+  <button class="run-btn" id="runBtn" onclick="startRun()">▶ START RUN</button>
+  <div id="achPanel">
+    <h3>🏆 ACHIEVEMENTS (<span id="achCount">0</span>/15)</h3>
+    <div id="achGrid"></div>
+  </div>
+</div>
+
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=640,H=400,GY=360; // taller canvas for sunset sky
+
+// ── FIXED LEVEL ──
+// One long scrolling level, 4800px wide, fixed platforms + coins + boss at end
+const LEVEL_W=4800;
+const GROUND_Y=360;
+
+// Platforms: [worldX, worldY, width, type]  type: normal|high|spike
+const PLATFORMS=[
+  // Zone 1 — ground level reachable early
+  [280,310,90,'normal'], [420,280,80,'normal'], [560,250,80,'normal'],
+  // Zone 2 — need small jump
+  [700,290,100,'normal'], [850,260,90,'normal'], [950,230,80,'normal'],
+  [1060,200,80,'high'],
+  // Zone 3 — need more jump + time
+  [1200,240,90,'normal'], [1320,200,90,'high'], [1450,165,80,'high'],
+  [1600,190,90,'normal'], [1720,155,80,'high'],
+  // Zone 4 — high platforms
+  [1900,200,100,'normal'], [2020,165,80,'high'], [2160,130,90,'high'],
+  [2320,100,100,'high'], [2480,130,80,'high'],
+  // Zone 5 — mid game
+  [2650,200,90,'normal'], [2780,165,80,'high'], [2900,130,90,'high'],
+  [3050,165,80,'normal'],
+  // Zone 6 — approaching boss
+  [3200,200,100,'normal'], [3350,165,90,'high'], [3500,130,90,'high'],
+  [3650,100,120,'high'],
+  // Boss platform (big wide platform at far right)
+  [4000,200,300,'boss'],
+  // Ground spikes hazard zones
+  [600,GROUND_Y-18,60,'spike'], [900,GROUND_Y-18,40,'spike'],
+  [1400,GROUND_Y-18,60,'spike'], [2100,GROUND_Y-18,80,'spike'],
+  [2900,GROUND_Y-18,60,'spike'], [3400,GROUND_Y-18,80,'spike'],
+];
+
+// Coins: [worldX, worldY]
+const LEVEL_COINS=[
+  // Ground coins — early runs can grab these
+  [180,330],[220,330],[260,330],[300,330],[340,330],
+  [500,330],[540,330],[580,330],
+  [700,330],[740,330],[780,330],
+  // Platform coins
+  [290,295],[320,295],[350,295],
+  [430,265],[460,265],
+  [570,235],[600,235],
+  [710,275],[750,275],[790,275],
+  [860,245],[890,245],
+  [960,215],[990,215],
+  [1070,183],[1100,183],[1130,183],
+  [1210,225],[1250,225],
+  [1330,183],[1370,183],
+  [1460,148],[1500,148],[1530,148],
+  [1610,173],[1650,173],
+  [1730,138],[1770,138],
+  [1910,183],[1950,183],[1990,183],
+  [2030,148],[2070,148],
+  [2170,113],[2210,113],[2250,113],
+  [2330,83],[2380,83],[2430,83],
+  [2490,113],[2530,113],
+  [2660,183],[2700,183],[2740,183],
+  [2790,148],[2830,148],
+  [2910,113],[2950,113],[2990,113],
+  [3060,148],[3100,148],
+  [3210,183],[3260,183],[3310,183],
+  [3360,148],[3400,148],
+  [3510,113],[3560,113],[3610,113],
+  [3660,83],[3710,83],[3760,83],[3800,83],
+  // Treasure coins near boss
+  [4020,183],[4060,183],[4100,183],[4140,183],[4180,183],[4220,183],
+];
+
+// Enemies: [worldX, worldY, type]  type: walk|fly
+const LEVEL_ENEMIES=[
+  [600,GROUND_Y,'walk'],  [800,GROUND_Y,'walk'],
+  [1100,GROUND_Y,'walk'], [1100,190,'fly'],
+  [1500,GROUND_Y,'walk'], [1600,155,'fly'],
+  [1800,GROUND_Y,'walk'], [2000,GROUND_Y,'walk'],
+  [2200,155,'fly'],       [2400,GROUND_Y,'walk'],
+  [2600,GROUND_Y,'walk'], [2700,120,'fly'],
+  [2900,GROUND_Y,'walk'], [3100,GROUND_Y,'walk'],
+  [3200,155,'fly'],       [3400,GROUND_Y,'walk'],
+  [3600,GROUND_Y,'walk'], [3700,90,'fly'],
+  [3800,GROUND_Y,'walk'],
+];
+
+// Build enemy objects from level data
+function buildLevelEnemies(){
+  return LEVEL_ENEMIES.map(([wx,wy,type])=>({
+    wx,// world x
+    y:wy,vy:0,
+    hp:1,maxHp:1,
+    type,dead:false,
+    col:type==='fly'?'#5544dd':'#cc3322',
+    startWx:wx, // patrol anchor
+    dir:1,
+  }));
+}
+
+// Build coin objects
+function buildLevelCoins(){
+  return LEVEL_COINS.map(([wx,wy])=>({wx,wy,collected:false,bob:Math.random()*Math.PI*2}));
+}
+
+
+
+// ── PERSISTENCE ──
+let coins=parseInt(localStorage.getItem('pu2_coins')||0);
+let bestDist=parseInt(localStorage.getItem('pu2_best')||0);
+let runNum=parseInt(localStorage.getItem('pu2_run')||1);
+let achUnlocked=JSON.parse(localStorage.getItem('pu2_ach')||'[]');
+
+function saveAll(){
+  localStorage.setItem('pu2_coins',coins);
+  localStorage.setItem('pu2_best',bestDist);
+  localStorage.setItem('pu2_run',runNum);
+  localStorage.setItem('pu2_ach',JSON.stringify(achUnlocked));
+  localStorage.setItem('pu2_kills',totalKills);
+  localStorage.setItem('pu2_totalcoins',totalCoinsEver);
+  localStorage.setItem('pu2_bosswin',bossDefeated?'1':'0');
+  localStorage.setItem('pu2_progress',bestProgress);
+  localStorage.setItem('pu2_plat',platformsLanded);
+  UPGRADES.forEach(u=>localStorage.setItem('pu2_'+u.id,upgLevels[u.id]));
+}
+
+// ── UPGRADES (Johnny Upgrade style — start with nothing) ──
+const UPGRADES=[
+  {id:'timer', icon:'⏱',name:'TIMER',     desc:'More time per run — START HERE',maxLv:8, costs:[3,8,15,25,40,60,90,130],
+   vals:[5,10,18,28,42,60,85,120,180], unlockMsg:'More time!'},
+  {id:'move',  icon:'👟',name:'MOVE',      desc:'Unlock movement! ← →',         maxLv:5, costs:[5,15,30,60,100],
+   vals:[0,2,3.2,4.5,5.5,6.5], unlockMsg:'You can move now!'},
+  {id:'jump',  icon:'⬆',name:'JUMP',      desc:'Unlock jumping! Space/Up',      maxLv:5, costs:[8,20,40,80,150],
+   vals:[0,0,11,12.5,14,15.5], unlockMsg:'You can jump!', req:'move'},
+  {id:'shoot', icon:'🔫',name:'SHOOT',     desc:'Unlock shooting! Z key',        maxLv:5, costs:[10,25,50,100,180],
+   vals:[0,0,5,8,12,16], unlockMsg:'You can shoot!', req:'move'},
+  {id:'hp',    icon:'❤',name:'HP',        desc:'Survive more hits',              maxLv:4, costs:[15,30,60,120],
+   vals:[0,1,2,3,4]},
+  {id:'ammo',  icon:'📦',name:'MAX AMMO', desc:'Carry more bullets',             maxLv:4, costs:[12,24,50,100],
+   vals:[0,0,6,10,16], req:'shoot'},
+  {id:'dmg',   icon:'💥',name:'DAMAGE',   desc:'Bullets hit harder',             maxLv:4, costs:[18,36,72,140],
+   vals:[0,1,2,3,5], req:'shoot'},
+  {id:'dj',    icon:'2️⃣',name:'DBL JUMP', desc:'Jump again in the air',          maxLv:1, costs:[50],
+   vals:[0,1], req:'jump'},
+  {id:'armor', icon:'🛡',name:'ARMOR',    desc:'Take less damage',               maxLv:3, costs:[25,55,110],
+   vals:[0,1,2,3]},
+  {id:'speed', icon:'⚡',name:'SPEED+',   desc:'Extra movement speed',           maxLv:3, costs:[20,45,90],
+   vals:[0,0,.5,1.2], req:'move'},
+  {id:'magnet',icon:'🧲',name:'MAGNET',   desc:'Auto-collect nearby coins',      maxLv:3, costs:[30,70,140],
+   vals:[0,0,55,110]},
+  {id:'regen', icon:'💚',name:'REGEN',    desc:'Slowly heal over time',          maxLv:3, costs:[35,80,160],
+   vals:[0,0,1,2]},
+];
+
+let upgLevels={};
+UPGRADES.forEach(u=>upgLevels[u.id]=parseInt(localStorage.getItem('pu2_'+u.id)||0));
+function getUpg(id){return UPGRADES.find(u=>u.id===id);}
+function lv(id){return upgLevels[id]||0;}
+function val(id){const u=getUpg(id);if(!u)return 0;return u.vals[lv(id)]||0;}
+function unlocked(id){const u=getUpg(id);if(!u)return false;if(!u.req)return true;return lv(u.req)>=1;}
+
+// ── ACHIEVEMENTS ──
+const ACHIEVEMENTS=[
+  {id:'standstill',name:'STAND STILL',  desc:'Stand still for 60s on first run', icon:'🧍', check:()=>standStillSecs>=60},
+  {id:'firstcoin', name:'FIRST COIN',   desc:'Earn your first coin',             icon:'💰', check:()=>totalCoinsEver>=1},
+  {id:'timer1',    name:'TICK TOCK',    desc:'Buy the Timer upgrade',            icon:'⏱', check:()=>lv('timer')>=1},
+  {id:'move',      name:'ON THE MOVE',  desc:'Unlock movement',                  icon:'👟', check:()=>lv('move')>=1},
+  {id:'jump',      name:'AIR TIME',     desc:'Unlock jumping',                   icon:'⬆', check:()=>lv('jump')>=1},
+  {id:'shoot',     name:'PEW PEW',      desc:'Unlock shooting',                  icon:'🔫', check:()=>lv('shoot')>=1},
+  {id:'platform1', name:'CLIMBER',      desc:'Land on your first platform',      icon:'🪜', check:()=>platformsLanded>=1},
+  {id:'platform10',name:'HIGH GROUND',  desc:'Land on 10 different platforms',   icon:'🏔', check:()=>platformsLanded>=10},
+  {id:'kill1',     name:'FIRST BLOOD',  desc:'Kill your first enemy',            icon:'💀', check:()=>totalKills>=1},
+  {id:'kill10',    name:'KILLER',       desc:'Kill 10 enemies total',            icon:'⚔️', check:()=>totalKills>=10},
+  {id:'halfway',   name:'HALFWAY',      desc:'Reach 50% of the level',           icon:'📍', check:()=>bestProgress>=50},
+  {id:'bossreach', name:'FACE TO FACE', desc:'Reach the boss platform',          icon:'😈', check:()=>bestProgress>=95},
+  {id:'bosswin',   name:'HERO',         desc:'Defeat the boss and win!',         icon:'🏆', check:()=>bossDefeated},
+  {id:'run10',     name:'VETERAN',      desc:'Complete 10 runs',                 icon:'🎖', check:()=>runNum>=10},
+  {id:'allupg',    name:'FULLY LOADED', desc:'Max out any 4 upgrades',           icon:'💎', check:()=>UPGRADES.filter(u=>lv(u.id)>=u.maxLv).length>=4},
+];
+
+let totalKills=parseInt(localStorage.getItem('pu2_kills')||0);
+let totalCoinsEver=parseInt(localStorage.getItem('pu2_totalcoins')||0);
+let bossDefeated=localStorage.getItem('pu2_bosswin')==='1';
+let bestProgress=parseInt(localStorage.getItem('pu2_progress')||0);
+let platformsLanded=parseInt(localStorage.getItem('pu2_plat')||0);
+let standStillSecs=0;
+
+// ── GAME STATE ──
+let state='shop',tick=0,frame=0;
+let P={},levelEnemies=[],levelCoins=[],bullets=[],particles=[],fxMsgs=[];
+let camX=0,runCoins=0,regenT=0;
+let timer=0,maxTimer=0; // seconds remaining
+let bossHp=0,bossMaxHp=0,bossActive=false,bossX=4150,bossY=170;
+
+function startRun(){
+  document.getElementById('upgPanel').style.display='none';
+  maxTimer=val('timer')||5;
+  timer=maxTimer;
+
+  P={x:60,y:GROUND_Y,vx:0,vy:0,
+    onGround:true,djUsed:false,
+    hp:Math.max(1,val('hp')),maxHp:Math.max(1,val('hp')),
+    ammo:val('ammo')||0,maxAmmo:val('ammo')||0,
+    shootCd:0,invTimer:0,dir:1};
+
+  levelEnemies=buildLevelEnemies();
+  levelCoins=buildLevelCoins();
+  bullets=[];particles=[];fxMsgs=[];
+  camX=0;runCoins=0;regenT=0;frame=0;standStillSecs=0;
+  bossHp=20+lv('dmg')*0;bossMaxHp=bossHp;bossActive=false;
+
+  state='playing';
+  updTopbar();
+}
+
+// ── SHOP ──
+function renderShop(){
+  document.getElementById('shopCoins').textContent=coins;
+  document.getElementById('h-coins').textContent=coins;
+  document.getElementById('h-best').textContent=bestDist;
+  document.getElementById('h-run').textContent=runNum;
+
+  const grid=document.getElementById('upgGrid');grid.innerHTML='';
+  UPGRADES.forEach(u=>{
+    const currentLv=lv(u.id);
+    const maxed=currentLv>=u.maxLv;
+    const isUnlocked=unlocked(u.id);
+    const cost=maxed?0:u.costs[currentLv];
+    const canAfford=coins>=cost;
+
+    const d=document.createElement('div');
+    d.className='uc'+(maxed?' maxed':!isUnlocked?' locked':'');
+
+    // Progress bar
+    const barHtml=Array.from({length:u.maxLv},(_,i)=>`<span class="${i<currentLv?(maxed?'maxfilled':'filled'):''}"></span>`).join('');
+
+    d.innerHTML=`<div class="ui">${u.icon}</div>
+      <div class="un">${u.name}</div>
+      <div class="ud">${isUnlocked?u.desc:(u.req?'Requires '+getUpg(u.req)?.name:'???')}</div>
+      <div class="ubar">${barHtml}</div>
+      <div class="ucost">${maxed?'✅ MAX':isUnlocked?(canAfford?'💰 '+cost:'🔒 '+cost+' (need '+(cost-coins)+')'):'🔒 LOCKED'}</div>`;
+
+    if(!maxed&&isUnlocked){
+      d.onclick=()=>{
+        if(coins<cost){d.style.borderColor='#ff2200';setTimeout(()=>d.style.borderColor='',500);return;}
+        coins-=cost;upgLevels[u.id]++;
+        if(u.unlockMsg)showUnlockFlash(u.unlockMsg);
+        saveAll();renderShop();checkAchievements();
+      };
+    }
+    grid.appendChild(d);
+  });
+
+  // Achievements
+  checkAchievements();
+  const achGrid=document.getElementById('achGrid');achGrid.innerHTML='';
+  let unlocked_count=0;
+  ACHIEVEMENTS.forEach(a=>{
+    const isUnlocked=achUnlocked.includes(a.id);
+    if(isUnlocked)unlocked_count++;
+    const d=document.createElement('div');
+    d.className='ach-badge '+(isUnlocked?'unlocked':'locked');
+    d.title=a.desc;
+    d.textContent=(isUnlocked?a.icon+' ':'')+a.name;
+    achGrid.appendChild(d);
+  });
+  document.getElementById('achCount').textContent=unlocked_count;
+
+  // Run button only enabled if player can do at least something
+  document.getElementById('runBtn').disabled=false;
+}
+
+function showUnlockFlash(msg){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#ffd700;font-size:22px;font-family:"Courier New",monospace;font-weight:bold;text-shadow:0 0 20px #ffd700;pointer-events:none;z-index:200;animation:float 1.5s ease forwards;text-align:center;';
+  d.textContent='🔓 '+msg;
+  document.body.appendChild(d);setTimeout(()=>d.remove(),1600);
+}
+
+function checkAchievements(){
+  let any=false;
+  ACHIEVEMENTS.forEach(a=>{
+    if(!achUnlocked.includes(a.id)&&a.check()){
+      achUnlocked.push(a.id);
+      any=true;
+      showUnlockFlash('ACHIEVEMENT: '+a.name+'!');
+    }
+  });
+  if(any){saveAll();}
+}
+
+
+function updTopbar(){
+  document.getElementById('h-run').textContent=runNum;
+  document.getElementById('h-coins').textContent=coins;
+  document.getElementById('h-best').textContent=Math.round(bestProgress)+'%';
+  document.getElementById('h-ammo').textContent=val('shoot')>=1?(P.ammo+'/'+P.maxAmmo):'—';
+  document.getElementById('h-hp').textContent=val('hp')>=1?(P.hp+'/'+P.maxHp):'—';
+}
+
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;keys[e.key]=true;
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();
+  // Jump
+  if((e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')&&state==='playing'){
+    if(val('jump')>0){
+      if(P.onGround){P.vy=-val('jump');P.onGround=false;P.djUsed=false;
+        for(let i=0;i<6;i++)particles.push({x:P.x-camX+10,y:P.y,vx:(Math.random()-.5)*3,vy:1+Math.random()*2,col:'#88aaff',life:14,sz:2});}
+      else if(val('dj')>=1&&!P.djUsed){P.vy=-val('jump')*.85;P.djUsed=true;
+        for(let i=0;i<10;i++)particles.push({x:P.x-camX+10,y:P.y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*4,col:'#ff8800',life:18,sz:3});}
+    }
+  }
+  // Shoot
+  if(e.code==='KeyZ'&&state==='playing'&&val('shoot')>=1&&P.shootCd<=0&&P.ammo>0){
+    P.ammo--;P.shootCd=Math.max(5,20-lv('fire')*3);
+    bullets.push({x:P.x+(P.dir>0?24:0),y:P.y-12,vx:P.dir*(8+val('shoot')),vy:0,dmg:Math.max(1,val('dmg')),life:55});
+    updTopbar();
+  }
+});
+document.addEventListener('keyup',e=>{delete keys[e.code];delete keys[e.key];});
+
+function update(){
+  if(state!=='playing')return;
+  frame++;tick++;
+
+  const moveSpd=val('move')+val('speed');
+  const canMove=moveSpd>0;
+  const canJump=val('jump')>0;
+  const canShoot=val('shoot')>=1;
+
+  // ── TIMER ──
+  if(frame%60===0&&timer>0){
+    timer--;
+    if(timer<=0){endRun('timeout');}
+  }
+
+  // Stand still tracking — give 1 coin every 12s while movement isn't unlocked
+  // This gives player 5 coins in 60s, enough to buy TIMER (3 coins) and start upgrading
+  if(!canMove&&P.onGround){
+    if(frame%720===0){// every 12 seconds
+      standStillSecs+=12;
+      coins++;runCoins++;totalCoinsEver++;
+      fxMsgs.push({txt:'🧍 +1 COIN! ('+Math.min(5,Math.ceil(standStillSecs/12))+'/5)',x:W/2,y:220,col:'#ffd700',life:100});
+      checkAchievements();updTopbar();saveAll();
+    }
+    // Check stand-still achievement at 60s
+    if(standStillSecs>=60&&!achUnlocked.includes('standstill')){
+      checkAchievements();
+    }
+  }
+  // Once canMove, never give stand-still coins again this run
+
+  // ── PLAYER PHYSICS ──
+  if(canMove){
+    if(keys['ArrowLeft']||keys['KeyA']){P.vx=-moveSpd;P.dir=-1;}
+    else if(keys['ArrowRight']||keys['KeyD']){P.vx=moveSpd;P.dir=1;}
+    else P.vx*=.75;
+  } else {P.vx=0;}
+
+  P.vy=Math.min(P.vy+.75,20);
+  P.x+=P.vx;P.y+=P.vy;
+
+  // Ground
+  P.onGround=false;
+  if(P.y>=GROUND_Y){P.y=GROUND_Y;P.vy=0;P.onGround=true;P.djUsed=false;}
+
+  // Platform collision
+  PLATFORMS.forEach(([px,py,pw,type])=>{
+    if(type==='spike')return;// handled as hazard
+    const sx=px-camX;
+    // Check if player's feet pass through platform top this frame
+    if(P.x+16>px&&P.x+4<px+pw&&P.vy>0&&(P.y-P.vy)<=py&&P.y>=py){
+      P.y=py;P.vy=0;P.onGround=true;P.djUsed=false;
+    }
+  });
+
+  // Track platform landings
+  if(P.onGround&&P.y<GROUND_Y-10){platformsLanded++;}
+
+  // World bounds
+  P.x=Math.max(0,Math.min(LEVEL_W-20,P.x));
+
+  // Camera follows player — centered
+  const targetCam=P.x-W/2+20;
+  camX=Math.max(0,Math.min(LEVEL_W-W,targetCam));
+
+  // Progress %
+  const prog=(P.x/LEVEL_W)*100;
+  if(prog>bestProgress){bestProgress=prog;}
+
+  // Shoot/regen cooldown
+  if(P.shootCd>0)P.shootCd--;
+  if(P.invTimer>0)P.invTimer--;
+  const regenRate=val('regen');
+  if(regenRate>0&&P.hp<P.maxHp){regenT++;if(regenT>=120/regenRate){regenT=0;P.hp++;updTopbar();}}
+
+  // ── SPIKES ──
+  PLATFORMS.forEach(([px,py,pw,type])=>{
+    if(type!=='spike')return;
+    if(P.x+16>px&&P.x<px+pw&&P.y>=(py-20)&&P.y<=(py+5)){
+      P.hp=0;endRun('spike');
+    }
+  });
+
+  // ── COINS ──
+  const mag=val('magnet');
+  levelCoins.forEach(co=>{
+    if(co.collected)return;
+    co.bob+=.06;
+    const cx=co.wx-camX, cy=co.wy;
+    if(mag>0&&Math.hypot(cx-P.x+camX-P.x,co.wy-(P.y-12))<mag){
+      // simplified magnet towards player
+      co.wx+=(P.x+camX*0-co.wx)*0;// magnet handled in draw proximity
+    }
+    const screenPx=co.wx-camX;
+    if(Math.hypot(screenPx-(P.x-camX),co.wy-(P.y-12))<18){
+      co.collected=true;runCoins++;coins++;totalCoinsEver++;
+      particles.push({x:screenPx,y:co.wy,vx:0,vy:-3,col:'#ffd700',life:20,sz:4});
+      updTopbar();checkAchievements();
+    }
+  });
+
+  // ── ENEMIES ──
+  levelEnemies.forEach(e=>{
+    if(e.dead)return;
+    const ex=e.wx-camX;
+    if(ex<-80||ex>W+80)return;// off screen, skip
+
+    // Patrol
+    if(e.type==='walk'){
+      e.vy+=.7;e.y+=e.vy;if(e.y>=GROUND_Y){e.y=GROUND_Y;e.vy=0;}
+      e.wx+=e.dir*.8;
+      if(e.wx>e.startWx+60)e.dir=-1;
+      if(e.wx<e.startWx-60)e.dir=1;
+    } else {
+      e.wx+=e.dir*.6;
+      e.y=e.y+Math.sin(frame*.06+e.wx*.02)*1.3;
+      if(e.wx>e.startWx+80)e.dir=-1;
+      if(e.wx<e.startWx-80)e.dir=1;
+    }
+
+    // Hit player
+    if(P.invTimer===0&&Math.abs(ex-(P.x-camX))<20&&Math.abs(e.y-P.y)<28){
+      const dmg=Math.max(1,1-Math.floor(val('armor')*.3));
+      P.hp-=dmg;P.invTimer=80;
+      for(let k=0;k<8;k++)particles.push({x:P.x-camX,y:P.y-14,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,col:'#ff4444',life:18,sz:3});
+      updTopbar();if(P.hp<=0)endRun('hit');
+    }
+  });
+
+  // ── BULLETS ──
+  bullets=bullets.filter(b=>{
+    b.x+=b.vx;b.life--;
+    // Hit regular enemies — both in world space
+    levelEnemies.forEach(e=>{
+      if(e.dead)return;
+      if(Math.abs(b.x-e.wx)<18&&Math.abs(b.y-e.y)<22){
+        e.hp-=b.dmg;
+        for(let k=0;k<6;k++)particles.push({x:b.x-camX,y:b.y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,col:'#ff8800',life:14,sz:2});
+        if(e.hp<=0){e.dead=true;totalKills++;runCoins+=2;coins+=2;totalCoinsEver+=2;
+          for(let k=0;k<12;k++)particles.push({x:e.wx-camX,y:e.y-12,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,col:e.col,life:22,sz:4});
+          checkAchievements();}
+        b.life=0;
+      }
+    });
+    // Hit boss — world space
+    if(bossActive&&bossHp>0){
+      if(Math.abs(b.x-bossX)<30&&Math.abs(b.y-bossY)<40){
+        bossHp-=b.dmg;
+        for(let k=0;k<8;k++)particles.push({x:b.x-camX,y:b.y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,col:'#ff0066',life:18,sz:4});
+        b.life=0;
+        if(bossHp<=0){
+          bossDefeated=true;
+          for(let k=0;k<40;k++)particles.push({x:bossX-camX,y:bossY,vx:(Math.random()-.5)*12,vy:(Math.random()-.5)*12,col:['#ffd700','#ff4422','#44ff88','#fff'][k%4],life:40,sz:6});
+          fxMsgs.push({txt:'🏆 BOSS DEFEATED! YOU WIN!',x:W/2,y:160,col:'#ffd700',life:200});
+          checkAchievements();saveAll();
+          setTimeout(()=>endRun('win'),3000);
+        }
+      }
+    }
+    return b.life>0&&b.x>0&&b.x<LEVEL_W;
+  });
+
+  // Activate boss when player is close
+  if(!bossActive&&P.x>bossX-400){bossActive=true;bossHp=15+lv('dmg')*2;bossMaxHp=bossHp;
+    fxMsgs.push({txt:'⚠ BOSS AHEAD!',x:W/2,y:180,col:'#ff2200',life:120});}
+
+  // Boss shoots back — world space
+  if(bossActive&&bossHp>0&&frame%120===0){
+    bullets.push({x:bossX-20,y:bossY-10,vx:-5,vy:0,dmg:1,life:200,isEnemy:true});
+  }
+  // Enemy bullets hit player — b.x in world, P.x in world
+  bullets.forEach(b=>{
+    if(!b.isEnemy)return;
+    if(Math.abs(b.x-P.x)<14&&Math.abs(b.y-P.y)<20&&P.invTimer===0){
+      P.hp--;P.invTimer=80;updTopbar();if(P.hp<=0)endRun('hit');b.life=0;
+    }
+  });
+
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.1;p.life--;return p.life>0;});
+  for(let i=fxMsgs.length-1;i>=0;i--){fxMsgs[i].life--;if(fxMsgs[i].life<=0)fxMsgs.splice(i,1);}
+}
+
+function endRun(reason){
+  if(state!=='playing')return;
+  state='dying';
+  saveAll();
+  setTimeout(()=>{
+    runNum++;saveAll();
+    renderShop();
+    document.getElementById('upgPanel').style.display='flex';
+    state='shop';
+  },1800);
+}
+
+// ── DRAW ──
+function draw(){
+  // ── SUNSET SKY ──
+  const sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#1a0828');
+  sky.addColorStop(.35,'#5c1a3a');
+  sky.addColorStop(.6,'#c4522a');
+  sky.addColorStop(.8,'#e8832a');
+  sky.addColorStop(1,'#f0b060');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+  // Sun
+  const sunX=W*.75,sunY=H*.38;
+  const sunG=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,80);
+  sunG.addColorStop(0,'rgba(255,240,180,1)');
+  sunG.addColorStop(.4,'rgba(255,180,60,.8)');
+  sunG.addColorStop(1,'rgba(255,100,20,0)');
+  ctx.fillStyle=sunG;ctx.fillRect(0,0,W,H);
+
+  // Distant mountains silhouette
+  ctx.fillStyle='#2a0e1e';
+  [[0,240,120],[150,210,160],[340,220,140],[520,200,180],[620,230,140]].forEach(([mx,my,mw])=>{
+    ctx.beginPath();ctx.moveTo(mx,H-60);ctx.lineTo(mx+mw/2,my);ctx.lineTo(mx+mw,H-60);ctx.closePath();ctx.fill();
+  });
+
+  // Far city skyline silhouette
+  ctx.fillStyle='#1a0818';
+  for(let i=0;i<14;i++){
+    const bx=((i*80-camX*.08)%W+W*2)%(W+200)-60;
+    const bh=50+i*8;const bw=30+i%4*10;
+    ctx.fillRect(bx,H-60-bh,bw,bh);
+    // windows
+    for(let wy=H-60-bh+6;wy<H-66;wy+=10)for(let wx=bx+4;wx<bx+bw-4;wx+=8){
+      if(Math.sin(wx*7+wy*3+tick*.01)>.5){ctx.fillStyle='rgba(255,200,80,.25)';ctx.fillRect(wx,wy,4,5);}
+    }
+    ctx.fillStyle='#1a0818';
+  }
+
+  // Mid ground hills (parallax)
+  ctx.fillStyle='#2d0f20';
+  for(let i=0;i<6;i++){
+    const hx=((i*200-camX*.25+100)%W+W)%W;
+    ctx.beginPath();ctx.arc(hx,H-40,90,Math.PI,0);ctx.fill();
+  }
+
+  // ── GROUND ──
+  ctx.fillStyle='#3a1a10';ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
+  // Ground top grass/dirt edge
+  const gGrad=ctx.createLinearGradient(0,GROUND_Y-8,0,GROUND_Y+20);
+  gGrad.addColorStop(0,'#7a3a18');gGrad.addColorStop(1,'#3a1a10');
+  ctx.fillStyle=gGrad;ctx.fillRect(0,GROUND_Y-6,W,26);
+  // Ground tiles
+  for(let x=((-camX*.5)%60+60)%60;x<W;x+=60){
+    ctx.fillStyle='rgba(255,255,255,.04)';ctx.fillRect(x,GROUND_Y+4,30,6);
+  }
+  // Distance markers
+  for(let wx=0;wx<LEVEL_W;wx+=200){
+    const sx=wx-camX;if(sx<-20||sx>W+20)continue;
+    ctx.fillStyle='rgba(255,255,255,.06)';ctx.fillRect(sx-1,GROUND_Y-4,2,H-GROUND_Y+4);
+  }
+
+  // ── PLATFORMS ──
+  PLATFORMS.forEach(([px,py,pw,type])=>{
+    const sx=px-camX;
+    if(sx>W+80||sx+pw<-80)return;
+    if(type==='spike'){
+      // Draw spikes on ground
+      const count=Math.ceil(pw/16);
+      ctx.fillStyle='#cc3300';
+      for(let i=0;i<count;i++){
+        ctx.beginPath();
+        ctx.moveTo(sx+i*16,py);
+        ctx.lineTo(sx+i*16+8,py-18);
+        ctx.lineTo(sx+i*16+16,py);
+        ctx.closePath();ctx.fill();
+        ctx.fillStyle='#ff4400';ctx.fillRect(sx+i*16+7,py-18,2,18);
+        ctx.fillStyle='#cc3300';
+      }
+      return;
+    }
+    // Platform body
+    const isBoss=type==='boss';
+    const topCol=isBoss?'#884400':'#5a2e10';
+    const bodyCol=isBoss?'#4a2000':'#2e1408';
+    ctx.fillStyle=bodyCol;ctx.fillRect(sx,py,pw,16);
+    // Top edge
+    const plG=ctx.createLinearGradient(0,py,0,py+6);
+    plG.addColorStop(0,topCol);plG.addColorStop(1,bodyCol);
+    ctx.fillStyle=plG;ctx.fillRect(sx,py,pw,7);
+    // Highlights
+    ctx.fillStyle='rgba(255,200,100,.12)';ctx.fillRect(sx+2,py+1,pw-4,3);
+    // Boss platform gets a glow
+    if(isBoss){
+      ctx.shadowColor='#ff4400';ctx.shadowBlur=10;
+      ctx.strokeStyle='#884400';ctx.lineWidth=1.5;
+      ctx.strokeRect(sx,py,pw,16);
+      ctx.shadowBlur=0;
+    }
+  });
+
+  // ── COINS ──
+  levelCoins.forEach(co=>{
+    if(co.collected)return;
+    const cx=co.wx-camX;
+    if(cx<-15||cx>W+15)return;
+    const bob=Math.sin(co.bob+tick*.06)*4;
+    ctx.shadowColor='#ffd700';ctx.shadowBlur=8;
+    ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(cx,co.wy+bob,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.arc(cx-1.5,co.wy+bob-1.5,2,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+  });
+
+  // ── ENEMIES ──
+  levelEnemies.forEach(e=>{
+    if(e.dead)return;
+    const ex=e.wx-camX;
+    if(ex<-50||ex>W+50)return;
+    const ey=e.y;
+    ctx.shadowColor=e.col;ctx.shadowBlur=6;
+    ctx.fillStyle=e.col;ctx.beginPath();ctx.arc(ex,ey-12,12,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex-4,ey-14,3.5,0,Math.PI*2);ctx.fill();
+    ctx.arc(ex+4,ey-14,3.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#111';ctx.beginPath();ctx.arc(ex-3,ey-14,1.8,0,Math.PI*2);ctx.fill();
+    ctx.arc(ex+5,ey-14,1.8,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    if(e.type==='fly'){
+      // Wing flaps
+      ctx.fillStyle='rgba(180,160,255,.5)';
+      ctx.beginPath();ctx.ellipse(ex-14,ey-18,10,5,-.4,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(ex+14,ey-18,10,5,.4,0,Math.PI*2);ctx.fill();
+    } else {
+      // Walk legs
+      const ls=Math.sin(tick*.18+ex)*.4;
+      ctx.fillStyle=e.col;ctx.fillRect(ex-6,ey-2,5,12);ctx.fillRect(ex+1,ey-2,5,12);
+    }
+  });
+
+  // ── BOSS ──
+  if(bossActive){
+    const bsx=bossX-camX;
+    if(bsx>-80&&bsx<W+80&&bossHp>0){
+      // Boss body — big intimidating villain
+      ctx.save();ctx.translate(bsx,bossY);
+      // Cape
+      ctx.fillStyle='#550055';
+      ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(-28,40);ctx.lineTo(0,28);ctx.lineTo(28,40);ctx.lineTo(20,0);ctx.closePath();ctx.fill();
+      // Body
+      ctx.shadowColor='#ff0066';ctx.shadowBlur=16;
+      ctx.fillStyle='#220033';ctx.fillRect(-18,-36,36,40);
+      // Head
+      ctx.fillStyle='#cc0044';ctx.beginPath();ctx.arc(0,-48,16,0,Math.PI*2);ctx.fill();
+      // Helmet
+      ctx.fillStyle='#330044';ctx.fillRect(-16,-62,32,16);ctx.fillRect(-10,-68,20,8);
+      // Visor glow
+      ctx.fillStyle='#ff0044';ctx.fillRect(-12,-58,24,8);
+      ctx.fillStyle='rgba(255,0,100,.4)';ctx.fillRect(-12,-58,24,8);
+      // Eyes
+      ctx.fillStyle='#ff4400';ctx.beginPath();ctx.arc(-6,-50,4,0,Math.PI*2);ctx.fill();
+      ctx.arc(6,-50,4,0,Math.PI*2);ctx.fill();
+      // Arms
+      ctx.fillStyle='#220033';ctx.fillRect(-30,-32,14,28);ctx.fillRect(16,-32,14,28);
+      ctx.shadowBlur=0;
+      ctx.restore();
+      // Boss HP bar
+      const bpw=100;
+      ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(bsx-50,bossY-80,bpw,10);
+      ctx.fillStyle='#ff0044';ctx.fillRect(bsx-50,bossY-80,bpw*(bossHp/bossMaxHp),10);
+      ctx.strokeStyle='#880022';ctx.lineWidth=1;ctx.strokeRect(bsx-50,bossY-80,bpw,10);
+      ctx.fillStyle='#fff';ctx.font='8px monospace';ctx.textAlign='center';
+      ctx.fillText('BOSS',bsx,bossY-83);
+      // Hostage
+      ctx.save();ctx.translate(bsx+70,bossY-10);
+      ctx.fillStyle='#ffcc88';ctx.beginPath();ctx.arc(0,-20,9,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ffaaaa';ctx.fillRect(-8,-10,16,20);
+      ctx.fillStyle='#ff4444';ctx.font='11px serif';ctx.textAlign='center';ctx.fillText('😰',0,4);
+      ctx.restore();
+    } else if(bossHp<=0&&bossDefeated){
+      // Defeated boss ghost
+      const bsx=bossX-camX;
+      ctx.globalAlpha=.3;ctx.fillStyle='#880055';
+      ctx.beginPath();ctx.arc(bsx,bossY-30,20,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+    }
+  }
+  // Boss arrow indicator
+  if(!bossActive&&P.x<bossX-200){
+    ctx.fillStyle='rgba(255,80,0,.7)';ctx.font='bold 11px monospace';ctx.textAlign='right';
+    ctx.fillText('BOSS ▶▶',W-10,30);
+  }
+
+  // ── BULLETS ──
+  bullets.forEach(b=>{
+    ctx.shadowColor=b.isEnemy?'#ff0044':'#ffee44';ctx.shadowBlur=8;
+    ctx.fillStyle=b.isEnemy?'#ff4444':'#ffee44';
+    ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+  });
+
+  // ── PLAYER ──
+  if(state==='playing'||state==='dying'){
+    const blink=P.invTimer>0&&Math.floor(frame/4)%2===0;
+    if(!blink){
+      const px=P.x-camX;
+      const isMoving=Math.abs(P.vx)>.5&&P.onGround;
+      const flip=P.dir<0;
+      ctx.save();ctx.translate(px+10,P.y);
+      if(flip)ctx.scale(-1,1);
+      ctx.shadowColor='#4488ff';ctx.shadowBlur=6;
+      // Cape/back
+      ctx.fillStyle='#cc2200';ctx.beginPath();ctx.moveTo(-8,0);ctx.lineTo(-14,28);ctx.lineTo(0,18);ctx.lineTo(14,28);ctx.lineTo(8,0);ctx.closePath();ctx.fill();
+      // Body — blue suit
+      ctx.fillStyle='#1a3a88';ctx.fillRect(-10,-28,20,24);
+      // Chest emblem
+      ctx.fillStyle='#ffaa00';ctx.font='bold 8px serif';ctx.textAlign='center';ctx.fillText('★',0,-18);
+      // Head
+      ctx.fillStyle='#ffcc88';ctx.beginPath();ctx.arc(0,-38,10,0,Math.PI*2);ctx.fill();
+      // Helmet
+      ctx.fillStyle='#223399';ctx.fillRect(-10,-48,20,12);ctx.fillRect(-6,-52,12,6);
+      // Visor
+      ctx.fillStyle='rgba(100,200,255,.7)';ctx.fillRect(-8,-46,16,7);
+      // Eye
+      ctx.fillStyle='#000';ctx.beginPath();ctx.arc(3,-43,2,0,Math.PI*2);ctx.fill();
+      // Gun (if unlocked)
+      if(val('shoot')>=1){
+        ctx.fillStyle='#444';ctx.fillRect(8,-26,16,5);
+        ctx.fillStyle='#888';ctx.fillRect(20,-28,6,8);
+      }
+      // Legs
+      const ls=isMoving?Math.sin(frame*.28)*9:0;
+      ctx.fillStyle='#112266';ctx.fillRect(-8,-6,7,18+ls);ctx.fillRect(1,-6,7,18-ls);
+      ctx.shadowBlur=0;ctx.restore();
+
+      // HP bar
+      if(val('hp')>=1){
+        const px2=P.x-camX;
+        ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(px2-6,P.y-52,32,6);
+        ctx.fillStyle=P.hp/P.maxHp>.5?'#44ff44':'#ff4444';
+        ctx.fillRect(px2-6,P.y-52,32*(P.hp/P.maxHp),6);
+      }
+    }
+
+    // "can't move" hint
+    if(val('move')===0&&state==='playing'){
+      const px=P.x-camX;
+      ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 11px monospace';ctx.textAlign='center';
+      ctx.fillText('Buy TIMER & MOVE in the shop!',W/2,P.y-60);
+      ctx.fillStyle='#ffd700aa';ctx.font='10px monospace';
+      if(standStillSecs<60)ctx.fillText('⏳ '+Math.ceil(standStillSecs/12)+'/5 coins earned — keep still!',W/2,P.y-44);
+      else ctx.fillText('✅ 5 coins earned! Open shop with [U]',W/2,P.y-44);
+    }
+  }
+
+  // ── PARTICLES ──
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/25;ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();
+  });ctx.globalAlpha=1;
+
+  // ── FX TEXT ──
+  fxMsgs.forEach(f=>{
+    ctx.globalAlpha=Math.min(1,f.life/60);ctx.fillStyle=f.col;
+    ctx.shadowColor=f.col;ctx.shadowBlur=6;
+    ctx.font='bold 13px monospace';ctx.textAlign='center';
+    ctx.fillText(f.txt,f.x,f.y);
+    ctx.shadowBlur=0;
+  });ctx.globalAlpha=1;
+
+  // ── HUD ──
+  // Top bar
+  ctx.fillStyle='rgba(0,0,0,.65)';ctx.fillRect(0,0,W,24);
+
+  // Timer bar
+  const timerFrac=timer/maxTimer;
+  const timerW=200;const timerX=W/2-timerW/2;
+  ctx.fillStyle='rgba(255,255,255,.1)';ctx.fillRect(timerX,4,timerW,14);
+  const tcol=timerFrac>.5?'#44ff88':timerFrac>.25?'#ffcc00':'#ff4444';
+  ctx.fillStyle=tcol;ctx.fillRect(timerX,4,timerW*timerFrac,14);
+  ctx.strokeStyle='rgba(255,255,255,.2)';ctx.lineWidth=1;ctx.strokeRect(timerX,4,timerW,14);
+  ctx.fillStyle='#fff';ctx.font='bold 9px monospace';ctx.textAlign='center';
+  ctx.fillText('⏱ '+timer+'s',W/2,14);
+
+  // Coins earned this run
+  ctx.fillStyle='#ffd700';ctx.font='bold 10px monospace';ctx.textAlign='left';
+  ctx.fillText('💰 +'+runCoins,8,14);
+
+  // Progress bar at bottom
+  const pct=(P.x/LEVEL_W);
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,H-10,W,10);
+  ctx.fillStyle='#ff8800';ctx.fillRect(0,H-10,W*pct,10);
+  // Player dot on progress
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(W*pct,H-5,4,0,Math.PI*2);ctx.fill();
+  // Boss marker
+  ctx.fillStyle='#ff2200';ctx.beginPath();ctx.arc(W*(bossX/LEVEL_W),H-5,5,0,Math.PI*2);ctx.fill();
+  ctx.font='7px monospace';ctx.textAlign='center';ctx.fillText('👹',W*(bossX/LEVEL_W),H-12);
+
+  // [U] shop hint
+  ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px monospace';ctx.textAlign='right';
+  ctx.fillText('[U] SHOP',W-6,14);
+
+  // ── DYING OVERLAY ──
+  if(state==='dying'){
+    ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#ff4444';ctx.font='bold 40px monospace';ctx.textAlign='center';
+    ctx.fillText('TIME UP!',W/2,H/2-30);
+    ctx.fillStyle='#ffd700';ctx.font='14px monospace';
+    ctx.fillText('+'+runCoins+' coins · '+Math.round(P.x/LEVEL_W*100)+'% reached',W/2,H/2+10);
+    ctx.fillStyle='#888';ctx.font='11px monospace';
+    ctx.fillText('Opening shop...',W/2,H/2+34);
+  }
+
+  // ── MAIN MENU ──
+  if(state==='menu'){
+    // Sunset still renders behind
+    ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(0,0,W,H);
+    ctx.shadowColor='#ff8800';ctx.shadowBlur=30;
+    ctx.fillStyle='#ff8800';ctx.font='bold 50px monospace';ctx.textAlign='center';
+    ctx.fillText('PIXEL',W/2,H/2-64);ctx.fillText('UPGRADE',W/2,H/2-8);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#aa5500';ctx.font='11px monospace';
+    ctx.fillText('You start with NOTHING — stand still 60s for your first coin',W/2,H/2+26);
+    ctx.fillText('Buy TIMER first, then MOVE, JUMP, SHOOT...',W/2,H/2+44);
+    ctx.fillText('Reach the boss at the end of the level to WIN!',W/2,H/2+62);
+    ctx.fillStyle='#ffaa00';ctx.font='bold 13px monospace';
+    ctx.fillText('PRESS ENTER TO OPEN SHOP',W/2,H/2+94);
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='Enter'&&state==='menu'){renderShop();document.getElementById('upgPanel').style.display='flex';state='shop';}
+  if(e.code==='KeyU'&&state==='playing'){renderShop();document.getElementById('upgPanel').style.display='flex';}
+  if(e.code==='Escape'&&state==='shop'&&runNum>1){document.getElementById('upgPanel').style.display='none';state='playing';}
+});
+C.addEventListener('click',()=>{
+  if(state==='menu'){renderShop();document.getElementById('upgPanel').style.display='flex';state='shop';}
+});
+
+// Add float CSS
+const sty=document.createElement('style');
+sty.textContent='@keyframes float{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-50px);}}';
+document.head.appendChild(sty);
+
+// Init
+if(runNum===1&&coins===0){
+  // First time — show menu
+  state='menu';
+} else {
+  renderShop();
+  document.getElementById('upgPanel').style.display='flex';
+  state='shop';
+}
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>ding:5px 0;font-size:10px;color:#555;align-items:center;flex-wrap:wrap;justify-content:space-between;}
 #topbar b{color:#fff;} a{color:#ff8800;text-decoration:none;font-size:9px;}a:hover{color:#fff;}
 /* UPGRADE PANEL */
 #upgPanel{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;overflow-y:auto;}
