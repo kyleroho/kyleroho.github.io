@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GOOFY CARDS 2 — Pixel Forge Games</title>
+<style>
+:root{--gold:#ffd700;--purple:#cc44ff;--blue:#44aaff;--red:#ff4444;--green:#44ff88;--dim:#556677;--bg:#05030f;--panel:#0a0818;--border:#1a1040;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);min-height:100vh;font-family:'Segoe UI',monospace;color:#fff;overflow:hidden;}
+.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;overflow-y:auto;}
+.screen.active{display:flex;}
+.btn{background:transparent;border:2px solid var(--purple);color:var(--purple);padding:10px 28px;font-size:13px;letter-spacing:2px;cursor:pointer;transition:all .15s;font-family:inherit;}
+.btn:hover{background:#cc44ff22;box-shadow:0 0 16px #cc44ff44;}
+.btn.gold{border-color:var(--gold);color:var(--gold);}
+.btn.gold:hover{background:#ffd70022;}
+.btn.red{border-color:var(--red);color:var(--red);}
+.btn.green{border-color:var(--green);color:var(--green);}
+.btn:disabled{opacity:.35;cursor:default;}
+/* Title */
+#s-title{justify-content:center;}
+.title-logo{font-size:64px;font-weight:900;letter-spacing:4px;color:var(--gold);text-shadow:0 0 40px #ffd70088,0 0 80px #ffd70044;text-align:center;}
+.title-logo span{color:var(--purple);}
+.title-sub{font-size:13px;letter-spacing:4px;color:var(--dim);margin:8px 0 32px;}
+/* Card styles */
+.card{border:2px solid #2a1a4a;background:linear-gradient(135deg,#0d0820,#160c30);border-radius:8px;padding:14px 10px;cursor:pointer;transition:all .15s;width:130px;flex-shrink:0;position:relative;}
+.card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.card.selected{transform:translateY(-8px);}
+.card .rarity{font-size:8px;letter-spacing:2px;margin-bottom:6px;}
+.card .card-icon{font-size:38px;text-align:center;margin:6px 0;}
+.card .card-name{font-size:11px;font-weight:bold;text-align:center;letter-spacing:1px;margin-bottom:6px;}
+.card .card-stats{font-size:9px;color:var(--dim);display:flex;justify-content:space-between;}
+.card .card-effect{font-size:8px;color:#9966cc;text-align:center;margin-top:5px;line-height:1.3;min-height:24px;}
+.card.in-hand{border-color:#3a2466;}
+.card.active-card{border-color:var(--gold);box-shadow:0 0 20px #ffd70066;}
+/* Hand area */
+#hand-area{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0;}
+/* Battle */
+#s-battle{justify-content:flex-start;overflow-y:auto;}
+.battle-hud{display:flex;justify-content:space-between;align-items:flex-start;width:100%;max-width:900px;gap:12px;margin-bottom:10px;}
+.fighter-panel{background:var(--panel);border:1px solid var(--border);padding:12px;flex:1;max-width:280px;}
+.fighter-name{font-size:14px;font-weight:bold;letter-spacing:2px;margin-bottom:8px;}
+.hp-bar{height:10px;background:#112;border:1px solid #224;margin:4px 0;}
+.hp-fill{height:100%;background:linear-gradient(90deg,#ff2200,#ff8800,#ffcc00);transition:width .4s;}
+.shield-bar{height:6px;background:#112;border:1px solid #224;margin:2px 0;}
+.shield-fill{height:100%;background:linear-gradient(90deg,#2244ff,#44aaff);transition:width .4s;}
+.stat-row{font-size:10px;color:var(--dim);display:flex;gap:16px;margin-top:4px;}
+.energy-pips{display:flex;gap:3px;margin-top:4px;}
+.energy-pip{width:14px;height:14px;border-radius:50%;background:#111;border:1px solid #334;}
+.energy-pip.full{background:var(--gold);border-color:var(--gold);box-shadow:0 0 6px #ffd70088;}
+/* Battle log */
+.battle-log{background:#040210;border:1px solid var(--border);padding:10px;font-size:10px;line-height:1.7;max-height:140px;overflow-y:auto;width:100%;max-width:900px;margin-bottom:8px;color:#9999bb;}
+/* Actions */
+.action-area{width:100%;max-width:900px;}
+.action-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:6px 0;}
+/* Collection */
+.cards-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:10px 0;max-width:100%;}
+/* Shop */
+.pack-options{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:16px 0;}
+.pack-box{background:var(--panel);border:2px solid var(--border);padding:20px 28px;text-align:center;cursor:pointer;transition:all .2s;}
+.pack-box:hover{border-color:var(--purple);background:#cc44ff11;}
+.pack-box .pack-name{font-size:13px;letter-spacing:2px;color:var(--purple);margin-bottom:6px;}
+.pack-box .pack-cost{font-size:18px;color:var(--gold);}
+.pack-box .pack-desc{font-size:10px;color:var(--dim);margin-top:4px;}
+/* Status effects display */
+.status-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;}
+.stag{font-size:8px;padding:2px 6px;border:1px solid #334;color:#8899aa;border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- TITLE -->
+<div class="screen active" id="s-title">
+  <div class="title-logo">GOOFY<br><span>CARDS 2</span></div>
+  <div class="title-sub">INFINITE BATTLES · 150 CARDS · FUSION & CURSED DECKS</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;">
+    <button class="btn gold" onclick="goTo('shop')">🎴 OPEN PACKS</button>
+    <button class="btn" onclick="goTo('collection')">📚 COLLECTION</button>
+    <button class="btn" onclick="goTo('deckbuild')">⚔️ BUILD DECK</button>
+    <button class="btn gold" onclick="startBattle()">⚡ FIGHT (15 STAGES)</button>
+  </div>
+  <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">💰 <span id="t-coins">0</span> coins &nbsp;|&nbsp; 📚 <span id="t-cards">0</span> cards &nbsp;|&nbsp; 🏆 <span id="t-wins">0</span>–<span id="t-losses">0</span></div>
+  <div id="freePackHint" style="font-size:10px;color:#44ff88;margin-bottom:6px;letter-spacing:1px;">🎉 Your FIRST pack is FREE — open the shop!</div>
+  <div style="font-size:9px;color:#332244;margin-top:4px;">Enter code: <input id="codeInput" style="background:#0a0818;border:1px solid #2a1a4a;color:#cc88ff;font-size:10px;padding:3px 8px;width:80px;" maxlength="6"> <button class="btn" style="padding:4px 10px;font-size:9px;" onclick="redeemCode()">REDEEM</button></div>
+  <a href="index.html" style="color:#332244;font-size:10px;letter-spacing:2px;margin-top:20px;">← BACK TO ARCADE</a>
+</div>
+
+<!-- SHOP -->
+<div class="screen" id="s-shop">
+  <div style="font-size:28px;font-weight:900;color:var(--gold);letter-spacing:4px;margin-bottom:4px;">CARD SHOP</div>
+  <div style="font-size:10px;color:var(--dim);margin-bottom:4px;">💰 <b id="shopCoins">0</b> coins</div>
+  <div id="shopMsg" style="font-size:11px;color:#ff6666;height:16px;margin-bottom:8px;"></div>
+  <div class="pack-options">
+    <div class="pack-box" onclick="buyPack('basic')">
+      <div class="pack-name">BASIC PACK</div>
+      <div class="pack-cost" id="basicPackCost">💰 30</div>
+      <div class="pack-desc">3 cards · Common/Uncommon</div>
+    </div>
+    <div class="pack-box" onclick="buyPack('rare')">
+      <div class="pack-name">RARE PACK</div>
+      <div class="pack-cost">💰 80</div>
+      <div class="pack-desc">4 cards · Guaranteed Rare+</div>
+    </div>
+    <div class="pack-box" onclick="buyPack('legendary')">
+      <div class="pack-name">LEGEND PACK</div>
+      <div class="pack-cost">💰 200</div>
+      <div class="pack-desc">5 cards · Guaranteed Legendary</div>
+    </div>
+    <div class="pack-box" onclick="buyPack('cursed')">
+      <div class="pack-name" style="color:#ff4444;">💀 CURSED PACK</div>
+      <div class="pack-cost" style="color:#ff4444;">💰 120</div>
+      <div class="pack-desc">4 cursed cards · Chaos effects</div>
+    </div>
+  </div>
+  <div id="packReveal" style="display:none;text-align:center;">
+    <div style="font-size:14px;color:var(--gold);letter-spacing:3px;margin:12px 0;">✨ YOU GOT:</div>
+    <div id="revealCards" class="cards-grid" style="justify-content:center;margin-bottom:12px;"></div>
+    <button class="btn gold" onclick="document.getElementById('packReveal').style.display='none'">NICE!</button>
+  </div>
+  <button class="btn" style="margin-top:16px;" onclick="goTo('title')">← BACK</button>
+</div>
+
+<!-- COLLECTION -->
+<div class="screen" id="s-collection">
+  <div style="font-size:22px;font-weight:900;color:var(--gold);letter-spacing:3px;margin-bottom:8px;">YOUR COLLECTION</div>
+  <div style="font-size:10px;color:var(--dim);margin-bottom:8px;"><span id="collCount">0</span> / 150 cards</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;" id="filterBtns">
+    <button class="btn" style="padding:4px 12px;font-size:9px;" onclick="filterCollection('all')">ALL</button>
+    <button class="btn" style="padding:4px 12px;font-size:9px;" onclick="filterCollection('Common')">COMMON</button>
+    <button class="btn" style="padding:4px 12px;font-size:9px;" onclick="filterCollection('Rare')">RARE</button>
+    <button class="btn" style="padding:4px 12px;font-size:9px;" onclick="filterCollection('Epic')">EPIC</button>
+    <button class="btn" style="padding:4px 12px;font-size:9px;" onclick="filterCollection('Legendary')">LEGEND</button>
+    <button class="btn" style="padding:4px 12px;font-size:9px;border-color:#ff4444;color:#ff4444;" onclick="filterCollection('Cursed')">CURSED</button>
+  </div>
+  <div class="cards-grid" id="collGrid"></div>
+  <button class="btn" style="margin-top:12px;" onclick="goTo('title')">← BACK</button>
+</div>
+
+<!-- DECK BUILDER -->
+<div class="screen" id="s-deckbuild">
+  <div style="font-size:22px;font-weight:900;color:var(--gold);letter-spacing:3px;margin-bottom:4px;">DECK BUILDER</div>
+  <div style="font-size:10px;color:var(--dim);margin-bottom:8px;">Deck: <span id="deckCount2">0</span>/7 cards &nbsp;|&nbsp; Click cards to add/remove</div>
+  <div style="display:flex;gap:16px;width:100%;max-width:1000px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:240px;">
+      <div style="font-size:11px;color:var(--purple);letter-spacing:2px;margin-bottom:6px;">YOUR DECK</div>
+      <div class="cards-grid" id="deckCards2" style="gap:6px;"></div>
+    </div>
+    <div style="flex:2;min-width:300px;">
+      <div style="font-size:11px;color:var(--dim);letter-spacing:2px;margin-bottom:6px;">COLLECTION</div>
+      <div class="cards-grid" id="deckCollGrid" style="gap:6px;"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn gold" onclick="startBattle()">⚡ BATTLE!</button>
+    <button class="btn" onclick="goTo('title')">← BACK</button>
+  </div>
+</div>
+
+<!-- CARD DRAW SCREEN (between stages) -->
+<div class="screen" id="s-carddraw">
+  <div style="font-size:22px;font-weight:900;color:var(--gold);letter-spacing:3px;margin-bottom:4px;">STAGE <span id="stageNum">1</span> / 15</div>
+  <div style="font-size:12px;color:var(--dim);margin-bottom:6px;" id="stageLabel">DRAW YOUR FIGHTER</div>
+  <div style="font-size:10px;color:#553366;margin-bottom:16px;">Pick a card to fight with. Your card's stats power up your fighter!</div>
+  <div class="cards-grid" id="drawChoices" style="justify-content:center;margin-bottom:16px;"></div>
+  <div style="font-size:10px;color:#332244;" id="drawMsg"></div>
+</div>
+
+<!-- BATTLE ARENA -->
+<div class="screen" id="s-battle" style="padding:0;overflow:hidden;">
+  <canvas id="fightCanvas" style="display:block;width:100%;height:100%;image-rendering:pixelated;"></canvas>
+  <!-- HUD overlay -->
+  <div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:8px 12px;pointer-events:none;z-index:10;">
+    <div style="background:rgba(0,0,0,.8);border:1px solid #2a1040;padding:6px 12px;min-width:180px;">
+      <div style="font-size:10px;color:var(--purple);letter-spacing:2px;margin-bottom:3px;" id="pCardName">YOU</div>
+      <div class="hp-bar" style="margin:2px 0;"><div class="hp-fill" id="pHpBar" style="width:100%"></div></div>
+      <div style="font-size:9px;color:#aaa;">❤ <span id="pHp">100</span> &nbsp;🛡 <span id="pBlock">—</span> &nbsp;⚡ <span id="pSpecialBar">●●●</span></div>
+    </div>
+    <div style="text-align:center;background:rgba(0,0,0,.7);border:1px solid #1a1040;padding:4px 12px;">
+      <div style="font-size:10px;color:var(--dim);">STAGE <span id="stageNumHud">1</span>/15</div>
+      <div style="font-size:11px;color:var(--gold);font-weight:bold;" id="stageNameHud">GRASSLANDS</div>
+      <div style="font-size:9px;color:#332244;margin-top:2px;">A/D Move · W Jump · J Punch · K Kick · L Special · Ctrl Block</div>
+    </div>
+    <div style="background:rgba(0,0,0,.8);border:1px solid #2a1040;padding:6px 12px;min-width:180px;text-align:right;">
+      <div style="font-size:10px;color:#ff4444;letter-spacing:2px;margin-bottom:3px;" id="eCardName">ENEMY</div>
+      <div class="hp-bar" style="margin:2px 0;"><div class="hp-fill" id="eHpBar" style="width:100%;background:linear-gradient(90deg,#ff2200,#ff5500);"></div></div>
+      <div style="font-size:9px;color:#aaa;text-align:right;">❤ <span id="eHp">100</span></div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:9px;color:#221133;letter-spacing:2px;pointer-events:none;">A/D:MOVE · W:JUMP · J:PUNCH · K:KICK · L:SPECIAL · CTRL:BLOCK</div>
+  <!-- Pause/forfeit -->
+  <button class="btn" style="position:absolute;bottom:6px;right:10px;padding:4px 10px;font-size:9px;z-index:20;" onclick="forfeitBattle()">✕ QUIT</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// GOOFY CARDS 2 — 150 CARD BATTLE SYSTEM
+// ═══════════════════════════════════════════════
+
+const RARITIES={Common:{col:'#aabbcc',chance:55},Uncommon:{col:'#44dd88',chance:25},Rare:{col:'#4488ff',chance:12},Epic:{col:'#cc44ff',chance:6},Legendary:{col:'#ffd700',chance:2},Cursed:{col:'#ff4444',chance:0}};
+
+// 150 card definitions
+const ALL_CARDS=[
+  // === COMMON ===
+  {id:1,name:'Rock Golem',icon:'🪨',rarity:'Common',atk:7,def:4,hp:80,spd:3,effect:'Stone Skin: takes 2 less damage',effectFn:(p,e,ctx)=>{ctx.dmgReduce=(ctx.dmgReduce||0)+2;}},
+  {id:2,name:'Angry Cat',icon:'😾',rarity:'Common',atk:8,def:2,hp:70,spd:8,effect:'Scratch: +2 ATK when below 50% HP',effectFn:(p,e,ctx)=>{if(p.hp<p.maxHp*.5)ctx.bonus=(ctx.bonus||0)+2;}},
+  {id:3,name:'Slime Blob',icon:'🟢',rarity:'Common',atk:5,def:6,hp:90,spd:2,effect:'Split: heals 5 HP each turn',effectFn:(p,e,ctx)=>{ctx.regen=(ctx.regen||0)+5;}},
+  {id:4,name:'Torch Knight',icon:'🔥',rarity:'Common',atk:9,def:3,hp:75,spd:5,effect:'Burn: enemy takes +3 damage from fire',effectFn:(p,e,ctx)=>{ctx.bonusDmg=(ctx.bonusDmg||0)+3;}},
+  {id:5,name:'Bubble Fish',icon:'🐟',rarity:'Common',atk:4,def:8,hp:85,spd:4,effect:'Bubble Shield: 20% chance to block hit',effectFn:(p,e,ctx)=>{if(Math.random()<.2)ctx.block=true;}},
+  {id:6,name:'Grumpy Dwarf',icon:'🧔',rarity:'Common',atk:8,def:5,hp:80,spd:3,effect:'Rage: +1 ATK per hit taken',effectFn:(p,e,ctx)=>{ctx.bonus=(ctx.bonus||0)+Math.floor((p.maxHp-p.hp)/15);}},
+  {id:7,name:'Baby Dragon',icon:'🐉',rarity:'Common',atk:10,def:2,hp:65,spd:7,effect:'Fire Breath: pierces 5 shield',effectFn:(p,e,ctx)=>{ctx.pierceFn=5;}},
+  {id:8,name:'Mushroom Man',icon:'🍄',rarity:'Common',atk:6,def:6,hp:88,spd:3,effect:'Spore: enemy loses 2 ATK',effectFn:(p,e,ctx)=>{ctx.atkDebuff=(ctx.atkDebuff||0)+2;}},
+  {id:9,name:'Speed Ghost',icon:'👻',rarity:'Common',atk:7,def:1,hp:60,spd:10,effect:'Phase: 15% dodge chance',effectFn:(p,e,ctx)=>{if(Math.random()<.15)ctx.dodge=true;}},
+  {id:10,name:'Stone Wizard',icon:'🧙',rarity:'Common',atk:8,def:4,hp:72,spd:4,effect:'Stone Bolt: slows enemy by 2 SPD',effectFn:(p,e,ctx)=>{ctx.spdDebuff=(ctx.spdDebuff||0)+2;}},
+  // Uncommon
+  {id:11,name:'Thunder Bear',icon:'🐻‍❄️',rarity:'Uncommon',atk:12,def:5,hp:95,spd:5,effect:'Lightning Roar: 50% chance for 2x damage',effectFn:(p,e,ctx)=>{if(Math.random()<.5)ctx.multi=(ctx.multi||1)*2;}},
+  {id:12,name:'Iron Golem',icon:'🤖',rarity:'Uncommon',atk:10,def:10,hp:110,spd:2,effect:'Iron Wall: reduces all damage by 4',effectFn:(p,e,ctx)=>{ctx.dmgReduce=(ctx.dmgReduce||0)+4;}},
+  {id:13,name:'Ninja Fox',icon:'🦊',rarity:'Uncommon',atk:13,def:3,hp:70,spd:12,effect:'Shadow Step: first hit always crits',effectFn:(p,e,ctx)=>{if(!ctx.critted){ctx.multi=(ctx.multi||1)*2;ctx.critted=true;}}},
+  {id:14,name:'Witch Doctor',icon:'🧟',rarity:'Uncommon',atk:9,def:4,hp:80,spd:6,effect:'Voodoo: heals 8 HP on every attack',effectFn:(p,e,ctx)=>{ctx.lifesteal=(ctx.lifesteal||0)+8;}},
+  {id:15,name:'Ice Mage',icon:'🧊',rarity:'Uncommon',atk:11,def:5,hp:75,spd:7,effect:'Freeze: 25% chance to skip enemy turn',effectFn:(p,e,ctx)=>{if(Math.random()<.25)ctx.stunEnemy=true;}},
+  {id:16,name:'Lava Troll',icon:'🌋',rarity:'Uncommon',atk:14,def:6,hp:100,spd:4,effect:'Molten: +5 dmg if enemy has shield',effectFn:(p,e,ctx)=>{if(e.shield>0)ctx.bonusDmg=(ctx.bonusDmg||0)+5;}},
+  {id:17,name:'Cloud Surfer',icon:'⛅',rarity:'Uncommon',atk:10,def:3,hp:72,spd:9,effect:'Tailwind: grants +4 SPD to team',effectFn:(p,e,ctx)=>{ctx.spdBuff=(ctx.spdBuff||0)+4;}},
+  {id:18,name:'Poison Frog',icon:'🐸',rarity:'Uncommon',atk:8,def:5,hp:78,spd:6,effect:'Venom: poisons for 5/turn (3 turns)',effectFn:(p,e,ctx)=>{ctx.poison=(ctx.poison||0)+5;}},
+  {id:19,name:'Steel Paladin',icon:'⚔️',rarity:'Uncommon',atk:11,def:8,hp:100,spd:4,effect:'Holy Shield: blocks first 20 damage',effectFn:(p,e,ctx)=>{if(!ctx.shieldUsed){ctx.block20=true;ctx.shieldUsed=true;}}},
+  {id:20,name:'Mirror Imp',icon:'🪞',rarity:'Uncommon',atk:9,def:4,hp:75,spd:8,effect:'Reflect: 30% chance to bounce dmg',effectFn:(p,e,ctx)=>{if(Math.random()<.3)ctx.reflect=true;}},
+  // Rare
+  {id:21,name:'Storm Phoenix',icon:'🦅',rarity:'Rare',atk:16,def:6,hp:90,spd:11,effect:'Rebirth: revive once at 30 HP',effectFn:(p,e,ctx)=>{if(!p.revived)ctx.reviveFlag=true;}},
+  {id:22,name:'Shadow Assassin',icon:'🗡️',rarity:'Rare',atk:18,def:2,hp:70,spd:14,effect:'Execute: triple damage below 30% HP',effectFn:(p,e,ctx)=>{if(e.hp<e.maxHp*.3)ctx.multi=(ctx.multi||1)*3;}},
+  {id:23,name:'Crystal Golem',icon:'💎',rarity:'Rare',atk:12,def:14,hp:120,spd:3,effect:'Crystal Shell: absorbs 30 damage',effectFn:(p,e,ctx)=>{ctx.absorb=(ctx.absorb||0)+30;}},
+  {id:24,name:'Time Mage',icon:'⏰',rarity:'Rare',atk:13,def:6,hp:85,spd:9,effect:'Time Loop: 20% chance for extra turn',effectFn:(p,e,ctx)=>{if(Math.random()<.2)ctx.extraTurn=true;}},
+  {id:25,name:'Chaos Jester',icon:'🤡',rarity:'Rare',atk:15,def:4,hp:80,spd:10,effect:'Wild Card: random bonus effect each hit',effectFn:(p,e,ctx)=>{const r=Math.floor(Math.random()*4);if(r===0)ctx.multi=2;else if(r===1)ctx.lifesteal=15;else if(r===2)ctx.stunEnemy=true;else ctx.bonusDmg=10;}},
+  // Epic
+  {id:26,name:'Galaxy Titan',icon:'🌌',rarity:'Epic',atk:22,def:10,hp:130,spd:7,effect:'Meteor Crash: hits all enemies',effectFn:(p,e,ctx)=>{ctx.splash=true;}},
+  {id:27,name:'Void Reaper',icon:'💀',rarity:'Epic',atk:25,def:5,hp:100,spd:12,effect:'Instant Death: 10% chance to one-shot',effectFn:(p,e,ctx)=>{if(Math.random()<.1)ctx.instakill=true;}},
+  {id:28,name:'Angel of War',icon:'😇',rarity:'Epic',atk:20,def:12,hp:140,spd:8,effect:'Divine Aura: heals 20/turn + blocks 8',effectFn:(p,e,ctx)=>{ctx.regen=(ctx.regen||0)+20;ctx.dmgReduce=(ctx.dmgReduce||0)+8;}},
+  // Legendary
+  {id:29,name:'THE DOPEIMAN',icon:'😎',rarity:'Legendary',atk:30,def:15,hp:160,spd:15,effect:'MEGA VIBE: heals 30/turn + 3x damage + dodge',effectFn:(p,e,ctx)=>{ctx.multi=(ctx.multi||1)*3;ctx.regen=(ctx.regen||0)+30;if(Math.random()<.4)ctx.dodge=true;}},
+  {id:30,name:'Omega Dragon',icon:'🐲',rarity:'Legendary',atk:35,def:12,hp:150,spd:13,effect:'Apocalypse: all effects at once',effectFn:(p,e,ctx)=>{ctx.multi=(ctx.multi||1)*2;ctx.lifesteal=25;ctx.bonusDmg=15;ctx.stunEnemy=Math.random()<.3;}},
+  // Cursed
+  {id:31,name:'Cursed Mirror',icon:'🪞',rarity:'Cursed',atk:20,def:-2,hp:60,spd:10,effect:'CURSE: 50% chance to damage yourself',effectFn:(p,e,ctx)=>{if(Math.random()<.5)ctx.selfHarm=15;}},
+  {id:32,name:'Chaos Blob',icon:'🫧',rarity:'Cursed',atk:0,def:0,hp:50,spd:Math.random()*15|0,effect:'CHAOS: completely random stats each turn',effectFn:(p,e,ctx)=>{ctx.bonus=Math.floor(Math.random()*30)-10;ctx.dmgReduce=Math.floor(Math.random()*10);}},
+  {id:33,name:'Doom Clock',icon:'⏱',rarity:'Cursed',atk:40,def:0,hp:40,spd:5,effect:'DOOM: dies in 3 turns, massive damage',effectFn:(p,e,ctx)=>{ctx.multi=(ctx.multi||1)*3;}},
+  {id:34,name:'Glitch Guy',icon:'👾',rarity:'Cursed',atk:15,def:15,hp:100,spd:8,effect:'GLITCH: effects trigger twice or not at all',effectFn:(p,e,ctx)=>{if(Math.random()<.5){ctx.bonus=(ctx.bonus||0)*2;ctx.regen=(ctx.regen||0)*2;}else{ctx.bonus=0;ctx.regen=0;}}},
+];
+// Pad to 150 by auto-generating remaining cards
+const NAMES=['Swamp Ogre','Pixel Pirate','Turbo Snail','Mega Ant','Funky Yeti','Rad Raccoon','Epic Potato','Bling Spider','Wacky Wizard','Cursed Corn','Flying Pig','Disco Crab','Neon Shark','Glow Bat','Storm Chicken'];
+const ICONS=['🦕','🏴‍☠️','🐌','🐜','❄️','🦝','🥔','🕷','🎩','🌽','🐷','🦀','🦈','🦇','🐔'];
+for(let i=35;i<=150;i++){
+  const rar=Math.random()<.55?'Common':Math.random()<.6?'Uncommon':Math.random()<.7?'Rare':Math.random()<.8?'Epic':'Legendary';
+  const ni=(i-35)%NAMES.length;
+  ALL_CARDS.push({id:i,name:NAMES[ni]+(i>49?' Mk.'+Math.ceil((i-34)/15):''),icon:ICONS[ni],rarity:rar,
+    atk:rar==='Common'?6+i%6:rar==='Uncommon'?10+i%7:rar==='Rare'?14+i%8:rar==='Epic'?18+i%9:28+i%8,
+    def:2+i%9,hp:65+i%55,spd:3+i%10,
+    effect:['Deals bonus dmg','Heals on hit','Blocks damage','Speeds up','Poisons enemy'][i%5],
+    effectFn:(p,e,ctx)=>{ctx.bonusDmg=(ctx.bonusDmg||0)+3;}
+  });
+}
+
+// Game state
+let coins=0,collection=[],deck=[],wins=0,losses=0,usedCodes=[];
+let firstPackUsed=false;
+let bp={},bc={};// battle player, cpu
+let bLog=[],bRound=1,bPlayerTurn=true,bOver=false;
+let bPlayerActiveIdx=0,bCpuActiveIdx=0;
+
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+  if(id==='title')refreshTitle();
+  if(id==='shop')refreshShop();
+  if(id==='collection')renderCollection('all');
+  if(id==='deckbuild')renderDeckBuild();
+}
+
+function refreshShop(){
+  document.getElementById('shopCoins').textContent=coins;
+  const basicCost=document.getElementById('basicPackCost');
+  if(basicCost){
+    if(!firstPackUsed){
+      basicCost.textContent='🎉 FREE!';
+      basicCost.style.color='#44ff88';
+    } else {
+      basicCost.textContent='💰 30';
+      basicCost.style.color='';
+    }
+  }
+}
+
+function refreshTitle(){
+  document.getElementById('t-coins').textContent=coins;
+  document.getElementById('t-cards').textContent=collection.length;
+  document.getElementById('t-wins').textContent=wins;
+  document.getElementById('t-losses').textContent=losses;
+  // Show/hide free pack hint
+  const hint=document.getElementById('freePackHint');
+  if(hint) hint.style.display=firstPackUsed?'none':'block';
+}
+
+function cardColor(rarity){return RARITIES[rarity]?.col||'#888';}
+
+function makeCardEl(card,onClick,small){
+  const col=cardColor(card.rarity);
+  const div=document.createElement('div');
+  div.className='card'+(small?' small':'');
+  div.style.borderColor=col+'88';
+  div.style.width=small?'90px':'130px';
+  div.innerHTML=`
+    <div class="rarity" style="color:${col}">${card.rarity.toUpperCase()}</div>
+    <div class="card-icon">${card.icon}</div>
+    <div class="card-name" style="color:${col}">${card.name}</div>
+    <div class="card-stats"><span>⚔${card.atk}</span><span>🛡${card.def}</span><span>❤${card.hp}</span><span>⚡${card.spd}</span></div>
+    <div class="card-effect">${card.effect||''}</div>`;
+  if(onClick)div.onclick=onClick;
+  return div;
+}
+
+function buyPack(type){
+  const costs={basic:30,rare:80,legendary:200,cursed:120};
+  const cost=costs[type];
+  // First pack ever is FREE
+  const isFree=!firstPackUsed;
+  if(!isFree&&coins<cost){
+    document.getElementById('shopMsg').textContent='Not enough coins! (need '+cost+')';
+    setTimeout(()=>document.getElementById('shopMsg').textContent='',2000);
+    return;
+  }
+  if(!isFree) coins-=cost;
+  firstPackUsed=true;
+  document.getElementById('shopCoins').textContent=coins;
+  const newCards=drawPack(type);
+  collection.push(...newCards);
+  const rv=document.getElementById('packReveal'),rc=document.getElementById('revealCards');
+  rc.innerHTML='';newCards.forEach(c=>rc.appendChild(makeCardEl(c)));
+  rv.style.display='block';
+  refreshTitle();refreshShop();
+  if(isFree){
+    const msg=document.getElementById('shopMsg');
+    msg.textContent='🎉 First pack FREE! Earn coins by fighting!';
+    msg.style.color='#44ff88';
+    setTimeout(()=>{msg.textContent='';msg.style.color='';},3000);
+  }
+}
+
+function drawPack(type){
+  const count={basic:3,rare:4,legendary:5,cursed:4}[type];
+  const result=[];
+  for(let i=0;i<count;i++){
+    let pool;
+    if(type==='cursed')pool=ALL_CARDS.filter(c=>c.rarity==='Cursed'||Math.random()<.3);
+    else if(type==='legendary'&&i===0)pool=ALL_CARDS.filter(c=>c.rarity==='Legendary'||c.rarity==='Epic');
+    else if(type==='rare'&&i===0)pool=ALL_CARDS.filter(c=>['Rare','Epic','Legendary'].includes(c.rarity));
+    else{
+      const r=Math.random()*100;
+      if(r<55)pool=ALL_CARDS.filter(c=>c.rarity==='Common');
+      else if(r<80)pool=ALL_CARDS.filter(c=>c.rarity==='Uncommon');
+      else if(r<92)pool=ALL_CARDS.filter(c=>c.rarity==='Rare');
+      else if(r<98)pool=ALL_CARDS.filter(c=>c.rarity==='Epic');
+      else pool=ALL_CARDS.filter(c=>c.rarity==='Legendary');
+    }
+    result.push(pool[Math.floor(Math.random()*pool.length)]);
+  }
+  return result;
+}
+
+function filterCollection(rarity){
+  renderCollection(rarity);
+}
+
+function renderCollection(filter){
+  const el=document.getElementById('collGrid');el.innerHTML='';
+  document.getElementById('collCount').textContent=collection.length;
+  const shown=filter==='all'?collection:collection.filter(c=>c.rarity===filter);
+  shown.forEach(c=>{
+    const cel=makeCardEl(c,null,true);
+    const inDeck=deck.includes(c.id);
+    if(inDeck){cel.style.opacity='.6';cel.style.outline='2px solid var(--gold)';}
+    el.appendChild(cel);
+  });
+}
+
+function renderDeckBuild(){
+  const dc=document.getElementById('deckCards2');dc.innerHTML='';
+  const dg=document.getElementById('deckCollGrid');dg.innerHTML='';
+  document.getElementById('deckCount2').textContent=deck.length;
+  // Deck
+  deck.forEach(id=>{
+    const c=ALL_CARDS.find(x=>x.id===id);if(!c)return;
+    const cel=makeCardEl(c,()=>{deck=deck.filter(x=>x!==id);renderDeckBuild();},true);
+    cel.style.outline='2px solid #ff444466';
+    dc.appendChild(cel);
+  });
+  // Collection
+  collection.forEach(c=>{
+    const inDeck=deck.includes(c.id);
+    const cel=makeCardEl(c,()=>{
+      if(inDeck){deck=deck.filter(x=>x!==c.id);}
+      else{if(deck.length>=7){alert('Deck full (7 max)!');return;}deck.push(c.id);}
+      renderDeckBuild();
+    },true);
+    if(inDeck){cel.style.outline='2px solid var(--gold)';cel.style.opacity='.7';}
+    dg.appendChild(cel);
+  });
+}
+
+function redeemCode(){
+  const code=document.getElementById('codeInput').value.toUpperCase().trim();
+  const codes={FRT5:{coins:50,pack:'basic'},'THI9':{coins:100,pack:'rare'},'N673':{coins:0,card:29},'JK67L':{coins:200},'79443':{coins:0,pack:'legendary'}};
+  if(!codes[code]){alert('Invalid code!');return;}
+  if(usedCodes.includes(code)){alert('Already used!');return;}
+  usedCodes.push(code);
+  const reward=codes[code];
+  if(reward.coins)coins+=reward.coins;
+  if(reward.pack){const cards=drawPack(reward.pack);collection.push(...cards);alert('Got '+cards.length+' cards!');}
+  if(reward.card){const c=ALL_CARDS.find(x=>x.id===reward.card);if(c){collection.push(c);alert('Got '+c.name+'!');}}
+  refreshTitle();
+}
+
+// ═══════════════════════════════════════════════
+// SMASH-STYLE REAL-TIME FIGHT ENGINE
+// ═══════════════════════════════════════════════
+
+const fCanvas=document.getElementById('fightCanvas');
+const fCtx=fCanvas.getContext('2d');
+
+// 15 stages with unique platforms and backgrounds
+const STAGES=[
+  {name:'GRASSLANDS',bg:['#1a3a0a','#2a5a14'],ground:'#3a7020',platCol:'#4a8a30',
+   plats:[{x:.1,y:.55,w:.22},{x:.68,y:.55,w:.22},{x:.38,y:.38,w:.24}]},
+  {name:'LAVA LAIR',bg:['#1a0500','#3a0a00'],ground:'#5a1000',platCol:'#aa3000',
+   plats:[{x:.05,y:.45,w:.18},{x:.77,y:.45,w:.18},{x:.33,y:.3,w:.14},{x:.53,y:.3,w:.14}]},
+  {name:'ICE PEAK',bg:['#6090c0','#90b8e0'],ground:'#80a8d0',platCol:'#c8e8ff',
+   plats:[{x:.15,y:.42,w:.2},{x:.65,y:.42,w:.2},{x:.4,y:.25,w:.2}]},
+  {name:'CLOUD NINE',bg:['#2244aa','#4488ff'],ground:'#88aaff',platCol:'#ffffff',
+   plats:[{x:.1,y:.6,w:.15},{x:.75,y:.6,w:.15},{x:.28,y:.42,w:.16},{x:.56,y:.42,w:.16},{x:.42,y:.24,w:.16}]},
+  {name:'HAUNTED RUINS',bg:['#080408','#150c1a'],ground:'#1a0a22',platCol:'#442266',
+   plats:[{x:.08,y:.5,w:.2},{x:.72,y:.5,w:.2},{x:.35,y:.33,w:.3}]},
+  {name:'NEON CITY',bg:['#000008','#000020'],ground:'#0a0a2a',platCol:'#cc44ff',
+   plats:[{x:.05,y:.58,w:.15},{x:.8,y:.58,w:.15},{x:.25,y:.42,w:.15},{x:.6,y:.42,w:.15},{x:.42,y:.26,w:.16}]},
+  {name:'CANDY LAND',bg:['#ff88bb','#ffaad0'],ground:'#ff44aa',platCol:'#ffeeaa',
+   plats:[{x:.1,y:.52,w:.22},{x:.68,y:.52,w:.22},{x:.38,y:.33,w:.24}]},
+  {name:'SPACE VOID',bg:['#000004','#020010'],ground:'#080820',platCol:'#2244aa',
+   plats:[{x:.1,y:.5,w:.18},{x:.72,y:.5,w:.18},{x:.32,y:.34,w:.16},{x:.52,y:.34,w:.16},{x:.42,y:.18,w:.16}]},
+  {name:'DESERT DUNES',bg:['#8a5c20','#c8902a'],ground:'#d4a050',platCol:'#aa7030',
+   plats:[{x:.08,y:.48,w:.2},{x:.72,y:.48,w:.2},{x:.4,y:.3,w:.2}]},
+  {name:'JUNGLE DEEP',bg:['#0a1a04','#142808'],ground:'#1a4008',platCol:'#2a6010',
+   plats:[{x:.05,y:.55,w:.15},{x:.8,y:.55,w:.15},{x:.2,y:.4,w:.16},{x:.64,y:.4,w:.16},{x:.4,y:.25,w:.2}]},
+  {name:'VOLCANO TOP',bg:['#200000','#400500'],ground:'#600800',platCol:'#aa2200',
+   plats:[{x:.1,y:.45,w:.2},{x:.7,y:.45,w:.2},{x:.38,y:.28,w:.24}]},
+  {name:'UNDERWATER',bg:['#001828','#003050'],ground:'#004060',platCol:'#0088aa',
+   plats:[{x:.08,y:.55,w:.18},{x:.74,y:.55,w:.18},{x:.28,y:.38,w:.16},{x:.56,y:.38,w:.16}]},
+  {name:'CRYSTAL CAVE',bg:['#080818','#100830'],ground:'#180840',platCol:'#6644cc',
+   plats:[{x:.05,y:.5,w:.16},{x:.79,y:.5,w:.16},{x:.3,y:.36,w:.15},{x:.55,y:.36,w:.15},{x:.42,y:.2,w:.16}]},
+  {name:'STORM SUMMIT',bg:['#0a0a18','#181830'],ground:'#1a1a38',platCol:'#4488dd',
+   plats:[{x:.12,y:.48,w:.22},{x:.66,y:.48,w:.22},{x:.39,y:.3,w:.22}]},
+  {name:'THE FINALE',bg:['#080010','#100020'],ground:'#180028',platCol:'#cc44ff',
+   plats:[{x:.05,y:.55,w:.14},{x:.81,y:.55,w:.14},{x:.22,y:.4,w:.14},{x:.64,y:.4,w:.14},{x:.4,y:.25,w:.2},{x:.3,y:.1,w:.1},{x:.6,y:.1,w:.1}]},
+];
+
+// Fighter physical state
+function makeFightPhys(card,sx,sy,isP){
+  const spd=3+(card.spd||5)*.3;
+  const jumpPow=-(11+(card.spd||5)*.15);
+  const maxHp=card.hp+40;
+  return{
+    card,icon:card.icon,name:card.name,
+    x:sx,y:sy,w:44,h:52,vx:0,vy:0,onGround:false,dj:true,
+    faceDir:isP?1:-1,isPlayer:isP,
+    hp:maxHp,maxHp,
+    spd,jumpPow,
+    atkPow:card.atk*.8+4,
+    defMult:Math.max(.3,1-(card.def*.03)),
+    stocks:3,
+    // attack state
+    atkTimer:0,atkType:'',atkHit:false,
+    hitStun:0,hitFlash:0,
+    // special cooldown
+    specCd:0,
+    // AI
+    aiJumpCd:0,aiAtkCd:0,aiDir:1,
+    // effect from card
+    effectFn:card.effectFn||null,
+    // visual
+    particleColor:cardColor(card.rarity),
+  };
+}
+
+let fState='idle'; // idle|countdown|fighting|stageclear|gameover
+let fP=null,fE=null;
+let fStageIdx=0,fTotalStages=15;
+let fParticles=[];
+let fHitPauses=0;
+let fCountdown=0;
+let fTick=0;
+let fRafId=null;
+let fDecks={player:[],enemy:[]};
+let fDeckIdx={player:0,enemy:0};
+let fWinStreak=0;
+
+const fKeys={};
+document.addEventListener('keydown',e=>{
+  fKeys[e.code]=true;
+  if(fState==='fighting'||fState==='countdown'){
+    if(['KeyW','ArrowUp','Space'].includes(e.code)){e.preventDefault();fDoJump();}
+    if(e.code==='KeyL'||e.code==='KeyU'){e.preventDefault();fDoSpecial();}
+  }
+});
+document.addEventListener('keyup',e=>{fKeys[e.code]=false;});
+
+function forfeitBattle(){
+  fState='idle';
+  if(fRafId){cancelAnimationFrame(fRafId);fRafId=null;}
+  document.getElementById('battleResult').style.display='none';
+  goTo('title');
+}
+
+function fResizeCanvas(){
+  fCanvas.width=fCanvas.offsetWidth||window.innerWidth;
+  fCanvas.height=fCanvas.offsetHeight||window.innerHeight;
+}
+
+function fGetStage(){return STAGES[fStageIdx%STAGES.length];}
+
+function fSpawnPositions(){
+  const W=fCanvas.width,H=fCanvas.height;
+  return{px:W*.28,py:H*.35,ex:W*.72,ey:H*.35};
+}
+
+function startBattle(){
+  fResizeCanvas();
+  // Build deck for the run
+  const playerIds=deck.length>=3?[...deck]:Array.from({length:7},()=>Math.floor(Math.random()*30)+1);
+  const enemyIds=Array.from({length:15},()=>Math.floor(Math.random()*40)+1);
+  fDecks={player:playerIds,enemy:enemyIds};
+  fDeckIdx={player:0,enemy:0};
+  fStageIdx=0;fWinStreak=0;
+  loadNextStage();
+}
+
+function loadNextStage(){
+  // Show card draw screen between stages
+  goTo('carddraw');
+  document.getElementById('stageNum').textContent=fStageIdx+1;
+  document.getElementById('stageLabel').textContent=STAGES[fStageIdx%STAGES.length].name;
+
+  // Player picks from 3 cards
+  const choices=[];
+  for(let i=0;i<3;i++){
+    const pool=collection.length>=3?collection:ALL_CARDS;
+    choices.push(pool[Math.floor(Math.random()*pool.length)]);
+  }
+  const el=document.getElementById('drawChoices');el.innerHTML='';
+  document.getElementById('drawMsg').textContent='Pick a fighter for Stage '+(fStageIdx+1)+'!';
+  choices.forEach(card=>{
+    const cel=makeCardEl(card,(()=>{
+      const chosenCard=card;
+      return ()=>{startFight(chosenCard);}
+    })());
+    cel.style.cursor='pointer';
+    cel.style.boxShadow='0 0 0 0 transparent';
+    cel.onmouseenter=()=>cel.style.boxShadow='0 0 20px '+cardColor(card.rarity)+'88';
+    cel.onmouseleave=()=>cel.style.boxShadow='';
+    el.appendChild(cel);
+  });
+}
+
+function startFight(playerCard){
+  fResizeCanvas();
+  const W=fCanvas.width,H=fCanvas.height;
+  const pos=fSpawnPositions();
+
+  // Enemy card scales with stage
+  const ePool=ALL_CARDS.filter(c=>{
+    const minAtk=fStageIdx*2;
+    return c.atk>=minAtk||fStageIdx<3;
+  });
+  const eCard=ePool[Math.floor(Math.random()*Math.min(ePool.length,20+fStageIdx*3))];
+
+  fP=makeFightPhys(playerCard,pos.px,pos.py,true);
+  fE=makeFightPhys(eCard,pos.ex,pos.ey,false);
+  fE.faceDir=-1;
+
+  fParticles=[];fHitPauses=0;fTick=0;fState='countdown';fCountdown=180;
+  document.getElementById('stageNumHud').textContent=fStageIdx+1;
+  document.getElementById('stageNameHud').textContent=STAGES[fStageIdx%STAGES.length].name;
+  document.getElementById('pCardName').textContent=fP.icon+' '+fP.name;
+  document.getElementById('eCardName').textContent=fE.icon+' '+fE.name;
+  updateFightHud();
+
+  goTo('battle');
+  document.getElementById('battleResult').style.display='none';
+
+  if(fRafId)cancelAnimationFrame(fRafId);
+  fRafId=requestAnimationFrame(fLoop);
+}
+
+function fGetPlatforms(){
+  const W=fCanvas.width,H=fCanvas.height;
+  const st=fGetStage();
+  const gh=20; // ground height
+  const plats=[{x:0,y:H-gh,w:W,h:gh,isGround:true}];
+  st.plats.forEach(p=>{
+    plats.push({x:p.x*W,y:p.y*H,w:p.w*W,h:14});
+  });
+  return plats;
+}
+
+function fCollide(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;
+}
+
+function fResolvePhys(f,plats,W,H){
+  const spd=f.spd*(f.hitStun>0?.3:1);
+  if(f.isPlayer&&f.hitStun<=0){
+    if(fKeys['KeyA']||fKeys['ArrowLeft']){f.vx=Math.max(f.vx-1.4,-spd);f.faceDir=-1;}
+    else if(fKeys['KeyD']||fKeys['ArrowRight']){f.vx=Math.min(f.vx+1.4,spd);f.faceDir=1;}
+    else f.vx*=0.78;
+  } else if(!f.isPlayer){
+    fAI(f,W,H,plats);
+  } else {
+    f.vx*=0.78;
+  }
+
+  if(f.hitStun>0)f.hitStun--;
+  if(f.hitFlash>0)f.hitFlash--;
+  if(f.atkTimer>0)f.atkTimer--;else f.atkType='';
+  if(f.specCd>0)f.specCd--;
+  if(f.aiJumpCd>0)f.aiJumpCd--;
+  if(f.aiAtkCd>0)f.aiAtkCd--;
+
+  f.vy+=0.7;
+  if(f.vy>18)f.vy=18;
+
+  f.x+=f.vx;
+  plats.forEach(p=>{
+    if(fCollide(f.x,f.y,f.w,f.h,p.x,p.y,p.w,p.h)){
+      f.vx>0?f.x=p.x-f.w:f.x=p.x+p.w;f.vx=0;
+    }
+  });
+
+  f.y+=f.vy;f.onGround=false;
+  plats.forEach(p=>{
+    if(fCollide(f.x,f.y,f.w,f.h,p.x,p.y,p.w,p.h)){
+      if(f.vy>0&&f.y+f.h-f.vy<=p.y+2){f.y=p.y-f.h;f.vy=0;f.onGround=true;f.dj=true;}
+      else if(f.vy<0){f.y=p.y+p.h;f.vy=2;}
+    }
+  });
+
+  // Wrap/kill on OOB
+  if(f.x<-200){f.x=W+100;f.vx=0;}
+  if(f.x>W+200){f.x=-100;f.vx=0;}
+  if(f.y>H+100){fTakeDmg(f,f===fP?fE:fP,30,0,-18,true);}
+}
+
+function fDoJump(){
+  if(!fP)return;
+  if(fP.onGround){fP.vy=fP.jumpPow;fP.onGround=false;}
+  else if(fP.dj){fP.vy=fP.jumpPow*.85;fP.dj=false;
+    for(let i=0;i<8;i++)fParticles.push({x:fP.x+22,y:fP.y+fP.h,vx:(Math.random()-.5)*4,vy:2+Math.random()*2,col:'#ffffff44',life:15,sz:3});
+  }
+}
+
+function fDoSpecial(){
+  if(!fP||fP.hitStun>0)return;
+  if(fP.specCd>0)return;
+  fP.specCd=90;
+  // Card special based on effectFn tag
+  const ctx2={};
+  if(fP.effectFn)fP.effectFn(fP,fE,ctx2);
+
+  // Special: massive hitbox arc in front
+  fP.atkType='special';fP.atkTimer=18;fP.atkHit=false;
+  fP.vx=fP.faceDir*5;
+  for(let i=0;i<12;i++)fParticles.push({x:fP.x+22,y:fP.y+26,vx:fP.faceDir*(3+Math.random()*5),vy:(Math.random()-.5)*4,col:fP.particleColor,life:22,sz:4});
+
+  // Apply card passive effect during special
+  if(ctx2.regen)fP.hp=Math.min(fP.maxHp,fP.hp+ctx2.regen);
+  if(ctx2.stunEnemy&&fE){fE.hitStun=90;fE.hitFlash=90;}
+  if(ctx2.multi)fP._specMulti=ctx2.multi;else fP._specMulti=1.5;
+}
+
+function fDoAttack(f,type){
+  if(f.atkTimer>0)return;
+  f.atkType=type;f.atkTimer=type==='heavy'?22:type==='special'?18:14;f.atkHit=false;
+  if(type==='heavy'){f.vx=f.faceDir*3;}
+}
+
+function fCheckHits(){
+  [fP,fE].forEach(attacker=>{
+    if(!attacker.atkTimer||attacker.atkHit)return;
+    const target=attacker===fP?fE:fP;
+    if(!target)return;
+    // hitbox in front of attacker
+    const hbx=attacker.faceDir>0?attacker.x+attacker.w-4:attacker.x-36;
+    const hby=attacker.y+6;
+    const hbw=attacker.atkType==='special'?50:attacker.atkType==='heavy'?42:36;
+    const hbh=attacker.atkType==='kick'?28:36;
+    if(fCollide(hbx,hby,hbw,hbh,target.x,target.y,target.w,target.h)){
+      attacker.atkHit=true;
+      const ctx2={};
+      if(attacker.effectFn)attacker.effectFn(attacker,target,ctx2);
+      const multi=attacker.atkType==='heavy'?1.8:attacker.atkType==='special'?(attacker._specMulti||1.5):attacker.atkType==='kick'?1.2:1;
+      const rawDmg=attacker.atkPow*multi*(ctx2.multi||1)+(ctx2.bonusDmg||0);
+      if(!ctx2.dodge)fTakeDmg(target,attacker,rawDmg,attacker.faceDir*(attacker.atkType==='heavy'?14:9),attacker.atkType==='heavy'?-11:-8,false);
+      if(ctx2.lifesteal)attacker.hp=Math.min(attacker.maxHp,attacker.hp+ctx2.lifesteal);
+      if(ctx2.stunEnemy)target.hitStun=Math.max(target.hitStun,60);
+      if(ctx2.selfHarm)attacker.hp-=ctx2.selfHarm;
+      fHitPauses=6;
+    }
+  });
+}
+
+function fTakeDmg(target,attacker,dmg,kbx,kby,isFall){
+  const actual=Math.max(1,dmg*target.defMult-(isFall?0:0));
+  target.hp=Math.max(0,target.hp-actual);
+  target.vx=kbx;target.vy=kby;
+  target.hitStun=isFall?30:Math.min(55,18+actual*.4);
+  target.hitFlash=12;
+  // hit particles
+  for(let i=0;i<10;i++)fParticles.push({
+    x:target.x+22,y:target.y+26,
+    vx:(Math.random()-.5)*8+(kbx*.3),vy:(Math.random()-.5)*6,
+    col:isFall?'#ff2200':attacker.particleColor,life:20,sz:3+Math.floor(actual/15)
+  });
+  if(target.hp<=0)fFighterDied(target);
+}
+
+function fFighterDied(f){
+  f.stocks--;
+  const W=fCanvas.width,H=fCanvas.height;
+  // Big explosion
+  for(let i=0;i<25;i++)fParticles.push({
+    x:f.x+22,y:f.y+26,vx:(Math.random()-.5)*12,vy:(Math.random()-.5)*12,
+    col:f.particleColor,life:40,sz:5
+  });
+  if(f.stocks>0){
+    // Respawn
+    setTimeout(()=>{
+      const pos=fSpawnPositions();
+      f.x=f.isPlayer?pos.px:pos.ex;f.y=f.isPlayer?pos.py:pos.ey;
+      f.vx=0;f.vy=0;f.hp=f.maxHp;f.hitStun=60;f.atkTimer=0;f.atkType='';
+    },800);
+  } else {
+    fState='stageover';
+    setTimeout(()=>fStageResult(f.isPlayer),600);
+  }
+}
+
+function fStageResult(playerLost){
+  if(playerLost){
+    // Game over
+    fState='gameover';
+    endBattle(false);
+  } else {
+    wins++;fWinStreak++;
+    const reward=20+fStageIdx*8;
+    coins+=reward;refreshTitle();
+    fStageIdx++;
+    if(fStageIdx>=fTotalStages){
+      fState='gameover';
+      endBattle(true);
+    } else {
+      // Show stage clear then next card draw
+      fState='stageclear';
+      setTimeout(()=>{
+        loadNextStage();
+      },1500);
+    }
+  }
+}
+
+function fAI(f,W,H,plats){
+  if(!fP)return;
+  const target=fP;
+  const dx=target.x-f.x,dy=target.y-f.y;
+  const dist=Math.abs(dx);
+
+  // Move toward player
+  if(dist>60){
+    const dir=dx>0?1:-1;
+    f.vx+=(dir-f.vx)*.15;
+    f.faceDir=dir;
+  } else if(dist<30&&f.onGround){
+    f.vx+=(-(dx>0?1:-1)*.5);
+  } else {
+    f.vx*=0.8;
+  }
+
+  // Jump to reach player on platforms, or jump over player
+  if(f.aiJumpCd<=0&&f.onGround){
+    if(dy<-60||(dist<120&&Math.random()<.015)){
+      f.vy=f.jumpPow;f.onGround=false;f.dj=true;
+      f.aiJumpCd=45+Math.floor(Math.random()*30);
+    }
+  }
+  // Double jump
+  if(f.aiJumpCd<=0&&!f.onGround&&f.dj&&dy<-40){
+    f.vy=f.jumpPow*.8;f.dj=false;f.aiJumpCd=30;
+  }
+
+  // Attack when in range
+  if(f.aiAtkCd<=0){
+    if(dist<80&&Math.abs(dy)<60){
+      f.faceDir=dx>0?1:-1;
+      const r=Math.random();
+      if(r<.35)fDoAttack(f,'punch');
+      else if(r<.6)fDoAttack(f,'kick');
+      else if(r<.75)fDoAttack(f,'heavy');
+      else if(f.specCd<=0){fDoAttack(f,'special');f.specCd=90;}
+      f.aiAtkCd=25+Math.floor(Math.random()*20*(1.5-fStageIdx*.05));
+    }
+  }
+
+  f.vx=Math.max(-f.spd,Math.min(f.spd,f.vx));
+}
+
+function updateFightHud(){
+  if(!fP||!fE)return;
+  document.getElementById('pHpBar').style.width=Math.max(0,fP.hp/fP.maxHp*100)+'%';
+  document.getElementById('pHp').textContent=Math.max(0,Math.round(fP.hp));
+  document.getElementById('pBlock').textContent='🗡'.repeat(fP.stocks);
+  document.getElementById('pSpecialBar').textContent=fP.specCd>0?'○○○'.slice(0,3-Math.floor(fP.specCd/30))+'●'.repeat(Math.floor(fP.specCd/30)):'●●●';
+  document.getElementById('eHpBar').style.width=Math.max(0,fE.hp/fE.maxHp*100)+'%';
+  document.getElementById('eHp').textContent=Math.max(0,Math.round(fE.hp));
+}
+
+function fDrawBackground(){
+  const W=fCanvas.width,H=fCanvas.height;
+  const st=fGetStage();
+  const grad=fCtx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,st.bg[0]);grad.addColorStop(1,st.bg[1]);
+  fCtx.fillStyle=grad;fCtx.fillRect(0,0,W,H);
+
+  // Parallax stars/dots
+  fCtx.fillStyle='rgba(255,255,255,0.04)';
+  for(let i=0;i<30;i++){
+    const sx=(i*137+fTick*.5)%W,sy=(i*71)%H;
+    fCtx.fillRect(sx,sy,2,2);
+  }
+}
+
+function fDrawPlatforms(plats){
+  const st=fGetStage();
+  plats.forEach(p=>{
+    fCtx.fillStyle=p.isGround?st.ground:st.platCol;
+    fCtx.fillRect(p.x,p.y,p.w,p.h);
+    if(!p.isGround){
+      fCtx.fillStyle='rgba(255,255,255,0.15)';
+      fCtx.fillRect(p.x,p.y,p.w,4);
+    }
+  });
+}
+
+function fDrawFighter(f){
+  if(f.stocks<=0)return;
+  const x=f.x,y=f.y,w=f.w,h=f.h;
+  const flip=f.faceDir<0;
+
+  // Flash on hit
+  if(f.hitFlash>0&&Math.floor(fTick/2)%2===0)return;
+
+  fCtx.save();fCtx.translate(x+w/2,y+h/2);
+  if(flip)fCtx.scale(-1,1);
+
+  // Shadow
+  fCtx.fillStyle='rgba(0,0,0,0.3)';
+  fCtx.beginPath();fCtx.ellipse(0,h/2+4,w*.4,6,0,0,Math.PI*2);fCtx.fill();
+
+  // Body glow when special active
+  if(f.atkType==='special'){
+    fCtx.shadowColor=f.particleColor;fCtx.shadowBlur=20;
+  }
+
+  // Body
+  const bodyCol=cardColor(f.card.rarity);
+  fCtx.fillStyle=bodyCol;
+  fCtx.fillRect(-w/2,-h/4,w,h/2);
+
+  // Head — big emoji icon centered
+  fCtx.font=(w*.9)+'px serif';fCtx.textAlign='center';fCtx.textBaseline='middle';
+  fCtx.fillText(f.icon,0,-h*.12);
+
+  // Arms when attacking
+  if(f.atkTimer>0){
+    fCtx.fillStyle=bodyCol;
+    if(f.atkType==='punch'){
+      fCtx.fillRect(w*.2,-h*.15,w*.6,10);// punch arm forward
+    } else if(f.atkType==='kick'){
+      fCtx.fillRect(w*.1,h*.2,w*.5,10);// kick leg forward
+    } else if(f.atkType==='heavy'||f.atkType==='special'){
+      fCtx.fillRect(-w*.1,-h*.3,w*.7,14);// big swing
+    }
+  }
+
+  // Legs
+  const legSwing=f.vx!==0&&f.onGround?Math.sin(fTick*.3)*8:0;
+  fCtx.fillStyle='rgba(0,0,0,0.4)';
+  fCtx.fillRect(-w*.3,h*.22,w*.25,h*.3+legSwing);
+  fCtx.fillRect(w*.05,h*.22,w*.25,h*.3-legSwing);
+
+  // HP indicator under fighter
+  const hpFrac=f.hp/f.maxHp;
+  fCtx.fillStyle='rgba(0,0,0,0.5)';fCtx.fillRect(-w/2,h/2+8,w,5);
+  fCtx.fillStyle=hpFrac>.5?'#44ff44':hpFrac>.25?'#ffcc00':'#ff2200';
+  fCtx.fillRect(-w/2,h/2+8,w*hpFrac,5);
+
+  // Stock dots
+  for(let i=0;i<f.stocks;i++){
+    fCtx.fillStyle=f.particleColor;
+    fCtx.beginPath();fCtx.arc(-w/2+8+i*14,h/2+18,4,0,Math.PI*2);fCtx.fill();
+  }
+
+  // Attack hitbox outline
+  if(f.atkTimer>0&&!f.atkHit){
+    const hbx=f.faceDir>0?w/2-4:-36+w/2;// relative to center
+    const hbw=f.atkType==='special'?50:f.atkType==='heavy'?42:36;
+    const hbh=f.atkType==='kick'?28:36;
+    fCtx.strokeStyle=f.particleColor+'cc';fCtx.lineWidth=2;
+    fCtx.shadowColor=f.particleColor;fCtx.shadowBlur=8;
+    fCtx.strokeRect(hbx,-h*.15,hbw,hbh);
+    fCtx.shadowBlur=0;
+  }
+
+  fCtx.shadowBlur=0;
+  fCtx.restore();
+}
+
+function fDrawParticles(){
+  for(let i=fParticles.length-1;i>=0;i--){
+    const p=fParticles[i];
+    fCtx.globalAlpha=p.life/25;
+    fCtx.fillStyle=p.col;
+    fCtx.beginPath();fCtx.arc(p.x,p.y,p.sz,0,Math.PI*2);fCtx.fill();
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life-=1;
+    if(p.life<=0)fParticles.splice(i,1);
+  }
+  fCtx.globalAlpha=1;
+}
+
+function fLoop(){
+  fRafId=requestAnimationFrame(fLoop);
+  fTick++;
+  const W=fCanvas.width,H=fCanvas.height;
+  if(W!==fCanvas.offsetWidth||H!==fCanvas.offsetHeight)fResizeCanvas();
+
+  const plats=fGetPlatforms();
+
+  if(fHitPauses>0){fHitPauses--;fDrawBackground();fDrawPlatforms(plats);fDrawFighter(fP);fDrawFighter(fE);fDrawParticles();return;}
+
+  if(fState==='countdown'){
+    fDrawBackground();fDrawPlatforms(plats);
+    if(fP)fDrawFighter(fP);if(fE)fDrawFighter(fE);
+    fCtx.fillStyle='rgba(0,0,0,.55)';fCtx.fillRect(0,0,W,H);
+    const cd=Math.ceil(fCountdown/60);
+    fCtx.fillStyle=cd>1?'#ffffff':'#ff4444';
+    fCtx.font='bold 120px monospace';fCtx.textAlign='center';fCtx.textBaseline='middle';
+    if(fCountdown>20)fCtx.fillText(cd===0?'GO!':cd,W/2,H/2);
+    else{fCtx.fillStyle='#00ff88';fCtx.font='bold 80px monospace';fCtx.fillText('FIGHT!',W/2,H/2);}
+    fCountdown--;if(fCountdown<=0)fState='fighting';
+    return;
+  }
+
+  if(fState==='stageclear'){
+    fDrawBackground();fDrawPlatforms(plats);
+    if(fP)fDrawFighter(fP);
+    fCtx.fillStyle='rgba(0,0,0,.6)';fCtx.fillRect(0,0,W,H);
+    fCtx.fillStyle='#ffd700';fCtx.font='bold 72px monospace';fCtx.textAlign='center';fCtx.textBaseline='middle';
+    fCtx.fillText('STAGE CLEAR!',W/2,H/2-30);
+    fCtx.fillStyle='#aaa';fCtx.font='22px monospace';
+    fCtx.fillText('Stage '+(fStageIdx)+'/'+fTotalStages+' complete',W/2,H/2+40);
+    return;
+  }
+
+  if(fState==='fighting'){
+    fResolvePhys(fP,plats,W,H);
+    fResolvePhys(fE,plats,W,H);
+    fCheckHits();
+
+    // Player attacks
+    if(fP.hitStun<=0){
+      if((fKeys['KeyJ'])&&!fP.atkTimer)fDoAttack(fP,'punch');
+      else if((fKeys['KeyK'])&&!fP.atkTimer)fDoAttack(fP,'kick');
+      else if((fKeys['KeyI']||fKeys['ControlLeft'])&&!fP.atkTimer)fDoAttack(fP,'heavy');
+    }
+
+    updateFightHud();
+  }
+
+  // Draw
+  fDrawBackground();
+  fDrawPlatforms(plats);
+  if(fP)fDrawFighter(fP);
+  if(fE)fDrawFighter(fE);
+  fDrawParticles();
+
+  // Controls reminder
+  fCtx.fillStyle='rgba(0,0,0,.45)';fCtx.fillRect(0,H-28,W,28);
+  fCtx.fillStyle='#443355';fCtx.font='10px monospace';fCtx.textAlign='center';fCtx.textBaseline='middle';
+  fCtx.fillText('A/D:MOVE · W:JUMP · J:PUNCH · K:KICK · I/CTRL:HEAVY · L:SPECIAL',W/2,H-14);
+}
+
+function endBattle(playerWon){
+  if(fRafId){cancelAnimationFrame(fRafId);fRafId=null;}
+  fState='idle';
+  if(!playerWon)losses++;
+  const reward=playerWon?(100+fStageIdx*20):15;
+  coins+=reward;
+  const el=document.getElementById('battleResult');
+  el.style.display='flex';el.style.flexDirection='column';el.style.alignItems='center';el.style.justifyContent='center';
+  el.style.background='rgba(0,0,10,.95)';
+  el.innerHTML=`
+    <div style="font-size:60px;margin-bottom:8px;">${playerWon?'🏆':'💀'}</div>
+    <div style="font-size:36px;font-weight:900;color:${playerWon?'var(--green)':'var(--red)'};letter-spacing:4px;">${playerWon?'ALL STAGES CLEARED!':'GAME OVER'}</div>
+    <div style="font-size:13px;color:var(--dim);margin:12px 0 8px;">Stages beaten: ${fStageIdx} / ${fTotalStages}</div>
+    <div style="font-size:13px;color:var(--gold);margin-bottom:20px;">Coins earned: +${reward} 💰</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      <button class="btn gold" onclick="document.getElementById('battleResult').style.display='none';startBattle()">⚔️ NEW RUN</button>
+      <button class="btn" onclick="document.getElementById('battleResult').style.display='none';goTo('shop')">🎴 SHOP</button>
+      <button class="btn" onclick="document.getElementById('battleResult').style.display='none';goTo('title')">🏠 MENU</button>
+    </div>`;
+  refreshTitle();
+}
+
+// Start with a basic pack
+(function init(){
+  const starter=drawPack('basic');collection.push(...starter);
+  deck=starter.slice(0,3).map(c=>c.id);
+  renderCollection('all');
+})();
+</script>
+</body>
+</html>
