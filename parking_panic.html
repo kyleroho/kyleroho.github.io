@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PARKING PANIC — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;color:#fff;overflow:hidden;user-select:none;}
+canvas{display:block;cursor:pointer;}
+#ui{display:flex;gap:16px;padding:6px;font-size:11px;color:#aaa;align-items:center;justify-content:center;flex-wrap:wrap;}
+#ui b{color:#fff;} a{color:#44ffcc;text-decoration:none;font-size:10px;}a:hover{color:#fff;}
+</style>
+</head>
+<body>
+<div id="ui">
+  <span>🚗 LEVEL <b id="h-lv">1</b></span>
+  <span>🔄 MOVES <b id="h-moves">0</b></span>
+  <span>⭐ SCORE <b id="h-score">0</b></span>
+  <span>🏆 BEST <b id="h-best">0</b></span>
+  <span style="color:#555;font-size:10px;">Click a car to select · Click empty space to slide · Get the RED car to the exit!</span>
+  <a href="index.html">← Back</a>
+</div>
+<canvas id="c" width="520" height="520"></canvas>
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=520,H=520;
+const GRID=6,CELL=72,PAD=44;
+let hiScore=parseInt(localStorage.getItem('parking_hi')||0);
+
+let state='menu',level=1,moves=0,score=0,tick=0,winPending=false;
+let grid=[],cars=[],selected=null,particles=[],fx=[];
+let animating=false;
+
+// Car definitions per level
+const LEVELS=[
+  // [id, col, row, len, horiz, isTarget]
+  {cars:[
+    [0,'#ff2200',2,2,true,true],// red car (target) — horiz at row 2
+    [1,'#2244cc',0,0,2,true,false],
+    [2,'#228833',1,1,2,false,false],
+    [3,'#cc8800',3,3,2,true,false],
+    [4,'#884488',4,0,2,false,false],
+  ]},
+  {cars:[
+    [0,'#ff2200',2,1,true,true],
+    [1,'#2244cc',0,0,3,false,false],
+    [2,'#228833',2,0,2,true,false],
+    [3,'#cc8800',1,3,2,true,false],
+    [4,'#884488',3,1,2,false,false],
+    [5,'#44aa88',4,4,3,true,false],
+    [6,'#aa4444',5,2,2,false,false],
+  ]},
+  {cars:[
+    [0,'#ff2200',2,2,true,true],
+    [1,'#2244cc',0,0,2,false,false],
+    [2,'#228833',0,1,3,true,false],
+    [3,'#cc8800',3,0,2,false,false],
+    [4,'#884488',5,0,3,false,false],
+    [5,'#44aa88',1,3,2,true,false],
+    [6,'#aa4444',3,3,3,false,false],
+    [7,'#aaaa44',2,4,2,true,false],
+    [8,'#4488aa',4,2,2,true,false],
+  ]},
+  {cars:[
+    [0,'#ff2200',2,1,true,true],
+    [1,'#2244cc',0,0,3,false,false],
+    [2,'#228833',2,0,2,false,false],
+    [3,'#cc8800',4,0,2,false,false],
+    [4,'#884488',0,3,2,true,false],
+    [5,'#44aa88',1,4,3,false,false],
+    [6,'#aa4444',3,2,2,true,false],
+    [7,'#aaaa44',5,1,3,false,false],
+    [8,'#4488aa',0,5,3,true,false],
+    [9,'#aa88aa',4,4,2,false,false],
+  ]},
+  {cars:[
+    [0,'#ff2200',2,2,true,true],
+    [1,'#2244cc',0,0,2,false,false],
+    [2,'#228833',1,0,3,true,false],
+    [3,'#cc8800',4,0,2,false,false],
+    [4,'#884488',0,2,2,false,false],
+    [5,'#44aa88',0,4,3,true,false],
+    [6,'#aa4444',3,1,2,false,false],
+    [7,'#aaaa44',3,3,2,false,false],
+    [8,'#4488aa',1,4,2,false,false],// vertical
+    [9,'#aa88aa',4,3,2,true,false],
+    [10,'#88aa44',5,1,3,false,false],
+  ]},
+];
+
+function buildGrid(){
+  grid=Array(GRID).fill(null).map(()=>Array(GRID).fill(-1));
+  cars.forEach(car=>{
+    for(let i=0;i<car.len;i++){
+      if(car.horiz)grid[car.row][car.col+i]=car.id;
+      else grid[car.row+i][car.col]=car.id;
+    }
+  });
+}
+
+function loadLevel(lv){
+  const lvDef=LEVELS[(lv-1)%LEVELS.length];
+  cars=lvDef.cars.map(([id,color,col,row,len,horiz,isTarget])=>
+    ({id,color,col,row,len,horiz,isTarget,animOff:0,shakeTick:0}));
+  buildGrid();moves=0;selected=null;winPending=false;state='playing';
+  document.getElementById('h-lv').textContent=lv;
+  document.getElementById('h-moves').textContent=moves;
+}
+
+function startGame(){
+  level=1;score=0;moves=0;tick=0;particles=[];fx=[];winPending=false;
+  loadLevel(1);state='playing';
+  document.getElementById('h-score').textContent=score;
+  document.getElementById('h-best').textContent=hiScore;
+}
+
+function getCarAt(col,row){return cars.find(c=>c.id===grid[row]?.[col]);}
+
+function canMove(car,dir){
+  // dir: -1 = left/up, +1 = right/down
+  if(car.horiz){
+    const tc=dir>0?car.col+car.len:car.col-1;
+    if(tc<0||tc>=GRID)return false;
+    return grid[car.row][tc]===-1;
+  } else {
+    const tr=dir>0?car.row+car.len:car.row-1;
+    if(tr<0||tr>=GRID)return false;
+    return grid[tr][car.col]===-1;
+  }
+}
+
+function moveCar(car,dir){
+  if(!canMove(car,dir))return false;
+  // Remove from grid
+  for(let i=0;i<car.len;i++){
+    if(car.horiz)grid[car.row][car.col+i]=-1;
+    else grid[car.row+i][car.col]=-1;
+  }
+  if(car.horiz)car.col+=dir;else car.row+=dir;
+  for(let i=0;i<car.len;i++){
+    if(car.horiz)grid[car.row][car.col+i]=car.id;
+    else grid[car.row+i][car.col]=car.id;
+  }
+  return true;
+}
+
+function handleClick(mx,my){
+  if(state!=='playing'||animating)return;
+  const col=Math.floor((mx-PAD)/CELL);
+  const row=Math.floor((my-PAD)/CELL);
+  if(col<0||col>=GRID||row<0||row>=GRID)return;
+
+  const clickedCar=getCarAt(col,row);
+  if(clickedCar){
+    selected=clickedCar;
+    return;
+  }
+  if(!selected)return;
+
+  // Try to move selected car toward click
+  let moved=false;
+  if(selected.horiz){
+    const dir=col<selected.col?-1:1;
+    let steps=Math.abs(col-(dir>0?selected.col+selected.len-1:selected.col));
+    for(let i=0;i<steps;i++){if(moveCar(selected,dir))moved=true;else break;}
+  } else {
+    const dir=row<selected.row?-1:1;
+    let steps=Math.abs(row-(dir>0?selected.row+selected.len-1:selected.row));
+    for(let i=0;i<steps;i++){if(moveCar(selected,dir))moved=true;else break;}
+  }
+
+  if(moved){
+    moves++;
+    document.getElementById('h-moves').textContent=moves;
+    checkWin();
+  }
+}
+
+function checkWin(){
+  if(winPending)return;
+  const target=cars.find(c=>c.isTarget);
+  if(target&&target.col+target.len>=GRID){
+    winPending=true;
+    state='levelclear';
+    const bonus=Math.max(0,30-moves)*10;
+    score+=100+bonus;
+    if(score>hiScore){hiScore=score;localStorage.setItem('parking_hi',hiScore);}
+    document.getElementById('h-score').textContent=score;
+    document.getElementById('h-best').textContent=hiScore;
+    for(let i=0;i<40;i++)particles.push({
+      x:PAD+(GRID-1)*CELL+CELL/2,y:PAD+2*CELL+CELL/2,
+      vx:(Math.random()-.5)*12,vy:(Math.random()-1.2)*10,
+      col:['#ffd700','#ff4422','#44ff88','#44aaff'][Math.floor(Math.random()*4)],life:45,sz:6
+    });
+    fx.push({txt:'🚗 ESCAPED! +'+( 100+bonus),x:W/2,y:H/2-40,col:'#ffd700',life:120});
+    setTimeout(()=>{level++;winPending=false;loadLevel(level);},2000);
+  }
+}
+
+function draw(){
+  ctx.fillStyle='#0a0a14';ctx.fillRect(0,0,W,H);
+
+  if(state==='playing'||state==='gameover'){
+    // Board bg
+    ctx.fillStyle='#111120';ctx.fillRect(PAD-4,PAD-4,GRID*CELL+8,GRID*CELL+8);
+    ctx.strokeStyle='#222244';ctx.lineWidth=2;ctx.strokeRect(PAD-4,PAD-4,GRID*CELL+8,GRID*CELL+8);
+
+    // Grid cells
+    for(let r=0;r<GRID;r++)for(let c=0;c<GRID;c++){
+      ctx.fillStyle=(r+c)%2===0?'#131325':'#0f0f1f';
+      ctx.fillRect(PAD+c*CELL+1,PAD+r*CELL+1,CELL-2,CELL-2);
+    }
+
+    // Exit arrow
+    ctx.fillStyle='#ff2200';
+    ctx.fillStyle='rgba(255,34,0,.3)';ctx.fillRect(PAD+GRID*CELL,PAD+2*CELL,24,CELL);
+    ctx.fillStyle='#ff4400';ctx.font='20px monospace';ctx.textAlign='center';
+    ctx.fillText('▶',PAD+GRID*CELL+12,PAD+2*CELL+CELL/2+7);
+    ctx.fillStyle='rgba(255,68,0,.2)';ctx.font='8px monospace';ctx.textAlign='center';
+    ctx.fillText('EXIT',PAD+GRID*CELL+12,PAD+2*CELL+CELL/2+20);
+
+    // Cars
+    cars.forEach(car=>{
+      const cx=PAD+car.col*CELL,cy=PAD+car.row*CELL;
+      const cw=car.horiz?car.len*CELL:CELL,ch=car.horiz?CELL:car.len*CELL;
+      const isSelected=selected&&selected.id===car.id;
+      const isTarget=car.isTarget;
+
+      // Shadow
+      ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(cx+4,cy+4,cw-2,ch-2);
+
+      // Body
+      ctx.fillStyle=car.color;
+      ctx.shadowColor=isSelected?'#ffffff':isTarget?'#ff2200':'transparent';
+      ctx.shadowBlur=isSelected?16:isTarget?8:0;
+      roundedRect(ctx,cx+3,cy+3,cw-6,ch-6,6);ctx.fill();
+      ctx.shadowBlur=0;
+
+      // Windows
+      ctx.fillStyle='rgba(180,220,255,.6)';
+      if(car.horiz){
+        ctx.fillRect(cx+cw*.35,cy+8,cw*.3,ch*.35);
+        if(car.len>1)ctx.fillRect(cx+cw*.62,cy+8,cw*.25,ch*.35);
+      } else {
+        ctx.fillRect(cx+8,cy+ch*.35,cw*.35,ch*.3);
+        if(car.len>1)ctx.fillRect(cx+8,cy+ch*.62,cw*.35,ch*.25);
+      }
+
+      // Wheels
+      ctx.fillStyle='#222';
+      if(car.horiz){
+        [[cx+10,cy+ch-4],[cx+cw-18,cy+ch-4],[cx+10,cy+1],[cx+cw-18,cy+1]].forEach(([wx,wy])=>{
+          ctx.beginPath();ctx.arc(wx+4,wy+3,5,0,Math.PI*2);ctx.fill();
+        });
+      } else {
+        [[cx+1,cy+10],[cx+cw-4,cy+10],[cx+1,cy+ch-18],[cx+cw-4,cy+ch-18]].forEach(([wx,wy])=>{
+          ctx.beginPath();ctx.arc(wx+3,wy+4,5,0,Math.PI*2);ctx.fill();
+        });
+      }
+
+      // Selected indicator
+      if(isSelected){
+        ctx.strokeStyle='#ffffff';ctx.lineWidth=2;
+        roundedRect(ctx,cx+1,cy+1,cw-2,ch-2,8);ctx.stroke();
+      }
+    });
+
+    // Particles
+    particles.forEach(p=>{
+      ctx.globalAlpha=p.life/40;ctx.fillStyle=p.col;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();
+    });ctx.globalAlpha=1;
+
+    // FX
+    fx.forEach(f=>{
+      ctx.globalAlpha=f.life/80;ctx.fillStyle=f.col;ctx.font='bold 16px monospace';ctx.textAlign='center';
+      ctx.fillText(f.txt,f.x,f.y-(80-f.life)*.3);
+    });ctx.globalAlpha=1;
+
+    // HUD
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,W,22);
+    ctx.fillStyle='#ff4422';ctx.font='bold 11px monospace';ctx.textAlign='center';
+    ctx.fillText('Get the 🚗 red car to the exit →',W/2,14);
+  }
+
+  if(state==='menu'){
+    ctx.fillStyle='rgba(0,0,0,.9)';ctx.fillRect(0,0,W,H);
+    ctx.shadowColor='#44ffcc';ctx.shadowBlur=30;
+    ctx.fillStyle='#44ffcc';ctx.font='bold 52px monospace';ctx.textAlign='center';
+    ctx.fillText('PARKING',W/2,H/2-60);ctx.fillText('PANIC',W/2,H/2-4);
+    ctx.shadowBlur=0;ctx.fillStyle='#555';ctx.font='12px monospace';
+    ctx.fillText('Slide cars to free the red one · Fewer moves = more points!',W/2,H/2+32);
+    ctx.fillStyle='#ffd700';ctx.font='11px monospace';ctx.fillText('Best: '+hiScore,W/2,H/2+56);
+    ctx.fillStyle='#ffe600';ctx.font='bold 14px monospace';ctx.fillText('CLICK OR PRESS ENTER',W/2,H/2+96);
+  }
+}
+
+
+// Cross-browser rounded rect helper
+function roundedRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.arcTo(x+w, y, x+w, y+r, r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h);
+  ctx.arcTo(x, y+h, x, y+h-r, r);
+  ctx.lineTo(x, y+r);
+  ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
+}
+function loopF(){
+  tick++;
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.2;p.life--;return p.life>0;});
+  for(let i=fx.length-1;i>=0;i--){fx[i].life--;if(fx[i].life<=0)fx.splice(i,1);}
+  draw();requestAnimationFrame(loopF);
+}
+
+C.addEventListener('click',e=>{
+  if(state==='menu'){startGame();return;}
+  const r=C.getBoundingClientRect();
+  handleClick(e.clientX-r.left,e.clientY-r.top);
+});
+document.addEventListener('keydown',e=>{
+  if(e.code==='Enter'){if(state==='menu')startGame();}
+  if(e.code==='Escape'){selected=null;}
+  // Arrow keys to move selected car
+  if(state==='playing'&&selected){
+    const dirs={ArrowLeft:-1,ArrowRight:1,ArrowUp:-1,ArrowDown:1};
+    const dir=dirs[e.code];
+    if(dir!==undefined){
+      e.preventDefault();
+      const moved=moveCar(selected,dir);
+      if(moved){
+        moves++;document.getElementById('h-moves').textContent=moves;
+        checkWin();
+      }
+    }
+  }
+});
+loopF();
+</script>
+</body>
+</html>
