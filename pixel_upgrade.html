@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PIXEL UPGRADE — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a12;font-family:'Courier New',monospace;color:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+canvas{display:block;border:2px solid #1a1a2a;}
+#topbar{width:640px;display:flex;gap:16px;padding:5px 0;font-size:10px;color:#555;align-items:center;flex-wrap:wrap;justify-content:space-between;}
+#topbar b{color:#fff;} a{color:#ff8800;text-decoration:none;font-size:9px;}a:hover{color:#fff;}
+/* UPGRADE PANEL */
+#upgPanel{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;overflow-y:auto;}
+#upgPanel h1{font-size:28px;color:#ff8800;letter-spacing:4px;margin-bottom:4px;}
+#upgPanel .subtitle{font-size:9px;color:#553300;letter-spacing:3px;margin-bottom:12px;}
+#upgPanel .coins{font-size:16px;color:#ffd700;margin-bottom:14px;}
+#upgGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:700px;width:100%;}
+.uc{background:#0d0a00;border:2px solid #332200;padding:12px 10px;cursor:pointer;transition:all .12s;text-align:center;position:relative;}
+.uc:hover:not(.locked):not(.maxed){border-color:#ff8800;background:#1a0f00;}
+.uc.maxed{border-color:#ffd700;background:#0f0a00;cursor:default;}
+.uc.locked{opacity:.25;cursor:default;}
+.uc .ui{font-size:24px;margin-bottom:5px;}
+.uc .un{font-size:9px;color:#ff8800;letter-spacing:1px;margin-bottom:3px;}
+.uc .ud{font-size:8px;color:#443300;line-height:1.4;margin-bottom:6px;min-height:24px;}
+.uc .ubar{display:flex;gap:2px;justify-content:center;margin-bottom:5px;}
+.uc .ubar span{width:12px;height:6px;background:#222;}
+.uc .ubar span.filled{background:#ff8800;}
+.uc .ubar span.maxfilled{background:#ffd700;}
+.uc .ucost{font-size:10px;color:#ffd700;}
+#upgPanel .run-btn{margin-top:14px;background:transparent;border:2px solid #ff8800;color:#ff8800;font-family:'Courier New',monospace;font-size:13px;letter-spacing:3px;padding:12px 44px;cursor:pointer;transition:all .2s;}
+#upgPanel .run-btn:hover{background:#ff880022;}
+#upgPanel .run-btn:disabled{opacity:.4;cursor:default;}
+/* ACHIEVEMENTS */
+#achPanel{max-width:700px;width:100%;margin-top:10px;}
+#achPanel h3{font-size:9px;color:#553300;letter-spacing:3px;margin-bottom:8px;}
+#achGrid{display:flex;flex-wrap:wrap;gap:6px;}
+.ach-badge{padding:4px 8px;border:1px solid;font-size:8px;letter-spacing:1px;}
+.ach-badge.unlocked{border-color:#ffd700;color:#ffd700;background:#0f0a00;}
+.ach-badge.locked{border-color:#222;color:#222;}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span>🏃 RUN <b id="h-run">1</b></span>
+  <span>💰 <b id="h-coins">0</b> coins</span>
+  <span>📏 BEST <b id="h-best">0</b>m</span>
+  <span>🔫 AMMO <b id="h-ammo">—</b></span>
+  <span>❤ HP <b id="h-hp">—</b></span>
+  <a href="index.html">← Back</a>
+</div>
+<canvas id="c" width="640" height="380"></canvas>
+
+<div id="upgPanel">
+  <h1>⬆ UPGRADE SHOP</h1>
+  <div class="subtitle">BUY UPGRADES TO IMPROVE YOUR NEXT RUN</div>
+  <div class="coins">💰 <span id="shopCoins">0</span> coins</div>
+  <div id="upgGrid"></div>
+  <button class="run-btn" id="runBtn" onclick="startRun()">▶ START RUN</button>
+  <div id="achPanel">
+    <h3>🏆 ACHIEVEMENTS (<span id="achCount">0</span>/15)</h3>
+    <div id="achGrid"></div>
+  </div>
+</div>
+
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=640,H=380,GY=320;
+
+// ── PERSISTENCE ──
+let coins=parseInt(localStorage.getItem('pu2_coins')||0);
+let bestDist=parseInt(localStorage.getItem('pu2_best')||0);
+let runNum=parseInt(localStorage.getItem('pu2_run')||1);
+let achUnlocked=JSON.parse(localStorage.getItem('pu2_ach')||'[]');
+
+function saveAll(){
+  localStorage.setItem('pu2_coins',coins);
+  localStorage.setItem('pu2_best',bestDist);
+  localStorage.setItem('pu2_run',runNum);
+  localStorage.setItem('pu2_ach',JSON.stringify(achUnlocked));
+  UPGRADES.forEach(u=>localStorage.setItem('pu2_'+u.id,upgLevels[u.id]));
+}
+
+// ── UPGRADES (Johnny Upgrade style — start with nothing) ──
+const UPGRADES=[
+  {id:'move',  icon:'👟',name:'MOVE',      desc:'Unlock movement! WASD/Arrows', maxLv:5, costs:[5,15,30,60,100],
+   vals:[0,2,3.2,4.5,5.5,6.5], unlockMsg:'You can move now!'},
+  {id:'jump',  icon:'⬆',name:'JUMP',      desc:'Unlock jumping! Space/Up',     maxLv:5, costs:[8,20,40,80,150],
+   vals:[0,0,11,12.5,14,15.5], unlockMsg:'You can jump!', req:'move'},
+  {id:'shoot', icon:'🔫',name:'SHOOT',     desc:'Unlock shooting! Z key',       maxLv:5, costs:[10,25,50,100,180],
+   vals:[0,0,5,8,12,16], unlockMsg:'You can shoot!', req:'move'},
+  {id:'hp',    icon:'❤',name:'HP',        desc:'Survive more hits',             maxLv:4, costs:[15,30,60,120],
+   vals:[0,1,2,3,4]},
+  {id:'ammo',  icon:'📦',name:'MAX AMMO', desc:'Carry more bullets',            maxLv:4, costs:[12,24,50,100],
+   vals:[0,0,6,10,16], req:'shoot'},
+  {id:'dmg',   icon:'💥',name:'DAMAGE',   desc:'Bullets hit harder',            maxLv:4, costs:[18,36,72,140],
+   vals:[0,1,2,3,5], req:'shoot'},
+  {id:'dj',    icon:'2️⃣',name:'DBL JUMP', desc:'Jump again in the air',         maxLv:1, costs:[50],
+   vals:[0,1], req:'jump'},
+  {id:'armor', icon:'🛡',name:'ARMOR',    desc:'Take less damage from enemies', maxLv:3, costs:[25,55,110],
+   vals:[0,1,2,3]},
+  {id:'speed', icon:'⚡',name:'SPEED+',   desc:'Extra movement speed',          maxLv:3, costs:[20,45,90],
+   vals:[0,0,.5,1.2], req:'move'},
+  {id:'magnet',icon:'🧲',name:'MAGNET',   desc:'Auto-collect nearby coins',     maxLv:3, costs:[30,70,140],
+   vals:[0,0,50,100]},
+  {id:'regen', icon:'💚',name:'REGEN',    desc:'Slowly heal over time',         maxLv:3, costs:[35,80,160],
+   vals:[0,0,1,2]},
+  {id:'fire',  icon:'⏩',name:'FIRE RATE',desc:'Shoot faster',                  maxLv:4, costs:[20,45,90,180],
+   vals:[0,30,20,12,7], req:'shoot'},
+];
+
+let upgLevels={};
+UPGRADES.forEach(u=>upgLevels[u.id]=parseInt(localStorage.getItem('pu2_'+u.id)||0));
+function getUpg(id){return UPGRADES.find(u=>u.id===id);}
+function lv(id){return upgLevels[id]||0;}
+function val(id){const u=getUpg(id);if(!u)return 0;return u.vals[lv(id)]||0;}
+function unlocked(id){const u=getUpg(id);if(!u)return false;if(!u.req)return true;return lv(u.req)>=1;}
+
+// ── ACHIEVEMENTS ──
+const ACHIEVEMENTS=[
+  {id:'standstill', name:'STAND STILL',  desc:'Survive 60s without moving',  icon:'🧍', check:()=>standStillSecs>=60},
+  {id:'firstcoin',  name:'FIRST COIN',   desc:'Earn your first coin',         icon:'💰', check:()=>coins>=1||runNum>1},
+  {id:'move',       name:'ON THE MOVE',  desc:'Unlock movement',              icon:'👟', check:()=>lv('move')>=1},
+  {id:'jump',       name:'AIR TIME',     desc:'Unlock jumping',               icon:'⬆', check:()=>lv('jump')>=1},
+  {id:'shoot',      name:'PEW PEW',      desc:'Unlock shooting',              icon:'🔫', check:()=>lv('shoot')>=1},
+  {id:'10m',        name:'10 METERS',    desc:'Run 10 meters',                icon:'📏', check:()=>bestDist>=10},
+  {id:'100m',       name:'100 METERS',   desc:'Run 100 meters',               icon:'🏃', check:()=>bestDist>=100},
+  {id:'500m',       name:'500 METERS',   desc:'Run 500 meters',               icon:'🏅', check:()=>bestDist>=500},
+  {id:'kill1',      name:'FIRST BLOOD',  desc:'Kill your first enemy',        icon:'💀', check:()=>totalKills>=1},
+  {id:'kill10',     name:'KILLER',       desc:'Kill 10 enemies total',        icon:'⚔️', check:()=>totalKills>=10},
+  {id:'kill50',     name:'DESTROYER',    desc:'Kill 50 enemies total',        icon:'💥', check:()=>totalKills>=50},
+  {id:'maxmove',    name:'SPEED DEMON',  desc:'Max out movement speed',       icon:'🚀', check:()=>lv('move')>=5},
+  {id:'dj',         name:'DOUBLE JUMP',  desc:'Unlock double jump',           icon:'2️⃣', check:()=>lv('dj')>=1},
+  {id:'run10',      name:'VETERAN',      desc:'Complete 10 runs',             icon:'🎖', check:()=>runNum>=10},
+  {id:'allupg',     name:'FULLY LOADED', desc:'Max out any 4 upgrades',       icon:'🏆', check:()=>UPGRADES.filter(u=>lv(u.id)>=u.maxLv).length>=4},
+];
+
+let totalKills=parseInt(localStorage.getItem('pu2_kills')||0);
+let standStillSecs=0;
+
+// ── GAME STATE ──
+let state='shop',tick=0,frame=0;
+let P={},enemies=[],bullets=[],coinObjs=[],particles=[],fxMsgs=[];
+let dist=0,runCoins=0,spawnT=0,scrollX=0,regenT=0;
+
+// ── SHOP ──
+function renderShop(){
+  document.getElementById('shopCoins').textContent=coins;
+  document.getElementById('h-coins').textContent=coins;
+  document.getElementById('h-best').textContent=bestDist;
+  document.getElementById('h-run').textContent=runNum;
+
+  const grid=document.getElementById('upgGrid');grid.innerHTML='';
+  UPGRADES.forEach(u=>{
+    const currentLv=lv(u.id);
+    const maxed=currentLv>=u.maxLv;
+    const isUnlocked=unlocked(u.id);
+    const cost=maxed?0:u.costs[currentLv];
+    const canAfford=coins>=cost;
+
+    const d=document.createElement('div');
+    d.className='uc'+(maxed?' maxed':!isUnlocked?' locked':'');
+
+    // Progress bar
+    const barHtml=Array.from({length:u.maxLv},(_,i)=>`<span class="${i<currentLv?(maxed?'maxfilled':'filled'):''}"></span>`).join('');
+
+    d.innerHTML=`<div class="ui">${u.icon}</div>
+      <div class="un">${u.name}</div>
+      <div class="ud">${isUnlocked?u.desc:(u.req?'Requires '+getUpg(u.req)?.name:'???')}</div>
+      <div class="ubar">${barHtml}</div>
+      <div class="ucost">${maxed?'✅ MAX':isUnlocked?(canAfford?'💰 '+cost:'🔒 '+cost+' (need '+(cost-coins)+')'):'🔒 LOCKED'}</div>`;
+
+    if(!maxed&&isUnlocked){
+      d.onclick=()=>{
+        if(coins<cost){d.style.borderColor='#ff2200';setTimeout(()=>d.style.borderColor='',500);return;}
+        coins-=cost;upgLevels[u.id]++;
+        if(u.unlockMsg)showUnlockFlash(u.unlockMsg);
+        saveAll();renderShop();checkAchievements();
+      };
+    }
+    grid.appendChild(d);
+  });
+
+  // Achievements
+  checkAchievements();
+  const achGrid=document.getElementById('achGrid');achGrid.innerHTML='';
+  let unlocked_count=0;
+  ACHIEVEMENTS.forEach(a=>{
+    const isUnlocked=achUnlocked.includes(a.id);
+    if(isUnlocked)unlocked_count++;
+    const d=document.createElement('div');
+    d.className='ach-badge '+(isUnlocked?'unlocked':'locked');
+    d.title=a.desc;
+    d.textContent=(isUnlocked?a.icon+' ':'')+a.name;
+    achGrid.appendChild(d);
+  });
+  document.getElementById('achCount').textContent=unlocked_count;
+
+  // Run button only enabled if player can do at least something
+  document.getElementById('runBtn').disabled=false;
+}
+
+function showUnlockFlash(msg){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#ffd700;font-size:22px;font-family:"Courier New",monospace;font-weight:bold;text-shadow:0 0 20px #ffd700;pointer-events:none;z-index:200;animation:float 1.5s ease forwards;text-align:center;';
+  d.textContent='🔓 '+msg;
+  document.body.appendChild(d);setTimeout(()=>d.remove(),1600);
+}
+
+function checkAchievements(){
+  let any=false;
+  ACHIEVEMENTS.forEach(a=>{
+    if(!achUnlocked.includes(a.id)&&a.check()){
+      achUnlocked.push(a.id);
+      any=true;
+      showUnlockFlash('ACHIEVEMENT: '+a.name+'!');
+    }
+  });
+  if(any){saveAll();}
+}
+
+// ── GAME FUNCTIONS ──
+function startRun(){
+  document.getElementById('upgPanel').style.display='none';
+
+  P={x:80,y:GY,vx:0,vy:0,
+    onGround:true,djUsed:false,
+    hp:Math.max(1,val('hp')),
+    maxHp:Math.max(1,val('hp')),
+    ammo:val('ammo'),maxAmmo:val('ammo'),
+    shootCd:0,invTimer:0,
+    alive:true};
+
+  enemies=[];bullets=[];coinObjs=[];particles=[];fxMsgs=[];
+  dist=0;frame=0;runCoins=0;scrollX=0;spawnT=60;regenT=0;
+  standStillSecs=0;
+  state='playing';
+  updTopbar();
+}
+
+function updTopbar(){
+  document.getElementById('h-run').textContent=runNum;
+  document.getElementById('h-coins').textContent=coins;
+  document.getElementById('h-best').textContent=bestDist;
+  document.getElementById('h-ammo').textContent=val('shoot')>=1?(P.ammo+'/'+P.maxAmmo):'—';
+  document.getElementById('h-hp').textContent=val('hp')>=1?(P.hp+'/'+P.maxHp):'—';
+}
+
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;keys[e.key]=true;
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();
+  // Jump
+  if((e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')&&state==='playing'){
+    if(val('jump')>0){
+      if(P.onGround){P.vy=-val('jump');P.onGround=false;P.djUsed=false;
+        for(let i=0;i<6;i++)particles.push({x:P.x+10,y:P.y,vx:(Math.random()-.5)*3,vy:1+Math.random()*2,col:'#88aaff',life:14,sz:2});}
+      else if(val('dj')>=1&&!P.djUsed){P.vy=-val('jump')*.85;P.djUsed=true;
+        for(let i=0;i<10;i++)particles.push({x:P.x+10,y:P.y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*4,col:'#ff8800',life:18,sz:3});}
+    }
+  }
+  // Shoot
+  if(e.code==='KeyZ'&&state==='playing'&&val('shoot')>=1&&P.shootCd<=0&&P.ammo>0){
+    P.ammo--;P.shootCd=val('fire')||20;
+    const speed=8+val('shoot');
+    bullets.push({x:P.x+24,y:P.y-12,vx:speed,vy:0,dmg:Math.max(1,val('dmg')),life:55});
+    updTopbar();
+  }
+});
+document.addEventListener('keyup',e=>{delete keys[e.code];delete keys[e.key];});
+
+function update(){
+  if(state!=='playing')return;
+  frame++;tick++;
+
+  const moveSpd=val('move')+val('speed');
+  const canMove=moveSpd>0;
+
+  // Stand still achievement tracking
+  if(!canMove||(Math.abs(P.vx)<.1&&P.onGround)){
+    if(frame%60===0){standStillSecs++;
+      if(standStillSecs===60){
+        // First minute — give 1 coin
+        coins++;runCoins++;
+        fxMsgs.push({txt:'🧍 +1 COIN (stand still bonus!)',x:P.x,y:P.y-40,col:'#ffd700',life:80});
+        checkAchievements();updTopbar();
+      }
+    }
+  }
+
+  // Scroll only if player can move
+  if(canMove)scrollX+=2.2+(dist*.001);
+
+  // Player movement
+  if(canMove){
+    if(keys['ArrowLeft']||keys['KeyA']){P.vx=-moveSpd;P.dir=-1;}
+    else if(keys['ArrowRight']||keys['KeyD']){P.vx=moveSpd;}
+    else P.vx*=.78;
+  } else {P.vx=0;}
+
+  P.vy+=.7;if(P.vy>20)P.vy=20;
+  P.x+=P.vx;P.y+=P.vy;
+  if(P.y>=GY){P.y=GY;P.vy=0;P.onGround=true;P.djUsed=false;}
+  P.x=Math.max(scrollX+10,Math.min(scrollX+W-30,P.x));
+
+  if(P.shootCd>0)P.shootCd--;
+  if(P.invTimer>0)P.invTimer--;
+
+  // Regen
+  const regenRate=val('regen');
+  if(regenRate>0&&P.hp<P.maxHp){regenT++;if(regenT>=120/regenRate){regenT=0;P.hp++;updTopbar();}}
+
+  // Distance
+  if(canMove)dist=Math.floor((scrollX-120)/12);
+  if(dist<0)dist=0;
+
+  // Spawn enemies + coins
+  spawnT--;
+  if(spawnT<=0&&canMove){
+    const d=Math.min(dist/500,1);
+    spawnT=Math.max(35,110-d*70)+Math.random()*30;
+    if(Math.random()<.6){
+      const type=dist<200?'walk':Math.random()<.3?'fly':'walk';
+      enemies.push({x:scrollX+W+40,y:type==='fly'?200+Math.random()*80:GY,
+        vx:-(1.5+d*1.5),vy:0,hp:1+Math.floor(d*3),maxHp:1+Math.floor(d*3),
+        type,col:type==='fly'?'#4444cc':'#cc3300',dead:false});
+    }
+    if(Math.random()<.5){
+      for(let i=0;i<2+Math.floor(Math.random()*4);i++)
+        coinObjs.push({x:scrollX+W+40+i*22,y:GY-15-Math.random()*100,collected:false,bob:i*.4});
+    }
+  }
+
+  // Bullets
+  bullets=bullets.filter(b=>{
+    b.x+=b.vx;b.y+=b.vy;b.life--;
+    for(let i=enemies.length-1;i>=0;i--){
+      const e=enemies[i];if(e.dead)continue;
+      if(Math.abs(b.x-(e.x-scrollX))<16&&Math.abs(b.y-e.y)<20){
+        e.hp-=b.dmg;
+        for(let k=0;k<6;k++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,col:'#ff8800',life:14,sz:2});
+        if(e.hp<=0){e.dead=true;totalKills++;runCoins+=2;coins+=2;
+          for(let k=0;k<14;k++)particles.push({x:e.x-scrollX,y:e.y-10,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,col:e.col,life:22,sz:4});
+          checkAchievements();
+        }
+        b.life=0;
+      }
+    }
+    return b.life>0&&b.x<scrollX+W;
+  });
+
+  // Enemies
+  enemies.forEach(e=>{
+    if(e.dead)return;
+    e.x+=e.vx;
+    if(e.type==='fly'){e.y+=Math.sin(frame*.06+e.x*.01)*1.4;}
+    else{e.vy+=.7;e.y+=e.vy;if(e.y>=GY){e.y=GY;e.vy=0;}}
+    const ex=e.x-scrollX;
+    if(P.invTimer===0&&ex>P.x-18&&ex<P.x+24&&e.y>P.y-28&&e.y<P.y+8&&!e.dead){
+      const armorMult=1-Math.min(.7,val('armor')*.25);
+      const dmg=Math.max(1,Math.round(1*armorMult));
+      P.hp-=dmg;P.invTimer=90;
+      for(let k=0;k<10;k++)particles.push({x:P.x+10,y:P.y-14,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,col:'#ff4444',life:18,sz:3});
+      updTopbar();
+      if(P.hp<=0){P.hp=0;endRun();}
+    }
+  });
+  enemies=enemies.filter(e=>e.x>scrollX-100);
+
+  // Coins
+  const mag=val('magnet');
+  coinObjs.forEach(co=>{
+    if(co.collected)return;
+    co.bob+=.07;
+    const cx=co.x-scrollX;
+    if(mag>0&&Math.hypot(cx-P.x,co.y-(P.y-12))<mag){co.x+=(P.x+scrollX-co.x)*.15;co.y+=(P.y-12-co.y)*.15;}
+    if(Math.hypot(cx-P.x-10,co.y-(P.y-12))<18){
+      co.collected=true;runCoins++;coins++;
+      particles.push({x:cx,y:co.y,vx:0,vy:-3,col:'#ffd700',life:18,sz:4});
+      updTopbar();checkAchievements();
+    }
+  });
+  coinObjs=coinObjs.filter(co=>co.x>scrollX-50);
+
+  // Fell off screen
+  if(P.y>H+100)endRun();
+  if(canMove&&P.x<scrollX+5)endRun();
+
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.1;p.life--;return p.life>0;});
+  for(let i=fxMsgs.length-1;i>=0;i--){fxMsgs[i].life--;if(fxMsgs[i].life<=0)fxMsgs.splice(i,1);}
+}
+
+function endRun(){
+  if(state!=='playing')return;
+  state='dying';
+  if(dist>bestDist)bestDist=dist;
+  checkAchievements();
+  saveAll();
+  setTimeout(()=>{
+    runNum++;saveAll();
+    renderShop();
+    document.getElementById('upgPanel').style.display='flex';
+    state='shop';
+  },1600);
+}
+
+// ── DRAW ──
+function draw(){
+  ctx.fillStyle='#05050f';ctx.fillRect(0,0,W,H);
+
+  // Parallax BG city
+  [.1,.25,.4,.6].forEach((p,i)=>{
+    const bgs=['#060610','#08081a','#0a0a1e','#0c0c22'];
+    ctx.fillStyle=bgs[i];
+    for(let b=0;b<5;b++){
+      const bx=((b*180-scrollX*p+b*60)%W+W)%W;
+      const bh=30+b*15+i*20;
+      ctx.fillRect(bx-10,H-40-bh,50+i*10,bh);
+      // Windows
+      for(let wy=H-40-bh+6;wy<H-44;wy+=12)for(let wx=bx-6;wx<bx+40+i*8;wx+=10){
+        ctx.fillStyle=Math.sin(tick*.02+wx+wy)>.7?'rgba(255,200,100,.15)':'rgba(0,0,0,.1)';
+        ctx.fillRect(wx,wy,6,6);
+      }
+      ctx.fillStyle=bgs[i];
+    }
+  });
+
+  // Ground
+  ctx.fillStyle='#111122';ctx.fillRect(0,GY+2,W,H-GY-2);
+  ctx.fillStyle='#1a1a33';ctx.fillRect(0,GY,W,4);
+  for(let x=((-scrollX*.5)%60+60)%60;x<W;x+=60){ctx.fillStyle='rgba(255,255,255,.03)';ctx.fillRect(x,GY+4,30,4);}
+
+  // Coins
+  coinObjs.forEach(co=>{
+    if(co.collected)return;
+    const cx=co.x-scrollX;if(cx<-15||cx>W+15)return;
+    const bob=Math.sin(co.bob)*4;
+    ctx.shadowColor='#ffd700';ctx.shadowBlur=8;
+    ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(cx,co.y+bob,7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff8';ctx.beginPath();ctx.arc(cx-2,co.y+bob-2,2.5,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+  });
+
+  // Enemies
+  enemies.forEach(e=>{
+    if(e.dead)return;
+    const ex=e.x-scrollX;if(ex<-40||ex>W+40)return;
+    ctx.shadowColor=e.col;ctx.shadowBlur=6;
+    ctx.fillStyle=e.col;
+    ctx.beginPath();ctx.arc(ex,e.y-12,14,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex-5,e.y-15,4,0,Math.PI*2);ctx.fill();
+    ctx.arc(ex+5,e.y-15,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(ex-4,e.y-15,2,0,Math.PI*2);ctx.fill();
+    ctx.arc(ex+6,e.y-15,2,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    if(e.type==='fly'){ctx.font='10px serif';ctx.textAlign='center';ctx.fillText('🪽',ex,e.y-26);}
+    if(e.hp<e.maxHp){ctx.fillStyle='#300';ctx.fillRect(ex-12,e.y-28,24,4);ctx.fillStyle='#f44';ctx.fillRect(ex-12,e.y-28,24*(e.hp/e.maxHp),4);}
+  });
+
+  // Bullets
+  bullets.forEach(b=>{
+    ctx.shadowColor='#ffee44';ctx.shadowBlur=8;
+    ctx.fillStyle='#ffee44';ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+  });
+
+  // Player
+  if(state==='playing'||state==='dying'){
+    const blink=P.invTimer>0&&Math.floor(frame/4)%2===0;
+    const canMove=val('move')>0;
+    if(!blink){
+      const isMoving=Math.abs(P.vx)>.5&&P.onGround;
+      ctx.save();ctx.translate(P.x+10,P.y-14);
+      ctx.shadowColor=canMove?'#4488ff':'#888888';ctx.shadowBlur=8;
+      ctx.fillStyle=canMove?'#2244aa':'#333355';ctx.fillRect(-10,-14,20,18);
+      ctx.fillStyle='#ffcc88';ctx.beginPath();ctx.arc(0,-24,10,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#000';ctx.beginPath();ctx.arc(3,-25,2.5,0,Math.PI*2);ctx.fill();
+      if(val('shoot')>=1){ctx.fillStyle='#666';ctx.fillRect(8,-20,14,5);}
+      const ls=isMoving?Math.sin(frame*.3)*8:0;
+      ctx.fillStyle='#1a3388';ctx.fillRect(-8,-8+ls,7,14);ctx.fillRect(1,-8-ls,7,14);
+      ctx.shadowBlur=0;ctx.restore();
+
+      // HP bar above player
+      if(val('hp')>=1){
+        ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(P.x-4,P.y-38,28,6);
+        ctx.fillStyle='#44ff44';ctx.fillRect(P.x-4,P.y-38,28*(P.hp/P.maxHp),6);
+      }
+    }
+
+    // "stuck" message if player can't move
+    if(!canMove&&state==='playing'){
+      ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='bold 11px monospace';ctx.textAlign='center';
+      ctx.fillText('Buy MOVE in the shop! (U)',W/2,P.y-60);
+      // stand still counter
+      if(standStillSecs<60){
+        ctx.fillStyle='#ffd700aa';ctx.font='10px monospace';
+        ctx.fillText('⏳ Stand still: '+standStillSecs+'/60s for a coin!',W/2,P.y-44);
+      }
+    }
+  }
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/25;ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();
+  });ctx.globalAlpha=1;
+
+  // FX text
+  fxMsgs.forEach(f=>{
+    ctx.globalAlpha=Math.min(1,f.life/50);ctx.fillStyle=f.col;
+    ctx.font='bold 12px monospace';ctx.textAlign='center';
+    ctx.fillText(f.txt,f.x,f.y-(80-f.life)*.5);
+  });ctx.globalAlpha=1;
+
+  // HUD strip
+  ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,W,22);
+  ctx.fillStyle='#ff8800';ctx.font='bold 11px monospace';ctx.textAlign='left';
+  ctx.fillText('📏 '+dist+'m',8,14);
+  ctx.fillStyle='#ffd700';ctx.textAlign='center';
+  ctx.fillText('💰 +'+runCoins+' this run',W/2,14);
+  ctx.fillStyle='#888';ctx.textAlign='right';
+  ctx.fillText('[U] SHOP',W-8,14);
+
+  // Dying overlay
+  if(state==='dying'){
+    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#ff4444';ctx.font='bold 42px monospace';ctx.textAlign='center';
+    ctx.fillText('RUN OVER',W/2,H/2-20);
+    ctx.fillStyle='#ffd700';ctx.font='14px monospace';
+    ctx.fillText(dist+'m · +'+runCoins+' coins · Opening shop...',W/2,H/2+20);
+  }
+
+  // Menu / first time
+  if(state==='menu'){
+    ctx.fillStyle='rgba(0,0,0,.9)';ctx.fillRect(0,0,W,H);
+    ctx.shadowColor='#ff8800';ctx.shadowBlur=30;
+    ctx.fillStyle='#ff8800';ctx.font='bold 52px monospace';ctx.textAlign='center';
+    ctx.fillText('PIXEL',W/2,H/2-60);ctx.fillText('UPGRADE',W/2,H/2-4);
+    ctx.shadowBlur=0;ctx.fillStyle='#664400';ctx.font='11px monospace';
+    ctx.fillText('You start with NOTHING. Buy upgrades to unlock movement, jumping, shooting...',W/2,H/2+30);
+    ctx.fillText('Stand still for 60s to get your first coin!',W/2,H/2+50);
+    ctx.fillStyle='#ff8800';ctx.font='bold 13px monospace';ctx.fillText('PRESS ENTER OR CLICK TO OPEN SHOP',W/2,H/2+90);
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='Enter'&&state==='menu'){renderShop();document.getElementById('upgPanel').style.display='flex';state='shop';}
+  if(e.code==='KeyU'&&state==='playing'){renderShop();document.getElementById('upgPanel').style.display='flex';}
+  if(e.code==='Escape'&&state==='shop'&&runNum>1){document.getElementById('upgPanel').style.display='none';state='playing';}
+});
+C.addEventListener('click',()=>{
+  if(state==='menu'){renderShop();document.getElementById('upgPanel').style.display='flex';state='shop';}
+});
+
+// Add float CSS
+const sty=document.createElement('style');
+sty.textContent='@keyframes float{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-50px);}}';
+document.head.appendChild(sty);
+
+// Init
+if(runNum===1&&coins===0){
+  // First time — show menu
+  state='menu';
+} else {
+  renderShop();
+  document.getElementById('upgPanel').style.display='flex';
+  state='shop';
+}
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
