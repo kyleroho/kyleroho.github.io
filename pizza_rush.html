@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PIZZA RUSH — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#1a0800;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Courier New',monospace;overflow:hidden;user-select:none;}
+canvas{display:block;}
+#ui{display:flex;gap:16px;padding:6px 14px;font-size:11px;color:#cc6600;align-items:center;flex-wrap:wrap;justify-content:center;}
+#ui b{color:#ff9900;} a{color:#ffaa44;text-decoration:none;font-size:10px;}a:hover{color:#fff;}
+</style>
+</head>
+<body>
+<div id="ui">
+  <span>🍕 ORDER <b id="h-order">0</b></span>
+  <span>⏱ TIME <b id="h-time">60</b></span>
+  <span>⭐ SCORE <b id="h-score">0</b></span>
+  <span>🏆 BEST <b id="h-best">0</b></span>
+  <span style="color:#553300;font-size:10px;">← → Move · Up/Z Jump · Deliver pizza to matching doors!</span>
+  <a href="index.html">← Back</a>
+</div>
+<canvas id="c" width="640" height="420"></canvas>
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=640,H=420,GROUND=350;
+const GRAVITY=.75;
+const keys={};
+let hiScore=parseInt(localStorage.getItem('pizza_hi')||0);
+
+// Colors for order types
+const PIZZA_TYPES=[
+  {name:'Pepperoni',col:'#ff4422',emoji:'🍕',doorCol:'#ff2200'},
+  {name:'Hawaiian',  col:'#ffaa00',emoji:'🍍',doorCol:'#ffaa00'},
+  {name:'Veggie',    col:'#44cc44',emoji:'🥦',doorCol:'#44aa00'},
+  {name:'BBQ',       col:'#884400',emoji:'🍖',doorCol:'#662200'},
+  {name:'Cheese',    col:'#ffee44',emoji:'🧀',doorCol:'#ccaa00'},
+];
+
+const PLATFORM_CONFIGS=[
+  // [x%, y%, w%]
+  [.1,.55,.2],[.35,.45,.18],[.6,.38,.2],[.8,.55,.15],
+  [.05,.72,.15],[.3,.65,.2],[.55,.72,.2],[.78,.65,.18],
+];
+
+let P,score,timeLeft,ordersDone,state='menu',tick=0;
+let platforms=[],doors=[],pizzaBox=null,particles=[];
+let gameTimer;
+
+function mkPlatforms(){
+  platforms=[{x:0,y:GROUND,w:W,h:70,isGround:true}];
+  PLATFORM_CONFIGS.forEach(([xp,yp,wp])=>{
+    platforms.push({x:xp*W,y:yp*H,w:wp*W,h:14});
+  });
+  // Buildings left and right
+  platforms.push({x:0,y:H-170,w:60,h:170,isBuilding:true,col:'#1a0800'});
+  platforms.push({x:W-60,y:H-170,w:60,h:170,isBuilding:true,col:'#1a0800'});
+}
+
+function mkDoors(){
+  doors=[];
+  // Place 4 doors on platforms (not ground)
+  const plats=platforms.filter(p=>!p.isGround&&!p.isBuilding).slice(0,6);
+  const usedTypes=new Set();
+  plats.forEach((pl,i)=>{
+    let type;
+    do{type=PIZZA_TYPES[Math.floor(Math.random()*PIZZA_TYPES.length)];}
+    while(usedTypes.has(type.name)&&usedTypes.size<PIZZA_TYPES.length);
+    usedTypes.add(type.name);
+    doors.push({x:pl.x+pl.w/2-16,y:pl.y-38,w:32,h:38,type,
+      platform:pl,ringing:false,ringTimer:0,delivered:false});
+  });
+}
+
+function pickNewOrder(){
+  // Ring a random door
+  const available=doors.filter(d=>!d.ringing&&!d.delivered);
+  if(available.length===0){doors.forEach(d=>{d.ringing=false;d.delivered=false;});return pickNewOrder();}
+  const d=available[Math.floor(Math.random()*available.length)];
+  d.ringing=true;d.ringTimer=0;
+  // Spawn pizza box on ground
+  pizzaBox={x:W/2,y:GROUND-16,w:28,h:16,type:d.type,collected:false,bob:0};
+}
+
+function startGame(){
+  mkPlatforms();mkDoors();
+  P={x:80,y:GROUND,vx:0,vy:0,onGround:true,dir:1,hp:3,
+    holdingPizza:null,animF:0,jumpCd:0};
+  score=0;timeLeft=60;ordersDone=0;tick=0;particles=[];state='playing';
+  pickNewOrder();
+  if(gameTimer)clearInterval(gameTimer);
+  gameTimer=setInterval(()=>{
+    timeLeft--;
+    if(timeLeft<=0){clearInterval(gameTimer);state='gameover';showGameOver();}
+    document.getElementById('h-time').textContent=timeLeft;
+  },1000);
+  updHUD();
+}
+
+function collide(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;}
+
+function update(){
+  if(state!=='playing')return;
+  tick++;
+  // Player
+  const spd=4.5;
+  if(keys['ArrowLeft']||keys['KeyA']){P.vx=-spd;P.dir=-1;}
+  else if(keys['ArrowRight']||keys['KeyD']){P.vx=spd;P.dir=1;}
+  else P.vx*=.78;
+
+  P.vy+=GRAVITY;
+  P.x+=P.vx;
+
+  // Clamp to screen
+  P.x=Math.max(0,Math.min(W-24,P.x));
+
+  // Vertical movement + platform collision
+  P.onGround=false;
+  P.y+=P.vy;
+
+  platforms.forEach(pl=>{
+    if(pl.isBuilding)return; // buildings are visual only, not collidable
+    // Only land on TOP of platforms when falling down
+    const prevY=P.y-P.vy;
+    if(P.x+20>pl.x&&P.x<pl.x+pl.w){
+      if(P.vy>=0&&prevY<=pl.y&&P.y>=pl.y){
+        P.y=pl.y;P.vy=0;P.onGround=true;
+      } else if(P.vy<0&&P.y<pl.y+pl.h&&prevY>=pl.y+pl.h){
+        P.y=pl.y+pl.h;P.vy=1;
+      }
+    }
+  });
+
+  P.x=Math.max(0,Math.min(W-24,P.x));
+  if(P.y>H+60){P.y=GROUND;P.vy=0;P.onGround=true;P.hp--;updHUD();if(P.hp<=0){clearInterval(gameTimer);state='gameover';showGameOver();}}
+  if(Math.abs(P.vx)>.5&&P.onGround)P.animF=(P.animF+1)%8;else P.animF=0;
+  if(P.jumpCd>0)P.jumpCd--;
+
+  // Collect pizza box — use proximity
+  if(pizzaBox&&!pizzaBox.collected&&!P.holdingPizza){
+    pizzaBox.bob+=.08;
+    if(Math.hypot(P.x+12-pizzaBox.x-14,P.y-16-pizzaBox.y-8)<36){
+      P.holdingPizza=pizzaBox.type;pizzaBox.collected=true;
+      showFx('🍕 Got '+pizzaBox.type.name+'!',P.x+12,P.y-40,'#ffaa00');
+    }
+  }
+
+  // Deliver to matching door — proximity based, player must be ON the platform
+  if(P.holdingPizza){
+    doors.forEach(d=>{
+      if(!d.ringing)return;
+      const inRange=Math.abs(P.x+12-(d.x+d.w/2))<40&&Math.abs(P.y-(d.y+d.h))<30;
+      if(inRange&&P.holdingPizza.name===d.type.name){
+        d.ringing=false;d.delivered=true;
+        const bonus=Math.max(1,Math.floor(timeLeft/10));
+        const pts=100+bonus*20;
+        score+=pts;ordersDone++;P.holdingPizza=null;
+        for(let i=0;i<20;i++)particles.push({x:d.x+16,y:d.y,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8-3,col:d.type.col,life:30,sz:4});
+        showFx('+'+pts+' DELIVERED!',d.x+d.w/2,d.y-20,'#ffd700');
+        document.getElementById('h-order').textContent=ordersDone;
+        setTimeout(()=>{d.delivered=false;pickNewOrder();},800);
+        updHUD();
+      }
+    });
+    // Wrong door penalty
+    doors.forEach(d=>{
+      if(!d.ringing&&!d.delivered)return;
+      if(d.ringing&&collide(P.x,P.y,24,32,d.x,d.y,d.w,d.h)&&P.holdingPizza.name!==d.type.name){
+        // nothing — just don't deliver wrong pizza
+      }
+    });
+  }
+
+  // Door rings (countdown)
+  doors.forEach(d=>{if(d.ringing)d.ringTimer++;});
+
+  // Particles + fx
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.2;p.life--;return p.life>0;});
+}
+
+let fxMsgs=[];
+function showFx(txt,x,y,col){fxMsgs.push({txt,x,y,col,life:50});}
+
+function updHUD(){
+  document.getElementById('h-score').textContent=score;
+  document.getElementById('h-best').textContent=hiScore;
+}
+
+function showGameOver(){
+  if(score>hiScore){hiScore=score;localStorage.setItem('pizza_hi',hiScore);}
+}
+
+function draw(){
+  // Sky gradient
+  const sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#0a0408');sky.addColorStop(1,'#1a0808');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+  // City BG
+  [60,150,260,360,480,560].forEach((bx,i)=>{
+    const bh=60+i*20;
+    ctx.fillStyle=`hsl(${i*15},30%,${8+i*2}%)`;
+    ctx.fillRect(bx-20,H-bh,50+i*8,bh);
+    // windows
+    for(let wy=H-bh+8;wy<H-20;wy+=16)for(let wx=bx-14;wx<bx+30+i*8;wx+=14){
+      ctx.fillStyle=Math.random()<.4?'#ffcc4433':'#00000033';
+      ctx.fillRect(wx,wy,8,8);
+    }
+  });
+
+  // Platforms
+  platforms.forEach(pl=>{
+    if(pl.isGround){
+      ctx.fillStyle='#221408';ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+      ctx.fillStyle='#332210';ctx.fillRect(pl.x,pl.y,pl.w,4);
+      // road lines
+      for(let x=((tick*2)%80+80)%80;x<W;x+=80){ctx.fillStyle='rgba(255,200,0,.3)';ctx.fillRect(x,pl.y+20,40,4);}
+    } else if(pl.isBuilding){
+      ctx.fillStyle=pl.col||'#1a0808';ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+    } else {
+      ctx.fillStyle='#2a1a10';ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+      ctx.fillStyle='#3a2a14';ctx.fillRect(pl.x,pl.y,pl.w,4);
+    }
+  });
+
+  // Doors
+  doors.forEach(d=>{
+    const pulse=d.ringing?Math.sin(tick*.2)*3:0;
+    ctx.fillStyle=d.delivered?'#225522':d.type.doorCol+'99';
+    ctx.fillRect(d.x,d.y,d.w,d.h);
+    ctx.strokeStyle=d.ringing?d.type.doorCol:'#334';
+    ctx.lineWidth=d.ringing?2+pulse:1;
+    ctx.strokeRect(d.x,d.y,d.w,d.h);
+    ctx.font='16px serif';ctx.textAlign='center';
+    ctx.fillText(d.type.emoji,d.x+d.w/2,d.y+d.h-6);
+    if(d.ringing){
+      // Ringing animation
+      ctx.fillStyle='rgba(255,200,0,'+Math.abs(Math.sin(tick*.3))+')';
+      ctx.font='bold 12px monospace';ctx.textAlign='center';
+      ctx.fillText('📞',d.x+d.w/2,d.y-10);
+    }
+    if(d.delivered){ctx.fillStyle='#44ff88';ctx.font='16px serif';ctx.fillText('✓',d.x+d.w/2,d.y-8);}
+  });
+
+  // Pizza box on ground
+  if(pizzaBox&&!pizzaBox.collected){
+    const bob=Math.sin(pizzaBox.bob)*4;
+    ctx.shadowColor=pizzaBox.type.col;ctx.shadowBlur=12;
+    ctx.fillStyle='#cc8800';ctx.fillRect(pizzaBox.x,pizzaBox.y+bob,pizzaBox.w,pizzaBox.h);
+    ctx.fillStyle=pizzaBox.type.col;ctx.fillRect(pizzaBox.x+2,pizzaBox.y+bob+2,pizzaBox.w-4,5);
+    ctx.font='12px serif';ctx.textAlign='center';
+    ctx.fillText(pizzaBox.type.emoji,pizzaBox.x+14,pizzaBox.y+bob+14);
+    ctx.shadowBlur=0;
+  }
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/30;ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();
+  });ctx.globalAlpha=1;
+
+  // Player
+  if(state==='playing'||state==='gameover'){
+    const flip=P.dir<0;
+    ctx.save();ctx.translate(P.x+12,P.y+16);if(flip)ctx.scale(-1,1);
+    // delivery bag (hat)
+    if(P.holdingPizza){
+      ctx.fillStyle=P.holdingPizza.col;ctx.fillRect(-10,-44,20,12);
+      ctx.font='11px serif';ctx.textAlign='center';ctx.fillText(P.holdingPizza.emoji,0,-35);
+    }
+    ctx.fillStyle='#cc4400';ctx.fillRect(-10,-32,20,22);// body/uniform
+    ctx.fillStyle='#ffcc88';ctx.beginPath();ctx.arc(0,-40,10,0,Math.PI*2);ctx.fill();// head
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(3,-41,2.5,0,Math.PI*2);ctx.fill();// eye
+    ctx.fillStyle='#991100';ctx.fillRect(-12,-10,8,16);ctx.fillRect(4,-10,8,16);// legs
+    // arm out when holding
+    if(P.holdingPizza){ctx.fillStyle='#cc4400';ctx.fillRect(10,-28,12,6);}
+    ctx.restore();
+  }
+
+  // FX messages
+  for(let i=fxMsgs.length-1;i>=0;i--){
+    const f=fxMsgs[i];
+    ctx.globalAlpha=f.life/50;ctx.fillStyle=f.col;ctx.font='bold 13px monospace';ctx.textAlign='center';
+    ctx.fillText(f.txt,f.x,f.y-(50-f.life)*.6);
+    f.life--;if(f.life<=0)fxMsgs.splice(i,1);
+  }ctx.globalAlpha=1;
+
+  // HUD bar — only during active game
+  if(state==='playing'||state==='gameover'){
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,W,22);
+    const timeCol=(timeLeft||0)<=10?'#ff4444':(timeLeft||0)<=20?'#ffaa00':'#44ff88';
+    ctx.fillStyle=timeCol;ctx.font='bold 12px monospace';ctx.textAlign='center';
+    ctx.fillText('⏱ '+(timeLeft||0)+'s',W/2,14);
+    ctx.textAlign='left';ctx.font='13px monospace';
+    const phpVal=P?P.hp:0;
+    ctx.fillText('❤'.repeat(phpVal)+'🖤'.repeat(Math.max(0,3-phpVal)),8,14);
+    ctx.textAlign='right';ctx.fillStyle='#ffd700';
+    ctx.fillText('⭐'+score,W-8,14);
+  }
+
+  // Menu
+  if(state==='menu'){
+    ctx.fillStyle='rgba(0,0,0,.88)';ctx.fillRect(0,0,W,H);
+    ctx.shadowColor='#ff6600';ctx.shadowBlur=30;
+    ctx.fillStyle='#ff6600';ctx.font='bold 54px monospace';ctx.textAlign='center';
+    ctx.fillText('🍕 PIZZA',W/2,H/2-60);ctx.fillText('RUSH',W/2,H/2-4);
+    ctx.shadowBlur=0;ctx.fillStyle='#aa4400';ctx.font='12px monospace';
+    ctx.fillText('Pick up the pizza · Deliver to the matching door',W/2,H/2+32);
+    ctx.fillText('Faster deliveries = bigger bonuses!',W/2,H/2+52);
+    ctx.fillStyle='#ffaa00';ctx.font='bold 14px monospace';ctx.fillText('PRESS ENTER',W/2,H/2+96);
+    ctx.fillStyle='#ffd700';ctx.font='11px monospace';ctx.fillText('Best: '+hiScore,W/2,H/2+120);
+  }
+
+  if(state==='gameover'){
+    ctx.fillStyle='rgba(0,0,0,.82)';ctx.fillRect(0,0,W,H);
+    const isNew=score>=hiScore&&score>0;
+    ctx.fillStyle='#ff6600';ctx.font='bold 44px monospace';ctx.textAlign='center';
+    ctx.fillText('TIME UP!',W/2,H/2-50);
+    ctx.fillStyle='#ffd700';ctx.font='18px monospace';
+    ctx.fillText('Orders: '+ordersDone+' · Score: '+score,W/2,H/2);
+    ctx.fillStyle=isNew?'#ffd700':'#888';ctx.font='13px monospace';
+    ctx.fillText(isNew?'🏆 NEW HIGH SCORE!':'Best: '+hiScore,W/2,H/2+30);
+    ctx.fillStyle='#ffaa00';ctx.font='13px monospace';
+    ctx.fillText('ENTER: Play Again    ESC: Menu',W/2,H/2+76);
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  if((e.code==='ArrowUp'||e.code==='KeyW'||e.code==='KeyZ')&&P&&P.onGround&&P.jumpCd===0){
+    P.vy=-(14);P.onGround=false;P.jumpCd=12;
+  }
+  if(e.code==='Enter'){
+    if(state==='menu'||state==='gameover')startGame();
+  }
+  if(e.code==='Escape'&&state==='gameover'){clearInterval(gameTimer);state='menu';}
+});
+document.addEventListener('keyup',e=>delete keys[e.code]);
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
