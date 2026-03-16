@@ -103,8 +103,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:str
 .game-card:hover::before{transform:scaleX(1);}
 .game-card:hover .card-screen canvas{transform:scale(1.04);}
 .game-card:active{transform:translate(2px,2px);}
-.card-screen{position:relative;overflow:hidden;background:#000;aspect-ratio:16/10;}
-.card-screen canvas{width:100%;height:100%;display:block;transition:transform .4s;}
+.card-screen{position:relative;overflow:hidden;background:#000;aspect-ratio:16/10;min-height:140px;}
+.card-screen canvas{width:100%;height:100%;position:absolute;inset:0;display:block;transition:transform .4s;}
 .card-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);transition:background .2s;font-family:'Black Han Sans',Impact,"Arial Black",sans-serif;font-size:15px;letter-spacing:5px;color:white;gap:10px;}
 .card-play:hover{background:rgba(0,0,0,.2);}
 .play-sq{width:34px;height:34px;border:2px solid var(--card-accent,var(--cyan));display:flex;align-items:center;justify-content:center;font-size:11px;padding-left:3px;color:var(--card-accent,var(--cyan));}
@@ -142,6 +142,16 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
 .reveal.in{opacity:1;transform:none;}
 @media(max-width:768px){.featured-card{grid-template-columns:1fr;}.featured-body{border-left:none;border-top:3px solid var(--yellow);}.manifesto{grid-template-columns:1fr;}.manifesto-cell:first-child{grid-column:1;}.stat-strip{grid-template-columns:repeat(3,1fr);}.stat-cell:nth-child(n+4){display:none;}.nav-links{display:none;}.dl-row{grid-template-columns:44px 1fr auto;}.dl-meta-cell{display:none;}}
+/* ── SEARCH ── */
+#searchWrap{display:flex;align-items:center;gap:10px;margin:18px 0 6px;flex-wrap:wrap;}
+#searchBox{flex:1;min-width:200px;background:#07000f;border:2px solid #220033;color:#fff;font-family:'Courier New',monospace;font-size:12px;padding:12px 18px;outline:none;transition:border-color .15s;letter-spacing:1px;}
+#searchBox:focus{border-color:#cc44ff;box-shadow:0 0 12px #cc44ff33;}
+#searchBox::placeholder{color:#331144;}
+#searchCount{font-size:9px;color:#443355;letter-spacing:2px;white-space:nowrap;font-family:'Courier New',monospace;}
+#clearSearch{background:transparent;border:1px solid #331144;color:#443355;font-family:'Courier New',monospace;font-size:9px;padding:8px 14px;cursor:pointer;letter-spacing:2px;transition:all .12s;display:none;}
+#clearSearch:hover{border-color:#cc44ff;color:#cc44ff;}
+#noResults{display:none;text-align:center;padding:60px 20px;font-family:'Courier New',monospace;font-size:11px;color:#332244;letter-spacing:3px;grid-column:1/-1;}
+.game-card.hidden-search{display:none!important;}
 </style>
 </head>
 <body>
@@ -186,7 +196,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
     <span class="hero-t3">GAMES</span>
   </div>
   <div class="hero-stats-row">
-    <div class="hstat"><span class="hstat-n">34</span><span class="hstat-l">Games</span></div>
+    <div class="hstat"><span class="hstat-n">49</span><span class="hstat-l">Games</span></div>
     <div class="hstat"><span class="hstat-n">30</span><span class="hstat-l">Levels</span></div>
     <div class="hstat"><span class="hstat-n">158</span><span class="hstat-l">Achievements</span></div>
     <div class="hstat"><span class="hstat-n">4</span><span class="hstat-l">Worlds</span></div>
@@ -198,39 +208,43 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
 <!-- TICKER 1 -->
 <div class="ticker-zone">
   <div class="ticker-track">
-    <span class="ticker-item">THE BLUE GUY 3 — DARK WORLD</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">POOPATROPAS — 4 PLAYABLE HEROES</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">BOX ROYALE — UP TO 4 PLAYERS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">FORGE CLICKER — 158 ACHIEVEMENTS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">NIGHT SHIFT — SURVIVE 7 NIGHTS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 PIXEL UPGRADE — UPGRADE BETWEEN RUNS · JOHNNY UPGRADE STYLE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 PIZZA RUSH — DELIVER PIZZAS BEFORE TIME RUNS OUT</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 RUN KID RUN — ENDLESS RUNNER · POWERUPS · SHOP</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 BLOONS POP — POP BALLOONS · CHAIN COMBOS FOR BIG POINTS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 PARKING PANIC — SLIDE PUZZLE · FREE THE RED CAR</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 POOPATROPAS 2 — 5 CHARS · JETPACK · STAR POWER · CHAOS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 NIGHT SHIFT 2 — VENTS · GENERATOR · MUSIC BOX · 7 ANIMATRONICS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 GOOFY CARDS 2 — 150 CARDS · SMASH BROS FIGHTING · 15 STAGES</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 GRAVITY SHIFT — 12 LEVELS · GHOST MODE · DASH · SCORE ATTACK</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 BOW PILLOWS — UPGRADE SHOP · TURN-BASED PILLOW ARCHERY</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">THE BLUE GUY 4 — RED UPRISING · BIGGEST ENTRY IN THE SERIES</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">FORGE CLICKER — 158 ACHIEVEMENTS · PRESTIGE · CASINO</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">BOX ROYALE — UP TO 4 PLAYERS · HATS · RESEARCH TREE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">NIGHT SHIFT — SURVIVE 7 NIGHTS · CAMERAS · POWER MANAGEMENT</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">PIXEL DRIFT 2 — WAVES + BOSSES + UPGRADES</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">BLOB PARTY — AI BOTS + SOLO MODE</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">GOOFY CARDS — 120 CARDS 9 RARITIES</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">DUNGEON DEPTHS — ROGUELIKE RPG</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">NEON KART — ONLINE RACING</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">TOWER SIEGE — 5 TOWER TYPES</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">STAR SWARM — BULLET HELL</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">PIXEL BRAWLER — BEAT EM UP</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">GHOST STATIC — SURVIVAL HORROR</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">HOOP DREAMS — BASKETBALL</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">GRAVITY SHIFT — FLIP REALITY</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">BOW PILLOWS — UPGRADE &amp; FIGHT</span><span class="ticker-diam">◆</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">PIXEL TANKS — 2 PLAYER TANK BATTLE</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">SPEED TYPER — TYPE TO SURVIVE</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">DUNGEON CRAWLER — ROGUELITE DUNGEON</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">DRIFT ZONE — ARCADE DRIFT RACING</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">SPACE MINER — MINE ASTEROIDS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">FLIP MASTER — TRAMPOLINE TRICKS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">SNAKE EVOLVED — 3 MODES + POWER-UPS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">CROWD CRUSHER — MATCH 3 MADNESS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">WORM WARS — 2 PLAYER WORM BATTLE</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">THE BLUE GUY 3 — DARK WORLD</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">POOPATROPAS — 4 PLAYABLE HEROES</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">BOX ROYALE — UP TO 4 PLAYERS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">FORGE CLICKER — 158 ACHIEVEMENTS</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">PIXEL DRIFT 2 — WAVES + BOSSES + UPGRADES</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">BOW PILLOWS — UPGRADE &amp; FIGHT</span><span class="ticker-diam">◆</span>
-    <span class="ticker-item">WORM WARS — 2 PLAYER WORM BATTLE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">GOOFY CARDS — 120 CARDS · 9 RARITIES · TOURNAMENTS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">DUNGEON DEPTHS — ROGUELIKE RPG · DESCEND FOREVER</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">NEON KART — ONLINE RACING · DRIFT · POWERSLIDE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">STAR SWARM — BULLET HELL · HOW LONG CAN YOU SURVIVE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">HOOP DREAMS — 1v1 BASKETBALL · 2PT AND 3PT SHOTS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">GHOST STATIC — SURVIVAL HORROR · NAVIGATE THE DARK</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">POOPATROPAS — 4 PLAYABLE HEROES · SONIC-STYLE ADVENTURE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">PIXEL TANKS — 2 PLAYER LOCAL TANK BATTLE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">WORM WARS — 2 PLAYER WORM BATTLE · CUT OFF YOUR OPPONENT</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">CROWD CRUSHER — LINE-DRAW MATCH · CASCADE COMBOS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">SNAKE EVOLVED — POWERUPS · PORTALS · ENEMIES</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">BLOB PARTY — AI BOTS · ABSORB · GROW · DOMINATE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">TOWER SIEGE — 5 TOWER TYPES · ENDLESS WAVES</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">PIXEL BRAWLER — BEAT EM UP · PUNCH KICK COMBO</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 POOPATROPAS 2 — 5 CHARS · JETPACK · STAR POWER · CHAOS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 NIGHT SHIFT 2 — VENTS · GENERATOR · MUSIC BOX · 7 ANIMATRONICS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 GOOFY CARDS 2 — 150 CARDS · SMASH BROS FIGHTING · 15 STAGES</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 GRAVITY SHIFT — 12 LEVELS · GHOST MODE · DASH · SCORE ATTACK</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 BOW PILLOWS — UPGRADE SHOP · TURN-BASED PILLOW ARCHERY</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">THE BLUE GUY 4 — RED UPRISING · BIGGEST ENTRY IN THE SERIES</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">FORGE CLICKER — 158 ACHIEVEMENTS · PRESTIGE · CASINO</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">DUNGEON DEPTHS — ROGUELIKE RPG · DESCEND FOREVER</span><span class="ticker-diam">◆</span>
   </div>
 </div>
 
@@ -254,7 +268,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
 
 <!-- STAT STRIP -->
 <div class="stat-strip reveal">
-  <div class="stat-cell"><span class="stat-val">34</span><span class="stat-lbl">Games Made</span></div>
+  <div class="stat-cell"><span class="stat-val">49</span><span class="stat-lbl">Games Made</span></div>
   <div class="stat-cell"><span class="stat-val">30</span><span class="stat-lbl">Levels</span></div>
   <div class="stat-cell"><span class="stat-val">158</span><span class="stat-lbl">Achievements</span></div>
   <div class="stat-cell"><span class="stat-val">4</span><span class="stat-lbl">Worlds</span></div>
@@ -284,8 +298,16 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
     </div>
   </div>
 
+  <!-- SEARCH BAR -->
+  <div id="searchWrap">
+    <input id="searchBox" type="text" placeholder="🔍  SEARCH GAMES..." autocomplete="off" oninput="doSearch(this.value)" />
+    <span id="searchCount"></span>
+    <button id="clearSearch" onclick="clearSearch()">✕ CLEAR</button>
+  </div>
+
   <!-- GAME GRID -->
   <div id="series" class="game-grid reveal">
+    <div id="noResults">NO GAMES FOUND — TRY A DIFFERENT SEARCH</div>
 
     <div class="game-card" style="--card-accent:#00fff5;" onclick="window.open('the_blue_guy_2.html','_blank')">
       <div class="card-screen"><canvas id="c2"></canvas><div class="card-play"><div class="play-sq">▶</div>PLAY</div></div>
@@ -308,7 +330,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
     </div>
 
     <div class="game-card" style="--card-accent:#ff3232;" onclick="window.open('the_blue_guy_4.html','_blank')">
-      <div class="card-screen"><div class="card-play" style="--card-accent:#ff3232;"><div class="play-sq" style="border-color:#ff3232;color:#ff3232;">▶</div>PLAY</div></div>
+      <div class="card-screen" style="background:#1a0000;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.35;">🔴</div><div class="card-play" style="--card-accent:#ff3232;"><div class="play-sq" style="border-color:#ff3232;color:#ff3232;">▶</div>PLAY</div></div>
       <div class="card-body">
         <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">30 Levels</span></div>
         <div class="card-title" style="color:#ff3232;">THE BLUE GUY 4: RED UPRISING</div>
@@ -537,13 +559,13 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
       </div>
     </div>
 
-    <div class="game-card" style="--card-accent:#44ff88;" onclick="window.open('dead_static.html','_blank')">
+    <div class="game-card" style="--card-accent:#44ff88;" onclick="window.open('ghost_static.html','_blank')">
       <div class="card-screen"><canvas id="cGS"></canvas><div class="card-play" style="--card-accent:#44ff88;"><div class="play-sq" style="border-color:#44ff88;color:#44ff88;">▶</div>PLAY</div></div>
       <div class="card-body">
         <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Horror</span><span class="tag tag-gen">Survival</span></div>
         <div class="card-title" style="color:#44ff88;">GHOST STATIC</div>
         <div class="card-desc">Tune your radio to find ghosts before they find you. Survive the night.</div>
-        <div class="card-footer"><a class="mini-btn" style="border-color:#44ff88;color:#44ff88;" href="dead_static.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Mouse</span></div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44ff88;color:#44ff88;" href="ghost_static.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Mouse</span></div>
       </div>
     </div>
 
@@ -562,7 +584,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
       <div class="card-body">
         <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Platformer</span><span class="tag tag-gen">Gravity</span></div>
         <div class="card-title" style="color:#44ffff;">GRAVITY SHIFT</div>
-        <div class="card-desc">Flip gravity to platform through mind-bending levels. Everything is upside down.</div>
+        <div class="card-desc">12 levels. Flip gravity, SHIFT to dash, grab Ghost powerup to phase through spikes. Score attack + best times!</div>
         <div class="card-footer"><a class="mini-btn" style="border-color:#44ffff;color:#44ffff;" href="gravity_shift.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Space</span></div>
       </div>
     </div>
@@ -585,6 +607,35 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
         <div class="card-title" style="color:#cc88ff;">BOW PILLOWS</div>
         <div class="card-desc">Upgrade your archer before the fight! Take turns throwing pillows. Wind, physics, best of 5!</div>
         <div class="card-footer"><a class="mini-btn" style="border-color:#cc88ff;color:#cc88ff;" href="bow_pillows.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse Drag</span></div>
+      </div>
+    </div>
+
+    <!-- SEQUEL GAMES -->
+    <div class="game-card" style="--card-accent:#00ccff;" onclick="window.open('night_shift_2.html','_blank')">
+      <div class="card-screen" style="background:#000508;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.35;">👁</div><div class="card-play" style="--card-accent:#00ccff;"><div class="play-sq" style="border-color:#00ccff;color:#00ccff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Horror</span><span class="tag tag-gen">Survival</span></div>
+        <div class="card-title" style="color:#00ccff;">NIGHT SHIFT 2</div>
+        <div class="card-desc">7 animatronics, vent system, backup generator & music box. More terrifying than ever. Survive 7 nights.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#00ccff;color:#00ccff;" href="night_shift_2.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
+      </div>
+    </div>
+    <div class="game-card" style="--card-accent:#cc44ff;" onclick="window.open('goofy_cards_2.html','_blank')">
+      <div class="card-screen" style="background:#0d0008;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.35;">⚔️</div><div class="card-play" style="--card-accent:#cc44ff;"><div class="play-sq" style="border-color:#cc44ff;color:#cc44ff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Cards</span><span class="tag tag-gen">RPG</span></div>
+        <div class="card-title" style="color:#cc44ff;">GOOFY CARDS 2</div>
+        <div class="card-desc">150 cards, real-time Smash Bros-style fighting! Pick a card, fight as that character through 15 stages.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#cc44ff;color:#cc44ff;" href="goofy_cards_2.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
+      </div>
+    </div>
+    <div class="game-card" style="--card-accent:#ff8800;" onclick="window.open('poopatropas_2.html','_blank')">
+      <div class="card-screen" style="background:#0a0a00;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.35;">💥</div><div class="card-play" style="--card-accent:#ff8800;"><div class="play-sq" style="border-color:#ff8800;color:#ff8800;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Platformer</span><span class="tag tag-gen">Powerups</span></div>
+        <div class="card-title" style="color:#ff8800;">POOPATROPAS 2</div>
+        <div class="card-desc">5 chars including Zara (teleport blink), 6 worlds, Star invincibility, Jetpack, Magnet, Speed powerups!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff8800;color:#ff8800;" href="poopatropas_2.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Space</span></div>
       </div>
     </div>
 
@@ -675,6 +726,56 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
         <div class="card-title" style="color:#aa44ff;">CROWD CRUSHER</div>
         <div class="card-desc">Swap monsters to match 3 or more. Crush mega combos for big points. Hit the target!</div>
         <div class="card-footer"><a class="mini-btn" style="border-color:#aa44ff;color:#aa44ff;" href="crowd_crusher.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse Click</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#ffaa00;" onclick="window.open('pixel_upgrade.html','_blank')">
+      <div class="card-screen" style="background:#0a0800;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.35;">⬆</div><div class="card-play" style="--card-accent:#ffaa00;"><div class="play-sq" style="border-color:#ffaa00;color:#ffaa00;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Upgrade</span><span class="tag tag-gen">Runner</span></div>
+        <div class="card-title" style="color:#ffaa00;">PIXEL UPGRADE</div>
+        <div class="card-desc">Run as far as you can, earn coins, then upgrade speed · jump · ammo · armor · fire rate between runs. Gets insane!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ffaa00;color:#ffaa00;" href="pixel_upgrade.html" target="_blank">▶ PLAY NOW</a><span class="card-key">← → Z X</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#ff6600;" onclick="window.open('pizza_rush.html','_blank')">
+      <div class="card-screen" style="background:#1a0800;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.35;">🍕</div><div class="card-play" style="--card-accent:#ff6600;"><div class="play-sq" style="border-color:#ff6600;color:#ff6600;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Delivery</span><span class="tag tag-gen">Platformer</span></div>
+        <div class="card-title" style="color:#ff6600;">PIZZA RUSH 🍕</div>
+        <div class="card-desc">Pick up pizzas and deliver them to the matching door before time runs out. Faster = bigger bonus!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff6600;color:#ff6600;" href="pizza_rush.html" target="_blank">▶ PLAY NOW</a><span class="card-key">← → Jump</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#44aaff;" onclick="window.open('run_kid.html','_blank')">
+      <div class="card-screen" style="background:#050510;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.35;">🏃</div><div class="card-play" style="--card-accent:#44aaff;"><div class="play-sq" style="border-color:#44aaff;color:#44aaff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Endless</span><span class="tag tag-gen">Runner</span></div>
+        <div class="card-title" style="color:#44aaff;">RUN KID RUN</div>
+        <div class="card-desc">Endless runner with double jump, shield, coin magnet, slow-mo and revive upgrades. How far can you get?</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44aaff;color:#44aaff;" href="run_kid.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Space to Jump</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#ff4488;" onclick="window.open('bloons_pop.html','_blank')">
+      <div class="card-screen" style="background:#0a0a1a;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.35;">🎈</div><div class="card-play" style="--card-accent:#ff4488;"><div class="play-sq" style="border-color:#ff4488;color:#ff4488;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Puzzle</span><span class="tag tag-gen">Balloons</span></div>
+        <div class="card-title" style="color:#ff4488;">BLOONS POP 🎈</div>
+        <div class="card-desc">Shoot darts to pop all the balloons. Big balloons split into smaller ones. Chain pops for massive combos!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff4488;color:#ff4488;" href="bloons_pop.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse Click</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#44ffcc;" onclick="window.open('parking_panic.html','_blank')">
+      <div class="card-screen" style="background:#0a0a14;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.35;">🚗</div><div class="card-play" style="--card-accent:#44ffcc;"><div class="play-sq" style="border-color:#44ffcc;color:#44ffcc;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Puzzle</span><span class="tag tag-gen">Sliding</span></div>
+        <div class="card-title" style="color:#44ffcc;">PARKING PANIC 🚗</div>
+        <div class="card-desc">Slide cars out of the way to free the red car. Fewer moves = more points. 5 increasingly tricky levels!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44ffcc;color:#44ffcc;" href="parking_panic.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse / Arrows</span></div>
       </div>
     </div>
 
@@ -1062,6 +1163,48 @@ function sc(id){const c=document.getElementById(id);if(!c)return null;const ctx=
     renderScoreboard();
   });
 })();
+
+// ── GAME SEARCH ──
+function doSearch(q){
+  const query=q.trim().toLowerCase();
+  const cards=document.querySelectorAll('#series .game-card');
+  let visible=0;
+  cards.forEach(card=>{
+    // Search in title, description, tags
+    const text=(card.textContent||'').toLowerCase();
+    const matches=!query||text.includes(query);
+    card.classList.toggle('hidden-search',!matches);
+    if(matches)visible++;
+  });
+  const countEl=document.getElementById('searchCount');
+  const clearBtn=document.getElementById('clearSearch');
+  const noRes=document.getElementById('noResults');
+  if(query){
+    countEl.textContent=visible+' GAME'+(visible!==1?'S':'')+' FOUND';
+    clearBtn.style.display='inline-block';
+    noRes.style.display=visible===0?'block':'none';
+  } else {
+    countEl.textContent='';
+    clearBtn.style.display='none';
+    noRes.style.display='none';
+  }
+}
+function clearSearch(){
+  document.getElementById('searchBox').value='';
+  doSearch('');
+  document.getElementById('searchBox').focus();
+}
+// Allow Escape key to clear search
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    const box=document.getElementById('searchBox');
+    if(box&&box.value){clearSearch();}
+  }
+  if((e.ctrlKey||e.metaKey)&&e.key==='f'){
+    const box=document.getElementById('searchBox');
+    if(box){e.preventDefault();box.focus();box.select();}
+  }
+});
 </script>
 </body>
 </html>
