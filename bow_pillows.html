@@ -50,7 +50,12 @@ h1 small{display:block;font-size:14px;letter-spacing:6px;color:#7755aa;margin-to
   <h1>BOW<br>PILLOWS<small>UPGRADE &amp; FIGHT</small></h1>
   <p style="color:#7755aa;font-size:13px;margin:10px 0 24px;text-align:center;">Shoot pillows at your enemy.<br>Take turns. Use gold to upgrade. First to 5 wins!</p>
   <button class="btn" onclick="startShop(true)">▶ PLAY</button>
-  <a href="index.html" style="color:#5533aa;font-size:11px;letter-spacing:2px;margin-top:16px;">← BACK</a>
+  <div style="margin-top:14px;font-size:10px;color:#5533aa;display:flex;gap:6px;align-items:center;">
+    🎟️ <input id="bpCode" maxlength="6" placeholder="SECRET CODE" style="background:#0a0818;border:1px solid #3a2266;color:#cc88ff;font-family:monospace;font-size:10px;padding:4px 8px;width:90px;letter-spacing:2px;text-transform:uppercase;">
+    <button onclick="bpRedeem()" style="background:transparent;border:1px solid #3a2266;color:#7755aa;font-family:monospace;font-size:9px;padding:4px 10px;cursor:pointer;letter-spacing:1px;">USE</button>
+    <span id="bpMsg" style="color:#44ff88;font-size:9px;"></span>
+  </div>
+  <a href="index.html" style="color:#5533aa;font-size:11px;letter-spacing:2px;margin-top:12px;">← BACK</a>
 </div>
 
 <!-- SHOP SCREEN -->
@@ -93,6 +98,31 @@ var maxArrows=3,pilllowDamage=1,powerMult=1,playerMaxHp=3,showWind=false,bouncy=
 var arrowsLeft,eArrowsLeft;
 var pHp,eHp;
 var player,enemy;
+
+// === SECRET CODES ===
+var usedBpCodes=[];
+var BP_CODES={
+  'BOW99':{gold:99,msg:'💰 +99 gold!'},
+  'PILLOW':{gold:50,arrows:1,msg:'🏹 +50 gold & +1 arrow!'},
+  'UPGRADE':{gold:150,msg:'💰 +150 gold!'},
+  'SECRET':{heavy:true,msg:'🪶 Heavy Pillow unlocked!'},
+  'POWER9':{power:true,msg:'🔱 Longbow power unlocked!'},
+};
+function bpRedeem(){
+  var code=(document.getElementById('bpCode').value||'').toUpperCase().trim();
+  var m=document.getElementById('bpMsg');
+  if(!BP_CODES[code]){m.textContent='❌ Invalid code';m.style.color='#ff4444';setTimeout(function(){m.textContent='';},2000);return;}
+  if(usedBpCodes.indexOf(code)>=0){m.textContent='Already used!';m.style.color='#ff8800';setTimeout(function(){m.textContent='';},2000);return;}
+  usedBpCodes.push(code);
+  var r=BP_CODES[code];
+  if(r.gold){coins+=r.gold;document.getElementById('coinCount').textContent=coins;}
+  if(r.arrows){maxArrows++;document.getElementById('maxArrows').textContent=maxArrows;}
+  if(r.heavy){pilllowDamage=2;}
+  if(r.power){powerMult=1.3;}
+  m.textContent=r.msg;m.style.color='#44ff88';
+  document.getElementById('bpCode').value='';
+  setTimeout(function(){m.textContent='';},3000);
+}
 var arrows=[],particles=[];
 var wind=0;
 var groundY,bgObjs=[];
