@@ -26,6 +26,11 @@ a{color:#88ff88;font-size:11px;text-decoration:none;}a:hover{color:#fff;}
   <span>💀 <b id="h-kills">0</b></span>
   <span id="h-msg" style="color:#ff4444;"></span>
   <a href="index.html">← Back</a>
+  <span style="font-size:9px;color:#446644;display:flex;align-items:center;gap:4px;">
+    <input id="tsCode" maxlength="6" placeholder="CODE" style="background:#050f05;border:1px solid #1a3a1a;color:#88ff88;font-family:monospace;font-size:9px;padding:2px 6px;width:70px;text-transform:uppercase;">
+    <button onclick="tsRedeem()" style="background:transparent;border:1px solid #1a3a1a;color:#446644;font-family:monospace;font-size:8px;padding:2px 6px;cursor:pointer;">USE</button>
+  </span>
+  <span id="tsMsg" style="font-size:9px;color:#44ff88;"></span>
 </div>
 <canvas id="c"></canvas>
 <div id="tbar">
@@ -38,9 +43,52 @@ a{color:#88ff88;font-size:11px;text-decoration:none;}a:hover{color:#fff;}
 </div>
 
 <script>
+let usedTsCodes=[];
+let activeMap='forest'; // 'forest' or 'lava'
+// Lava map path - a gnarly S-curve through volcanic terrain
+// LAVA_PATH_PTS built after TS is defined (see below)
+let LAVA_PATH_PTS=[];
+
+const TS_CODES={
+  'GOLD99':{gold:999,lava:true,msg:'🌋 +999 gold & LAVA MAP unlocked!'},
+  'TOWERS':{gold:500,msg:'💰 +500 gold!'},
+  'DEFEND':{hp:10,msg:'❤️ +10 HP!'},
+  'WAVES99':{gold:300,msg:'⚡ +300 gold, waves powered up!'},
+  'SECRET':{gold:300,hp:5,msg:'🎉 +300 gold +5 HP!'},
+};
+function tsRedeem(){
+  const code=document.getElementById('tsCode').value.toUpperCase().trim();
+  const m=document.getElementById('tsMsg');
+  if(!TS_CODES[code]){m.textContent='❌ Bad code';m.style.color='#ff4444';setTimeout(()=>m.textContent='',2000);return;}
+  if(usedTsCodes.includes(code)){m.textContent='Used!';m.style.color='#ff8800';setTimeout(()=>m.textContent='',1500);return;}
+  usedTsCodes.push(code);
+  const r=TS_CODES[code];
+  if(r.gold){gold+=r.gold;updateHUD();}
+  if(r.hp){hp+=r.hp;updateHUD();}
+  if(r.lava){activateLavaMap();}
+  m.textContent=r.msg;m.style.color='#44ff88';
+  document.getElementById('tsCode').value='';
+  setTimeout(()=>m.textContent='',3000);
+}
+
+function activateLavaMap(){
+  activeMap='lava';
+  PATH_PTS.length=0;
+  LAVA_PATH_PTS.forEach(p=>PATH_PTS.push(p));
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) IS_PATH[r][c]=onPath(c,r);
+  towers=[];enemies=[];bullets=[];particles=[];
+  wave=0;hp=25;gameState='waiting';
+  updateHUD();
+  showMsg('🌋 LAVA MAP ACTIVATED! Place towers & press SPACE!');
+}
+
 const C=document.getElementById('c'),ctx=C.getContext('2d');
 const W=680,H=440;C.width=W;C.height=H;
 const COLS=17,ROWS=11,TS=40;
+// Build lava path now that TS is defined
+LAVA_PATH_PTS=[
+  [0,2],[3,2],[3,5],[6,5],[6,1],[10,1],[10,9],[13,9],[13,4],[17,4]
+].map(([c,r])=>({x:c*TS+TS/2,y:r*TS+TS/2}));
 
 const TDEFS=[
   {name:'Archer', cost:50, col:'#88ff88', range:3.5, dmg:8, rate:40, type:'single', emoji:'🗼'},
@@ -51,7 +99,7 @@ const TDEFS=[
 ];
 
 // ── PATH ──
-const PATH_PTS=[
+let PATH_PTS=[
   [0,5],[2,5],[2,2],[5,2],[5,8],[9,8],[9,3],[13,3],[13,7],[16,7],[16,5],[17,5]
 ].map(([c,r])=>({x:c*TS+TS/2,y:r*TS+TS/2}));
 
@@ -66,7 +114,7 @@ function onPath(col,row){
   return false;
 }
 
-const IS_PATH=Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>onPath(c,r)));
+let IS_PATH=Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>onPath(c,r)));
 
 // ── STATE ──
 let towers=[],enemies=[],bullets=[],particles=[];
@@ -79,16 +127,16 @@ function selTower(i){selIdx=i;document.querySelectorAll('.tbtn').forEach((b,j)=>
 
 function placeTower(col,row){
   if(IS_PATH[row]?.[col])return;
-  if(towers.find(t=>t.col===col&&t.row===row))return;
+  if(towers.find(t=>t.tCol===col&&t.tRow===row))return;
   const def=TDEFS[selIdx];
   if(gold<def.cost){showMsg('Not enough gold!');return;}
   gold-=def.cost;
-  towers.push({col,row,x:col*TS+TS/2,y:row*TS+TS/2,...def,cd:0,kills:0,level:1});
+  towers.push({gridCol:col,gridRow:row,col:col,row:row,x:col*TS+TS/2,y:row*TS+TS/2,...def,tCol:col,tRow:row,cd:0,kills:0,level:1});
   updateHUD();
 }
 
 function sellTower(col,row){
-  const i=towers.findIndex(t=>t.col===col&&t.row===row);
+  const i=towers.findIndex(t=>t.tCol===col&&t.tRow===row);
   if(i<0)return;
   gold+=Math.floor(towers[i].cost/2);
   towers.splice(i,1);updateHUD();
@@ -223,16 +271,35 @@ function showMsg(t){msg=t;msgT=180;document.getElementById('h-msg').textContent=
 function drawGround(){
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const ip=IS_PATH[r]?.[c];
-    ctx.fillStyle=ip?'#1a1208':(tick%120<60?'#0c150c':'#0c150c');
+    if(activeMap==='lava'){
+      ctx.fillStyle=ip?'#3a1400':(r%2===c%2?'#1a0800':'#1f0a00');
+    } else {
+      ctx.fillStyle=ip?'#1a1208':(r%2===c%2?'#0c150c':'#0e170e');
+    }
     ctx.fillRect(c*TS,r*TS,TS,TS);
     if(!ip&&Math.random()<0.003){ctx.fillStyle='rgba(255,255,255,.03)';ctx.fillRect(c*TS+5,r*TS+5,2,2);}
   }
   // Path
-  ctx.strokeStyle='#2a2010';ctx.lineWidth=TS-2;
+  // Path color changes by map
+  ctx.strokeStyle=activeMap==='lava'?'#5a2000':'#2a2010';ctx.lineWidth=TS-2;
   ctx.beginPath();PATH_PTS.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
-  ctx.strokeStyle='#342818';ctx.lineWidth=TS-12;
+  ctx.strokeStyle=activeMap==='lava'?'#8a3400':'#342818';ctx.lineWidth=TS-12;
   ctx.beginPath();PATH_PTS.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
   // Start/end markers
+  // Lava map: animated lava glow on path
+  if(activeMap==='lava'){
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      if(!IS_PATH[r]?.[c])continue;
+      const glow=Math.sin(tick*.08+c*.4+r*.3)*.5+.5;
+      ctx.fillStyle=`rgba(255,${Math.floor(60+glow*80)},0,${.08+glow*.08})`;
+      ctx.fillRect(c*TS,r*TS,TS,TS);
+    }
+    // Lava bubbles
+    if(tick%15===0){
+      const br=Math.floor(Math.random()*ROWS),bc=Math.floor(Math.random()*COLS);
+      if(IS_PATH[br]?.[bc]) particles.push({x:bc*TS+TS/2,y:br*TS+TS/2,vx:(Math.random()-.5)*2,vy:-1-Math.random()*2,col:'#ff4400',life:20,sz:3+Math.random()*3});
+    }
+  }
   ctx.fillStyle='#88ff88';ctx.font='18px serif';ctx.textAlign='center';
   ctx.fillText('▶',PATH_PTS[0].x-14,PATH_PTS[0].y+6);
   ctx.fillStyle='#ff4444';ctx.fillText('🏰',PATH_PTS[PATH_PTS.length-1].x+12,PATH_PTS[PATH_PTS.length-1].y+6);
@@ -241,7 +308,7 @@ function drawGround(){
 function drawHover(){
   if(hovCol<0||hovRow<0)return;
   if(IS_PATH[hovRow]?.[hovCol])return;
-  const hasTower=towers.find(t=>t.col===hovCol&&t.row===hovRow);
+  const hasTower=towers.find(t=>t.tCol===hovCol&&t.tRow===hovRow);
   ctx.fillStyle=hasTower?'rgba(255,0,0,.15)':'rgba(136,255,136,.1)';
   ctx.fillRect(hovCol*TS,hovRow*TS,TS,TS);
   ctx.strokeStyle=hasTower?'rgba(255,0,0,.4)':'rgba(136,255,136,.4)';
@@ -255,14 +322,18 @@ function drawHover(){
 
 function drawTowers(){
   for(const t of towers){
+    // Shadow
     ctx.fillStyle='rgba(0,0,0,.4)';ctx.beginPath();ctx.ellipse(t.x+2,t.y+6,10,5,0,0,Math.PI*2);ctx.fill();
-    ctx.shadowColor=t.col;ctx.shadowBlur=8;
-    ctx.fillStyle=t.col+'44';ctx.fillRect(t.col*TS+2,t.row*TS+2,TS-4,TS-4);
-    ctx.strokeStyle=t.col;ctx.lineWidth=2;ctx.strokeRect(t.col*TS+2,t.row*TS+2,TS-4,TS-4);
+    // Tower base (use t.x,t.y which are correctly set at placement)
+    ctx.shadowColor=t.col;ctx.shadowBlur=10;
+    ctx.fillStyle=t.col+'33';ctx.fillRect(t.x-TS/2+2,t.y-TS/2+2,TS-4,TS-4);
+    ctx.strokeStyle=t.col;ctx.lineWidth=2;ctx.strokeRect(t.x-TS/2+2,t.y-TS/2+2,TS-4,TS-4);
     ctx.shadowBlur=0;
-    ctx.font='18px serif';ctx.textAlign='center';ctx.fillText(t.emoji,t.x,t.y+6);
-    // Level pip
-    if(t.level>1){ctx.fillStyle='#ffd700';ctx.font='bold 8px monospace';ctx.fillText('★',t.x+14,t.row*TS+14);}
+    // Tower icon
+    ctx.font='20px serif';ctx.textAlign='center';ctx.fillText(t.emoji,t.x,t.y+7);
+    // Level star
+    if(t.level>1){ctx.fillStyle='#ffd700';ctx.font='bold 8px monospace';ctx.fillText('★',t.x+14,t.y-TS/2+14);}
+    // Range ring on hover
   }
 }
 
@@ -303,9 +374,9 @@ function drawBullets(){
 function drawParticles(){
   particles=particles.filter(p=>p.life>0);
   for(const p of particles){
-    ctx.globalAlpha=p.life/20;ctx.fillStyle=p.col;
-    ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fill();
-    p.x+=p.vx;p.y+=p.vy;p.life-=2;
+    ctx.globalAlpha=Math.max(0,p.life/20);ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.sz||2,0,Math.PI*2);ctx.fill();
+    p.x+=p.vx;p.y+=p.vy;p.vy=(p.vy||0)+.04;p.life-=2;
   }ctx.globalAlpha=1;
 }
 
@@ -358,7 +429,16 @@ document.addEventListener('keydown',e=>{
   if(e.key>='1'&&e.key<='5')selTower(parseInt(e.key)-1);
   if((e.key==='r'||e.key==='R')&&gameState==='dead'){
     towers=[];enemies=[];bullets=[];particles=[];
-    gold=150;hp=20;wave=0;kills=0;gameState='waiting';updateHUD();
+    gold=150;hp=20;wave=0;kills=0;gameState='waiting';
+    // Reset to forest map on restart
+    if(activeMap==='lava'){
+      activeMap='forest';
+      PATH_PTS.length=0;
+      [[0,5],[2,5],[2,2],[5,2],[5,8],[9,8],[9,3],[13,3],[13,7],[16,7],[16,5],[17,5]]
+        .map(([c,r])=>({x:c*TS+TS/2,y:r*TS+TS/2})).forEach(p=>PATH_PTS.push(p));
+      for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) IS_PATH[r][c]=onPath(c,r);
+    }
+    updateHUD();
   }
 });
 loop();
