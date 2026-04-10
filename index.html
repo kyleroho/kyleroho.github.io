@@ -8,7 +8,7 @@
 :root{--ink:#0a0005;--red:#ff1744;--yellow:#ffe100;--cyan:#00fff5;--green:#39ff14;--orange:#ff6d00;--purple:#d500f9;--white:#ffffff;--dim:#555566;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
-body{background:var(--ink);color:var(--white);font-family:'Syne',"Trebuchet MS","Segoe UI",sans-serif;overflow-x:hidden;cursor:none;}
+body{background:var(--ink);color:var(--white);font-family:'Syne',"Trebuchet MS","Segoe UI",sans-serif;overflow-x:hidden;cursor:none;-webkit-overflow-scrolling:touch;}
 #dot{position:fixed;width:8px;height:8px;background:var(--yellow);pointer-events:none;z-index:99999;transform:translate(-50%,-50%);}
 #cross{position:fixed;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);}
 #cross::before,#cross::after{content:'';position:absolute;background:var(--cyan);opacity:0.5;}
@@ -97,7 +97,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:str
 .play-btn-main:hover{background:var(--white);transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--red);}
 .play-btn-main::after{content:'▶';}
 .game-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:4px;margin-top:4px;}
-.game-card{background:#0a0010;border:2px solid transparent;position:relative;overflow:hidden;transition:all .18s;cursor:pointer;}
+.game-card{background:#0a0010;border:2px solid transparent;position:relative;overflow:hidden;transition:all .18s;cursor:pointer;contain:layout style;}
 .game-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--card-accent,var(--cyan));transform:scaleX(0);transform-origin:left;transition:transform .25s;}
 .game-card:hover{border-color:var(--card-accent,var(--cyan));background:#120018;}
 .game-card:hover::before{transform:scaleX(1);}
@@ -196,7 +196,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
     <span class="hero-t3">GAMES</span>
   </div>
   <div class="hero-stats-row">
-    <div class="hstat"><span class="hstat-n">49</span><span class="hstat-l">Games</span></div>
+    <div class="hstat"><span class="hstat-n">54</span><span class="hstat-l">Games</span></div>
     <div class="hstat"><span class="hstat-n">30</span><span class="hstat-l">Levels</span></div>
     <div class="hstat"><span class="hstat-n">158</span><span class="hstat-l">Achievements</span></div>
     <div class="hstat"><span class="hstat-n">4</span><span class="hstat-l">Worlds</span></div>
@@ -208,6 +208,10 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
 <!-- TICKER 1 -->
 <div class="ticker-zone">
   <div class="ticker-track">
+    <span class="ticker-item">🆕 BLUE GUY WORLD — NEW ADVENTURE IN THE BLUE GUY UNIVERSE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 POOPATROPAS 3: BLUE GUY UNIVERSE — BLUE GUY · DRU · NICO · 6 WORLDS · 24 LEVELS</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 POOPATROPAS &amp; CLICKER CLUB — CLICK COOKIES · RECRUIT MEMBERS · PRESTIGE</span><span class="ticker-diam">◆</span>
+    <span class="ticker-item">🆕 NEON BLAST — TWIN-STICK BULLET HELL · 6 ENEMY TYPES · BOSS WAVES</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">🆕 PIXEL UPGRADE — UPGRADE BETWEEN RUNS · JOHNNY UPGRADE STYLE</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">🆕 PIZZA RUSH — DELIVER PIZZAS BEFORE TIME RUNS OUT</span><span class="ticker-diam">◆</span>
     <span class="ticker-item">🆕 RUN KID RUN — ENDLESS RUNNER · POWERUPS · SHOP</span><span class="ticker-diam">◆</span>
@@ -268,7 +272,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
 
 <!-- STAT STRIP -->
 <div class="stat-strip reveal">
-  <div class="stat-cell"><span class="stat-val">49</span><span class="stat-lbl">Games Made</span></div>
+  <div class="stat-cell"><span class="stat-val">54</span><span class="stat-lbl">Games Made</span></div>
   <div class="stat-cell"><span class="stat-val">30</span><span class="stat-lbl">Levels</span></div>
   <div class="stat-cell"><span class="stat-val">158</span><span class="stat-lbl">Achievements</span></div>
   <div class="stat-cell"><span class="stat-val">4</span><span class="stat-lbl">Worlds</span></div>
@@ -306,7 +310,7 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
   </div>
 
   <!-- GAME GRID -->
-  <div id="series" class="game-grid reveal">
+  <div id="series" class="game-grid">
     <div id="noResults">NO GAMES FOUND — TRY A DIFFERENT SEARCH</div>
 
     <div class="game-card" style="--card-accent:#00fff5;" onclick="window.open('the_blue_guy_2.html','_blank')">
@@ -569,6 +573,16 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
       </div>
     </div>
 
+    <div class="game-card" style="--card-accent:#ff4444;" onclick="window.open('BALLS.HTML','_blank')">
+      <div class="card-screen" style="background:#080010;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.5;">⚽</div><div class="card-play" style="--card-accent:#ff4444;"><div class="play-sq" style="border-color:#ff4444;color:#ff4444;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-gen">Physics</span><span class="tag tag-gen">Chaos</span></div>
+        <div class="card-title" style="color:#ff4444;">BALLS 🔴</div>
+        <div class="card-desc">Pure physics chaos. Balls everywhere. Bounce, collide, explode. The game is called BALLS and it delivers.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#ff4444;color:#ff4444;" href="BALLS.HTML" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse</span></div>
+      </div>
+    </div>
+
     <div class="game-card" style="--card-accent:#ff8844;" onclick="window.open('hoop_dreams.html','_blank')">
       <div class="card-screen"><canvas id="cHD"></canvas><div class="card-play" style="--card-accent:#ff8844;"><div class="play-sq" style="border-color:#ff8844;color:#ff8844;">▶</div>PLAY</div></div>
       <div class="card-body">
@@ -779,6 +793,46 @@ footer{border-top:3px solid var(--yellow);padding:48px 32px;display:flex;align-i
       </div>
     </div>
 
+    <div class="game-card" style="--card-accent:#00ffcc;" onclick="window.open('neon_blast.html','_blank')">
+      <div class="card-screen" style="background:#000408;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.4;">🌀</div><div class="card-play" style="--card-accent:#00ffcc;"><div class="play-sq" style="border-color:#00ffcc;color:#00ffcc;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Bullet Hell</span><span class="tag tag-gen">Survival</span></div>
+        <div class="card-title" style="color:#00ffcc;">NEON BLAST 🌀</div>
+        <div class="card-desc">Twin-stick bullet hell! 6 enemy types, wave survival, boss fights, score multiplier, orb pickups, dash + bomb. Mouse to aim.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#00ffcc;color:#00ffcc;" href="neon_blast.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD + Mouse</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#44aaff;" onclick="window.open('blue_guy_world.html','_blank')">
+      <div class="card-screen" style="background:#000810;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.45;">🔵</div><div class="card-play" style="--card-accent:#44aaff;"><div class="play-sq" style="border-color:#44aaff;color:#44aaff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Platformer</span><span class="tag tag-gen">Adventure</span></div>
+        <div class="card-title" style="color:#44aaff;">BLUE GUY WORLD 🔵</div>
+        <div class="card-desc">A brand new Blue Guy adventure. Explore new worlds, face new enemies, discover the universe.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#44aaff;color:#44aaff;" href="blue_guy_world.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Arrows · Z · X</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#4488ff;" onclick="window.open('poopatropas_3.html','_blank')">
+      <div class="card-screen" style="background:#000810;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.4;">🔵</div><div class="card-play" style="--card-accent:#4488ff;"><div class="play-sq" style="border-color:#4488ff;color:#4488ff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Platformer</span><span class="tag tag-gen">3 Characters</span></div>
+        <div class="card-title" style="color:#4488ff;">POOPATROPAS 3 🔵</div>
+        <div class="card-desc">Blue Guy Universe! Play as Blue Guy, Dru (puffy hair), or Nico (beanie). 6 worlds, 24 levels, unique specials.</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#4488ff;color:#4488ff;" href="poopatropas_3.html" target="_blank">▶ PLAY NOW</a><span class="card-key">WASD · Z · X · C</span></div>
+      </div>
+    </div>
+
+    <div class="game-card" style="--card-accent:#cc44ff;" onclick="window.open('clicker_club.html','_blank')">
+      <div class="card-screen" style="background:#05030a;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:.4;">🍪</div><div class="card-play" style="--card-accent:#cc44ff;"><div class="play-sq" style="border-color:#cc44ff;color:#cc44ff;">▶</div>PLAY</div></div>
+      <div class="card-body">
+        <div class="tag-row"><span class="tag tag-web">Browser</span><span class="tag tag-new">NEW</span><span class="tag tag-gen">Clicker</span><span class="tag tag-gen">Idle</span></div>
+        <div class="card-title" style="color:#cc44ff;">POOPATROPAS &amp; CLICKER CLUB 🍪</div>
+        <div class="card-desc">Click cookies, recruit club members (Blue Guy, Dru, Nico!), buy upgrades, catch golden cookies, prestige!</div>
+        <div class="card-footer"><a class="mini-btn" style="border-color:#cc44ff;color:#cc44ff;" href="clicker_club.html" target="_blank">▶ PLAY NOW</a><span class="card-key">Mouse Click</span></div>
+      </div>
+    </div>
+
     <div class="game-card" style="--card-accent:#ff6644;" onclick="window.open('worm_wars.html','_blank')">
       <div class="card-screen"><canvas id="cWW"></canvas><div class="card-play" style="--card-accent:#ff6644;"><div class="play-sq" style="border-color:#ff6644;color:#ff6644;">▶</div>PLAY</div></div>
       <div class="card-body">
@@ -867,7 +921,7 @@ document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.le
 (function rl(){cx+=(mx-cx)*0.09;cy+=(my-cy)*0.09;cross.style.left=cx+'px';cross.style.top=cy+'px';requestAnimationFrame(rl);})();
 
 // ── SCROLL REVEAL ──
-const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');obs.unobserve(e.target);}});},{threshold:0.08});
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');obs.unobserve(e.target);}});},{threshold:0,rootMargin:"0px 0px -40px 0px"});
 document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
 
 // ── CANVAS HELPER ──
