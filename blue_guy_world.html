@@ -1,0 +1,2677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blue Guy World — v5</title>
+<style>
+/* ══════════════════════════════════════════════════
+   RESET & DESIGN TOKENS
+══════════════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg0:#040b16;--bg1:#071220;--bg2:#0c1e36;
+  --acc:#3b9eff;--acc2:#64b8ff;--acc3:#1a6ccc;
+  --gold:#f0c040;--green:#3afa80;--red:#fa3030;
+  --purple:#c040f0;--cyan:#00e5ff;--orange:#ff8020;
+  --ui-bg:rgba(4,11,22,0.95);
+  --ui-bd:rgba(59,158,255,0.28);--ui-bd2:rgba(59,158,255,0.10);
+  --txt:#d4eaff;--txt2:#7aaad0;--txt3:#456a8a;
+  --r:4px;--r2:8px;--font:'Courier New',monospace;
+  --t:.15s;--t2:.25s;--t3:.4s;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:var(--font);color:var(--txt);}
+button{font-family:var(--font);cursor:pointer;border:none;outline:none;color:inherit;}
+input,select,textarea{font-family:var(--font);}
+
+/* ══════════════ CANVAS ══════════════ */
+#c{position:fixed;inset:0;width:100%;height:100%;z-index:1;display:none;}
+
+/* ══════════════ SCREEN SYSTEM ══════════════ */
+.scr{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.scr.off{display:none!important;}
+.scr.fi{animation:fadeIn .35s ease forwards;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+/* ══════════════ MAIN MENU ══════════════ */
+#s-main{
+  background:
+    radial-gradient(circle at 20% 70%,rgba(0,80,200,.32) 0%,transparent 52%),
+    radial-gradient(circle at 80% 20%,rgba(0,180,100,.18) 0%,transparent 45%),
+    radial-gradient(circle at 55% 95%,rgba(120,0,220,.14) 0%,transparent 40%),
+    linear-gradient(175deg,#020910 0%,#050e1c 55%,#030e0a 100%);
+}
+#s-main::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(255,255,255,.014) 32px),
+             repeating-linear-gradient(90deg,transparent,transparent 31px,rgba(255,255,255,.014) 32px);}
+#menu-particles{position:absolute;inset:0;pointer-events:none;}
+
+.logo{position:relative;z-index:1;text-align:center;margin-bottom:2.4rem;}
+.logo-t{
+  font-size:clamp(2.4rem,6vw,5rem);font-weight:900;letter-spacing:.06em;color:#fff;
+  text-shadow:0 0 10px rgba(59,158,255,.9),0 0 30px rgba(59,158,255,.45),0 4px 0 #1560bb,0 8px 0 rgba(0,35,110,.55);
+  animation:logoBob 4s ease-in-out infinite;
+}
+.logo-sub{font-size:clamp(.65rem,1.2vw,.88rem);letter-spacing:.4em;color:var(--acc);text-transform:uppercase;margin-top:.4em;}
+.logo-ver{display:inline-block;margin-top:.55em;padding:3px 14px;font-size:.62rem;letter-spacing:.24em;color:var(--green);
+  background:rgba(0,200,80,.1);border:1px solid rgba(0,200,80,.38);border-radius:20px;}
+@keyframes logoBob{0%,100%{transform:translateY(0);}45%{transform:translateY(-8px);}65%{transform:translateY(-5px);}}
+
+.mbtn{
+  position:relative;z-index:1;display:block;width:275px;padding:13px 0;margin:5px auto;
+  font-size:.9rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--txt);background:rgba(8,22,55,.72);border:1px solid var(--ui-bd);
+  clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+  transition:all var(--t2);overflow:hidden;
+}
+.mbtn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(59,158,255,.2),transparent);transition:left .38s;}
+.mbtn:hover::before{left:100%;}
+.mbtn:hover{background:rgba(18,50,120,.88);border-color:var(--acc2);color:#fff;
+  box-shadow:0 0 18px rgba(59,158,255,.45),inset 0 0 8px rgba(59,158,255,.08);transform:translateY(-2px) scale(1.01);}
+.mbtn:active{transform:translateY(0) scale(.99);}
+.mbtn.g{border-color:rgba(58,250,128,.38);color:#b8ffd8;}
+.mbtn.g:hover{background:rgba(8,50,25,.88);border-color:var(--green);box-shadow:0 0 18px rgba(58,250,128,.45);}
+.mbtn.r{border-color:rgba(250,48,48,.38);color:#ffc0c0;}
+.mbtn.r:hover{background:rgba(50,8,8,.88);border-color:var(--red);box-shadow:0 0 18px rgba(250,48,48,.45);}
+.mbtn.gold{border-color:rgba(240,192,64,.38);color:#fff0c0;}
+.mbtn.gold:hover{background:rgba(50,38,8,.88);border-color:var(--gold);box-shadow:0 0 18px rgba(240,192,64,.45);}
+.mbtn.pur{border-color:rgba(192,64,240,.38);color:#f0c0ff;}
+.mbtn.pur:hover{background:rgba(40,8,55,.88);border-color:var(--purple);box-shadow:0 0 18px rgba(192,64,240,.45);}
+.hint-row{position:relative;z-index:1;color:rgba(60,100,160,.6);font-size:.62rem;letter-spacing:.22em;margin-top:.7rem;}
+
+/* ══════════════ CHARACTER SELECT ══════════════ */
+#s-char{background:radial-gradient(ellipse at 50% 0%,rgba(0,50,130,.4) 0%,transparent 55%),
+             linear-gradient(185deg,#040c1c 0%,#08162a 100%);}
+.stitle{position:relative;z-index:1;font-size:clamp(1.4rem,3vw,2.4rem);color:#fff;letter-spacing:.12em;
+  text-shadow:0 0 14px rgba(59,158,255,.65);margin-bottom:.3em;}
+.ssub{color:var(--txt2);font-size:.74rem;letter-spacing:.22em;margin-bottom:2rem;z-index:1;}
+.char-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;z-index:1;}
+.ccard{width:155px;background:rgba(4,12,36,.92);border:1px solid rgba(59,158,255,.2);
+  padding:16px 13px;text-align:center;cursor:pointer;
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+  transition:all var(--t2);position:relative;}
+.ccard:hover,.ccard.sel{border-color:var(--acc);background:rgba(10,28,75,.92);
+  transform:translateY(-6px);box-shadow:0 16px 50px rgba(59,158,255,.35);}
+.ccard.sel::after{content:'✓ SELECTED';position:absolute;top:5px;right:7px;
+  font-size:.56rem;color:var(--acc);letter-spacing:.08em;}
+.cfig{margin:0 auto 10px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.ch{width:30px;height:30px;border-radius:5px;margin-bottom:2px;}
+.cb{width:26px;height:20px;border-radius:3px;}
+.cl{display:flex;gap:3px;}.clg{width:10px;height:14px;border-radius:2px;}
+.cname{color:#fff;font-weight:700;font-size:.88rem;margin-bottom:4px;}
+.cdesc{color:var(--txt2);font-size:.62rem;margin-bottom:8px;line-height:1.5;}
+.cbar-row{display:flex;align-items:center;margin:3px 0;font-size:.62rem;color:var(--txt2);gap:5px;}
+.cbar-tr{flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
+.cbar-f{height:100%;border-radius:2px;}
+
+/* ══════════════ SETTINGS ══════════════ */
+#s-set{background:linear-gradient(160deg,var(--bg0) 0%,var(--bg2) 100%);}
+.set-panel{width:min(440px,92vw);z-index:1;background:var(--ui-bg);border:1px solid var(--ui-bd);
+  border-radius:var(--r2);padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.85);}
+.set-panel h3{color:var(--acc);font-size:.95rem;letter-spacing:.15em;margin-bottom:16px;
+  border-bottom:1px solid var(--ui-bd2);padding-bottom:9px;}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;
+  border-bottom:1px solid var(--ui-bd2);color:var(--txt);font-size:.83rem;}
+.set-row:last-child{border-bottom:none;}
+.set-row label{letter-spacing:.06em;}
+.set-val{color:var(--acc2);font-size:.78rem;min-width:28px;text-align:right;}
+.srange{-webkit-appearance:none;width:110px;height:3px;background:rgba(59,158,255,.2);border-radius:2px;outline:none;}
+.srange::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--acc);border-radius:50%;cursor:pointer;}
+.stog{width:40px;height:20px;background:rgba(59,158,255,.1);border:1px solid var(--ui-bd);
+  border-radius:10px;cursor:pointer;position:relative;transition:.2s;}
+.stog.on{background:rgba(59,158,255,.4);border-color:var(--acc);}
+.stog::after{content:'';position:absolute;top:3px;left:3px;width:12px;height:12px;
+  background:var(--txt2);border-radius:50%;transition:.2s;}
+.stog.on::after{left:23px;background:var(--acc);}
+.sselect{background:rgba(8,20,50,.8);color:var(--txt);border:1px solid var(--ui-bd);
+  padding:3px 7px;border-radius:var(--r);font-family:var(--font);font-size:.78rem;}
+
+/* ══════════════ SECRET CODES PANEL ══════════════ */
+#s-codes{background:radial-gradient(ellipse at 50% 30%,rgba(192,64,240,.2) 0%,transparent 60%),
+  linear-gradient(180deg,#060010 0%,#0a0020 100%);}
+.codes-panel{width:min(420px,90vw);z-index:1;background:rgba(10,0,30,.95);
+  border:1px solid rgba(192,64,240,.4);border-radius:var(--r2);padding:24px;
+  box-shadow:0 0 40px rgba(192,64,240,.2),0 20px 60px rgba(0,0,0,.9);}
+.codes-panel h3{color:var(--purple);font-size:1rem;letter-spacing:.2em;margin-bottom:6px;}
+.codes-desc{color:var(--txt2);font-size:.7rem;margin-bottom:16px;line-height:1.6;}
+.code-input-wrap{position:relative;margin-bottom:14px;}
+#code-input{width:100%;padding:10px 14px;background:rgba(192,64,240,.08);
+  border:1px solid rgba(192,64,240,.35);border-radius:var(--r);
+  color:var(--purple);font-size:1rem;letter-spacing:.2em;text-align:center;outline:none;
+  transition:border-color .2s;}
+#code-input:focus{border-color:var(--purple);box-shadow:0 0 12px rgba(192,64,240,.3);}
+#code-feedback{text-align:center;font-size:.8rem;min-height:20px;margin-bottom:10px;
+  transition:all .3s;letter-spacing:.08em;}
+#code-feedback.ok{color:var(--green);}
+#code-feedback.bad{color:var(--red);}
+.active-codes{margin-top:12px;border-top:1px solid rgba(192,64,240,.2);padding-top:12px;}
+.active-codes h4{color:var(--txt2);font-size:.7rem;letter-spacing:.12em;margin-bottom:8px;}
+.code-tag{display:inline-block;margin:3px;padding:2px 9px;
+  background:rgba(192,64,240,.15);border:1px solid rgba(192,64,240,.3);
+  border-radius:12px;font-size:.68rem;color:var(--purple);}
+
+/* ══════════════ LOADING ══════════════ */
+#s-load{background:#020810;z-index:600;}
+.ld-wrap{text-align:center;}
+.ld-title{color:var(--acc);font-size:1.4rem;letter-spacing:.32em;margin-bottom:.4rem;}
+.ld-subtitle{color:var(--txt2);font-size:.68rem;letter-spacing:.22em;margin-bottom:1.8rem;}
+.ld-track{width:290px;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;margin:0 auto;}
+.ld-fill{height:100%;background:linear-gradient(90deg,var(--acc3),var(--acc),var(--acc2));border-radius:2px;width:0%;transition:width .28s;}
+.ld-msg{color:var(--txt3);font-size:.66rem;letter-spacing:.14em;margin-top:10px;}
+.ld-tip{color:var(--txt2);font-size:.7rem;margin-top:18px;max-width:300px;text-align:center;line-height:1.65;
+  border-left:2px solid var(--acc);padding-left:10px;}
+
+/* ══════════════ HUD ══════════════ */
+#hud{position:fixed;inset:0;z-index:20;pointer-events:none;}
+#hud.off{display:none;}
+
+#xh{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:26px;height:26px;}
+#xh::before,#xh::after{content:'';position:absolute;background:rgba(255,255,255,.82);box-shadow:0 0 4px rgba(0,0,0,.9);}
+#xh::before{width:2px;height:100%;left:50%;transform:translateX(-50%);}
+#xh::after{height:2px;width:100%;top:50%;transform:translateY(-50%);}
+#xh-dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:3px;background:#fff;border-radius:50%;}
+/* Gun crosshair - larger circle */
+#xh.gun-mode::before,#xh.gun-mode::after{background:rgba(255,120,0,.9);}
+#xh.gun-mode #xh-dot{background:var(--orange);}
+#xh.gun-mode{width:32px;height:32px;}
+#xh.hit{animation:xhHit .16s ease;}
+@keyframes xhHit{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.7);}}
+
+/* Ammo indicator */
+#ammo-hud{position:absolute;bottom:72px;right:14px;
+  background:rgba(0,0,0,.6);border:1px solid rgba(255,120,0,.4);
+  padding:6px 12px;border-radius:var(--r);font-size:.78rem;color:var(--orange);
+  display:none;letter-spacing:.1em;}
+#ammo-hud.reloading{color:var(--gold);animation:reload-pulse .5s ease-in-out infinite;}
+@keyframes reload-pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* Gunshot flash overlay */
+#gun-flash{position:fixed;inset:0;background:rgba(255,200,80,.12);
+  pointer-events:none;z-index:60;opacity:0;transition:opacity .08s;}
+
+#brk-wrap{position:absolute;top:57%;left:50%;transform:translateX(-50%);
+  width:180px;height:7px;background:rgba(0,0,0,.6);border-radius:4px;overflow:hidden;display:none;
+  border:1px solid rgba(255,255,255,.14);}
+#brk-bar{height:100%;background:linear-gradient(90deg,#d06010,#f0a030,#f0c040);width:0%;transition:width .04s;}
+
+#blk-tip{position:absolute;top:calc(50% + 32px);left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.72);padding:4px 12px;border-radius:3px;
+  color:#bbb;font-size:.7rem;opacity:0;transition:opacity .18s;pointer-events:none;
+  white-space:nowrap;border:1px solid rgba(255,255,255,.08);}
+
+#status{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:5px;}
+#hp-row,#hng-row{display:flex;gap:3px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9));}
+.hrt{font-size:16px;transition:all .18s;display:inline-block;}
+.hrt.full{filter:drop-shadow(0 0 4px rgba(220,40,40,.9));}
+.hrt.emp{opacity:.2;filter:none;}
+.hrt.pulse{animation:hpulse .22s ease;}
+@keyframes hpulse{0%,100%{transform:scale(1);}50%{transform:scale(1.4);}}
+.hng{font-size:14px;opacity:.75;transition:all .18s;}
+.hng.emp{opacity:.18;}
+
+/* Shields (armor) display */
+#armor-row{display:flex;gap:3px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9));}
+.armsym{font-size:14px;opacity:.8;}
+.armsym.emp{opacity:.18;}
+
+/* XP bar */
+#xp-wrap{position:absolute;bottom:84px;left:50%;transform:translateX(-50%);width:260px;}
+#xp-track{height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;}
+#xp-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--acc));border-radius:2px;transition:width .5s ease;}
+#xp-label{text-align:center;font-size:.6rem;color:var(--purple);letter-spacing:.1em;margin-top:2px;}
+
+/* Hotbar */
+#hotbar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:4px;
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,.7));}
+.hs{width:52px;height:52px;background:rgba(0,0,0,.68);border:1.5px solid rgba(180,210,255,.18);
+  border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:22px;position:relative;transition:all var(--t);}
+.hs.act{border-color:#fff;background:rgba(59,158,255,.22);
+  box-shadow:0 0 14px rgba(255,255,255,.25),0 -3px 0 rgba(59,158,255,.55);transform:translateY(-3px);}
+.hs.gun-act{border-color:var(--orange)!important;background:rgba(255,120,0,.2)!important;
+  box-shadow:0 0 14px rgba(255,120,0,.4),0 -3px 0 rgba(255,120,0,.5)!important;}
+.hs-n{position:absolute;bottom:2px;right:4px;font-size:9px;color:#fff;font-weight:700;text-shadow:1px 1px 0 #000;}
+.hs-k{position:absolute;top:2px;left:4px;font-size:8px;color:rgba(255,255,255,.3);}
+.hs-dur{position:absolute;bottom:0;left:1px;right:1px;height:2px;border-radius:1px;}
+
+/* Tool durability bar above hotbar */
+#tool-wrap{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);width:170px;display:none;}
+#tool-lbl{color:var(--txt2);font-size:.64rem;text-align:center;margin-bottom:2px;}
+#tool-tr{height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;}
+#tool-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .18s;}
+
+/* Info panels */
+#info-l{position:absolute;top:12px;left:13px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);
+  padding:8px 13px;border-radius:var(--r2);border-left:2px solid var(--acc);
+  font-size:.72rem;line-height:2;box-shadow:0 4px 18px rgba(0,0,0,.5);}
+#info-r{position:absolute;top:12px;right:13px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);
+  padding:8px 13px;border-radius:var(--r2);border-right:2px solid var(--acc);
+  font-size:.72rem;line-height:2;text-align:right;box-shadow:0 4px 18px rgba(0,0,0,.5);}
+
+/* Cheat indicator */
+#cheat-bar{position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(192,64,240,.15);border:1px solid rgba(192,64,240,.5);
+  border-radius:20px;padding:3px 14px;font-size:.65rem;color:var(--purple);
+  letter-spacing:.12em;display:none;}
+
+/* Minimap */
+#minimap{position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.65);border:1px solid var(--ui-bd);
+  border-radius:var(--r);padding:3px;backdrop-filter:blur(4px);}
+
+/* Quest panel */
+#quest-panel{position:absolute;bottom:90px;right:13px;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(6px);
+  padding:9px 13px;border-radius:var(--r2);border-right:2px solid var(--gold);
+  font-size:.7rem;max-width:195px;}
+#quest-title{color:var(--gold);font-weight:700;margin-bottom:4px;letter-spacing:.06em;}
+.q-obj{color:var(--txt2);margin:3px 0;transition:color .3s;}
+.q-obj.done{color:var(--green);}
+
+/* Controls hint */
+#ctrl-hint{position:absolute;bottom:76px;right:13px;
+  background:rgba(0,0,0,.52);backdrop-filter:blur(4px);
+  padding:7px 11px;border-radius:var(--r);color:rgba(150,195,255,.5);font-size:.62rem;line-height:1.95;
+  pointer-events:none;}
+
+/* Save indicator */
+#save-ind{position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  color:var(--green);font-size:.68rem;letter-spacing:.14em;opacity:0;transition:opacity .3s;
+  background:rgba(0,0,0,.62);padding:3px 12px;border-radius:20px;
+  border:1px solid rgba(58,250,128,.3);}
+
+/* Screen FX */
+#dmgfx{position:fixed;inset:0;z-index:35;pointer-events:none;opacity:0;transition:opacity .1s;
+  background:radial-gradient(ellipse at center,transparent 25%,rgba(200,0,0,.6) 100%);}
+#healfx{position:fixed;inset:0;z-index:35;pointer-events:none;opacity:0;transition:opacity .2s;
+  background:radial-gradient(ellipse at center,transparent 25%,rgba(0,200,80,.32) 100%);}
+#lvlfx{position:fixed;inset:0;z-index:36;pointer-events:none;opacity:0;transition:opacity .28s;
+  background:radial-gradient(ellipse at center,rgba(200,100,255,.3) 0%,transparent 68%);}
+#invinc-fx{position:fixed;inset:0;z-index:34;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse at center,rgba(0,200,255,.08) 0%,transparent 80%);
+  animation:none;}
+#invinc-fx.on{animation:invincPulse 1.5s ease-in-out infinite;}
+@keyframes invincPulse{0%,100%{opacity:0;}50%{opacity:1;}}
+
+/* Floating damage numbers */
+.dmg-num{position:fixed;pointer-events:none;z-index:80;font-weight:900;font-size:1.15rem;
+  text-shadow:0 2px 5px rgba(0,0,0,.9);animation:dmgFloat .85s ease forwards;}
+@keyframes dmgFloat{0%{opacity:1;transform:translateY(0) scale(1);}30%{transform:translateY(-22px) scale(1.25);}
+  100%{opacity:0;transform:translateY(-52px) scale(.75);}}
+
+/* ══════════════ PAUSE ══════════════ */
+#s-pause{background:rgba(0,0,0,.75);backdrop-filter:blur(12px);z-index:120;}
+#s-pause h2{color:#fff;font-size:2.2rem;letter-spacing:.22em;text-shadow:0 0 22px var(--acc);margin-bottom:2rem;}
+
+/* ══════════════ PANELS (Inventory / Crafting / Stats) ══════════════ */
+#s-inv,#s-craft,#s-stats{background:rgba(0,0,0,.8);backdrop-filter:blur(14px);z-index:115;}
+.panel{background:var(--ui-bg);border:1px solid var(--ui-bd);border-radius:var(--r2);padding:22px;
+  box-shadow:0 28px 90px rgba(0,0,0,.9),0 0 0 1px rgba(59,158,255,.06);animation:panIn .2s ease;}
+@keyframes panIn{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:scale(1);}}
+.ptitle{color:var(--acc);font-size:1rem;letter-spacing:.12em;margin-bottom:14px;
+  display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--ui-bd2);padding-bottom:9px;}
+.igrid{display:grid;grid-template-columns:repeat(9,44px);gap:3px;margin-bottom:9px;}
+.islot{width:44px;height:44px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+  border-radius:3px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;cursor:pointer;position:relative;transition:all var(--t);}
+.islot:hover{background:rgba(59,158,255,.2);border-color:var(--acc);}
+.islot.sel{background:rgba(59,158,255,.28);border-color:#fff;}
+.islot-n{position:absolute;bottom:2px;right:3px;font-size:9px;color:#fff;font-weight:700;text-shadow:1px 1px 0 #000;}
+.islot-tip{display:none;position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.94);padding:5px 9px;border-radius:3px;color:#ddd;font-size:.66rem;
+  white-space:nowrap;z-index:10;pointer-events:none;border:1px solid rgba(255,255,255,.09);}
+.islot:hover .islot-tip{display:block;}
+.rlist{display:flex;flex-direction:column;gap:7px;max-height:370px;overflow-y:auto;padding-right:3px;}
+.rlist::-webkit-scrollbar{width:3px;}
+.rlist::-webkit-scrollbar-thumb{background:var(--acc3);border-radius:2px;}
+.rrow{display:flex;align-items:center;gap:11px;padding:9px 12px;
+  background:rgba(12,30,75,.4);border:1px solid var(--ui-bd2);border-radius:var(--r);
+  cursor:pointer;transition:all var(--t);}
+.rrow:hover{background:rgba(20,55,140,.55);border-color:rgba(59,158,255,.35);}
+.rrow.ok{border-color:rgba(58,250,128,.28);}
+.rrow.ok:hover{background:rgba(12,50,28,.55);border-color:rgba(58,250,128,.5);}
+.ricon{font-size:24px;width:32px;text-align:center;flex-shrink:0;}
+.rinfo{flex:1;}
+.rname{color:#fff;font-weight:700;font-size:.85rem;}
+.rcost{color:var(--txt2);font-size:.68rem;margin-top:2px;}
+.ryield{color:#9f9;font-size:.68rem;margin-top:1px;}
+.rcbtn{padding:5px 12px;background:rgba(38,100,50,.32);border:1px solid rgba(58,250,128,.28);
+  color:#9f9;font-family:var(--font);font-size:.68rem;border-radius:var(--r);letter-spacing:.05em;
+  transition:all var(--t);flex-shrink:0;}
+.rcbtn:hover:not(:disabled){background:rgba(38,140,60,.5);border-color:var(--green);color:#fff;}
+.rcbtn:disabled{opacity:.22;cursor:not-allowed;}
+.pclose{width:100%;margin-top:12px;padding:10px 0;background:rgba(12,26,65,.65);
+  border:1px solid var(--ui-bd2);color:var(--txt2);font-size:.78rem;letter-spacing:.14em;
+  border-radius:var(--r);transition:all var(--t);}
+.pclose:hover{background:rgba(22,50,120,.72);border-color:var(--acc);color:#fff;}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.stat-box{background:rgba(255,255,255,.04);border:1px solid var(--ui-bd2);border-radius:var(--r);padding:9px 12px;}
+.stat-label{color:var(--txt2);font-size:.65rem;letter-spacing:.1em;margin-bottom:3px;}
+.stat-val{color:#fff;font-size:1.05rem;font-weight:700;}
+.stat-val.gold{color:var(--gold);}.stat-val.green{color:var(--green);}
+
+/* ══════════════ DEATH ══════════════ */
+#s-die{background:rgba(0,0,0,.9);backdrop-filter:blur(14px);z-index:130;}
+#s-die h2{font-size:3rem;color:var(--red);text-shadow:0 0 32px #f00,0 0 64px rgba(200,0,0,.5);
+  margin-bottom:.4rem;animation:dpulse 1.6s ease-in-out infinite;}
+@keyframes dpulse{0%,100%{text-shadow:0 0 32px #f00;}50%{text-shadow:0 0 60px #f55;}}
+#die-info{color:#a77;font-size:.9rem;line-height:2.4;text-align:center;margin:1.2rem 0;}
+
+/* Level up overlay */
+#lvlup-ov{position:fixed;top:38%;left:50%;transform:translate(-50%,-50%);
+  z-index:90;pointer-events:none;text-align:center;animation:lvlIn 2.5s ease forwards;}
+@keyframes lvlIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.6);}20%{opacity:1;transform:translate(-50%,-50%) scale(1.1);}
+  45%,72%{opacity:1;transform:translate(-50%,-50%) scale(1);}100%{opacity:0;transform:translate(-50%,-40%) scale(.85);}}
+.lvl-text{font-size:2.6rem;font-weight:900;color:var(--gold);text-shadow:0 0 28px rgba(240,192,64,.9);}
+.lvl-sub{font-size:.85rem;color:#fff;letter-spacing:.3em;margin-top:.2em;}
+
+/* ══════════════ NOTIFICATIONS ══════════════ */
+#notifs{position:fixed;top:78px;right:13px;z-index:70;display:flex;flex-direction:column;gap:5px;pointer-events:none;max-width:225px;}
+.ntf{background:rgba(0,0,0,.8);border-left:3px solid var(--acc);padding:6px 12px;
+  border-radius:0 var(--r) var(--r) 0;color:var(--txt);font-size:.74rem;line-height:1.4;
+  animation:ntfIn .28s ease,ntfOut .28s ease 2.72s forwards;box-shadow:0 4px 12px rgba(0,0,0,.5);}
+.ntf.g{border-color:var(--green);}.ntf.r{border-color:var(--red);}
+.ntf.x{border-color:var(--gold);}.ntf.p{border-color:var(--purple);}
+.ntf.cy{border-color:var(--cyan);}.ntf.or{border-color:var(--orange);}
+@keyframes ntfIn{from{opacity:0;transform:translateX(18px);}}
+@keyframes ntfOut{to{opacity:0;transform:translateX(18px);}}
+
+/* ══════════════ BULLET TRAIL STYLE ══════════════ */
+.bullet-tracer{position:fixed;pointer-events:none;z-index:55;
+  background:linear-gradient(90deg,rgba(255,200,0,.9),rgba(255,80,0,.0));
+  height:2px;transform-origin:left center;animation:tracerFade .18s ease forwards;}
+@keyframes tracerFade{0%{opacity:1;}100%{opacity:0;}}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="dmgfx"></div><div id="healfx"></div><div id="lvlfx"></div>
+<div id="invinc-fx"></div><div id="gun-flash"></div>
+<div id="notifs"></div>
+
+<!-- ═══════════════════ SCREENS ═══════════════════ -->
+
+<!-- LOADING -->
+<div id="s-load" class="scr">
+  <div class="ld-wrap">
+    <div class="ld-title">BLUE GUY WORLD</div>
+    <div class="ld-subtitle">SANDBOX SURVIVAL — v5 ULTIMATE</div>
+    <div class="ld-track"><div class="ld-fill" id="ld-fill"></div></div>
+    <div class="ld-msg" id="ld-msg">Initializing…</div>
+    <div class="ld-tip" id="ld-tip">Loading tips…</div>
+  </div>
+</div>
+
+<!-- MAIN MENU -->
+<div id="s-main" class="scr off">
+  <canvas id="menu-particles"></canvas>
+  <div class="logo">
+    <div class="logo-t">Blue Guy World</div>
+    <div class="logo-sub">Sandbox Survival Adventure</div>
+    <div class="logo-ver">v5.0 — Definitive Edition</div>
+  </div>
+  <button class="mbtn g"    id="btn-play">▶ &nbsp;New Game</button>
+  <button class="mbtn gold" id="btn-load">📁 &nbsp;Continue</button>
+  <button class="mbtn"      id="btn-char">👤 &nbsp;Character</button>
+  <button class="mbtn"      id="btn-set">⚙ &nbsp;Settings</button>
+  <button class="mbtn pur"  id="btn-codes">🔑 &nbsp;Secret Codes</button>
+  <button class="mbtn"      id="btn-stats-menu">📊 &nbsp;Statistics</button>
+  <div class="hint-row">WASD·MOUSE·Q=ATK·SPACE·SHIFT·C·I·F=EAT·G=GUN·F5=SAVE</div>
+</div>
+
+<!-- CHARACTER SELECT -->
+<div id="s-char" class="scr off">
+  <div class="stitle">Choose Your Character</div>
+  <div class="ssub">Each has unique abilities — choose wisely</div>
+  <div class="char-row" id="char-row"></div>
+  <button class="mbtn g" id="btn-start" style="z-index:1;margin-top:10px">▶ &nbsp;Begin Adventure</button>
+  <button class="mbtn" onclick="showScr('s-main')" style="z-index:1;margin-top:3px">← &nbsp;Back</button>
+</div>
+
+<!-- SETTINGS -->
+<div id="s-set" class="scr off">
+  <div class="set-panel">
+    <h3>⚙ Game Settings</h3>
+    <div class="set-row"><label>Mouse Sensitivity</label><div style="display:flex;align-items:center;gap:8px"><input class="srange" type="range" id="set-sens" min="1" max="20" value="8"><span class="set-val" id="sv-sens">8</span></div></div>
+    <div class="set-row"><label>Field of View</label><div style="display:flex;align-items:center;gap:8px"><input class="srange" type="range" id="set-fov" min="60" max="110" value="80"><span class="set-val" id="sv-fov">80</span></div></div>
+    <div class="set-row"><label>Camera Bobbing</label><div class="stog on" id="set-bob" onclick="this.classList.toggle('on')"></div></div>
+    <div class="set-row"><label>Sound Effects</label><div class="stog on" id="set-snd" onclick="this.classList.toggle('on')"></div></div>
+    <div class="set-row"><label>Hunger System</label><div class="stog on" id="set-hng" onclick="this.classList.toggle('on')"></div></div>
+    <div class="set-row"><label>Screen Shake</label><div class="stog on" id="set-shake" onclick="this.classList.toggle('on')"></div></div>
+    <div class="set-row"><label>Difficulty</label>
+      <select class="sselect" id="set-diff">
+        <option value="easy">Easy</option>
+        <option value="normal" selected>Normal</option>
+        <option value="hard">Hard</option>
+        <option value="nightmare">Nightmare</option>
+      </select></div>
+  </div>
+  <button class="mbtn" onclick="showScr('s-main')" style="margin-top:10px;z-index:1">← Back</button>
+</div>
+
+<!-- SECRET CODES -->
+<div id="s-codes" class="scr off">
+  <div class="codes-panel">
+    <h3>🔑 Secret Codes</h3>
+    <div class="codes-desc">Enter a code and press Enter to activate special powers. Codes persist for the current session.</div>
+    <div class="code-input-wrap">
+      <input type="text" id="code-input" placeholder="ENTER CODE HERE…" maxlength="20" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="code-feedback"></div>
+    <div class="active-codes">
+      <h4>ACTIVE CODES</h4>
+      <div id="active-code-list">None</div>
+    </div>
+  </div>
+  <button class="mbtn" onclick="showScr('s-main')" style="margin-top:12px;z-index:1">← Back</button>
+</div>
+
+<!-- PAUSE -->
+<div id="s-pause" class="scr off">
+  <h2>⏸ Paused</h2>
+  <button class="mbtn g"   id="btn-resume">▶ Resume</button>
+  <button class="mbtn gold" id="btn-save-p">💾 Save Game</button>
+  <button class="mbtn"     id="btn-set-p">⚙ Settings</button>
+  <button class="mbtn pur" id="btn-codes-p">🔑 Codes</button>
+  <button class="mbtn r"   id="btn-qmenu">🏠 Main Menu</button>
+</div>
+
+<!-- INVENTORY -->
+<div id="s-inv" class="scr off">
+  <div class="panel" style="min-width:430px">
+    <div class="ptitle">🎒 Inventory <span style="color:var(--txt3);font-size:.65rem;margin-left:auto">Right-click to drop · Click to select</span></div>
+    <div class="igrid" id="inv-grid"></div>
+    <div id="inv-sel-info" style="color:var(--txt2);font-size:.7rem;min-height:16px;margin-bottom:3px;"></div>
+    <button class="pclose" onclick="closeInv()">Close &nbsp;[I]</button>
+  </div>
+</div>
+
+<!-- CRAFTING -->
+<div id="s-craft" class="scr off">
+  <div class="panel" style="min-width:480px">
+    <div class="ptitle">⚒ Crafting Table</div>
+    <div class="rlist" id="rlist"></div>
+    <button class="pclose" onclick="closeCraft()">Close &nbsp;[C]</button>
+  </div>
+</div>
+
+<!-- STATS -->
+<div id="s-stats" class="scr off">
+  <div class="panel" style="min-width:370px;max-width:490px">
+    <div class="ptitle">📊 Statistics</div>
+    <div class="stat-grid" id="stat-grid"></div>
+    <button class="pclose" id="btn-stats-close">Close</button>
+  </div>
+</div>
+
+<!-- DEATH -->
+<div id="s-die" class="scr off">
+  <h2>☠ You Died</h2>
+  <div id="die-info"></div>
+  <button class="mbtn g" id="btn-resp">🔄 Respawn</button>
+  <button class="mbtn r" id="btn-dmenu">🏠 Main Menu</button>
+</div>
+
+<!-- ═══════════════════ HUD ═══════════════════ -->
+<div id="hud" class="off">
+  <div id="xh"><div id="xh-dot"></div></div>
+  <div id="brk-wrap"><div id="brk-bar"></div></div>
+  <div id="blk-tip"></div>
+  <div id="ammo-hud">🔫 -- / --</div>
+  <div id="status">
+    <div id="hp-row"></div>
+    <div id="armor-row"></div>
+    <div id="hng-row"></div>
+  </div>
+  <div id="xp-wrap"><div id="xp-track"><div id="xp-fill" style="width:0%"></div></div><div id="xp-label">Level 1 — 0/100 XP</div></div>
+  <div id="hotbar"></div>
+  <div id="tool-wrap"><div id="tool-lbl"></div><div id="tool-tr"><div id="tool-fill"></div></div></div>
+  <div id="info-l">
+    <div id="il-char">⬛ Blue Guy</div>
+    <div id="il-pos">📍 0, 0, 0</div>
+    <div id="il-lvl">⭐ Level 1</div>
+    <div id="il-foes">👾 0 enemies</div>
+  </div>
+  <div id="info-r">
+    <div id="ir-day">☀️ Day 1</div>
+    <div id="ir-time">Morning</div>
+    <div id="ir-score">🏆 0 pts</div>
+    <div id="ir-kills">💀 0 kills</div>
+  </div>
+  <div id="cheat-bar">⚡ CHEAT ACTIVE</div>
+  <div id="minimap"><canvas id="mm-canvas" width="80" height="80"></canvas></div>
+  <div id="quest-panel"><div id="quest-title">📋 Quest</div><div id="quest-objs"></div></div>
+  <div id="ctrl-hint">
+    WASD · Move &nbsp;|&nbsp; Shift · Sprint<br>
+    Space · Jump &nbsp;|&nbsp; Q · Attack<br>
+    LMB · Mine &nbsp;|&nbsp; RMB · Place<br>
+    G · Toggle Gun &nbsp;|&nbsp; LMB · Shoot<br>
+    1-9 · Hotbar &nbsp;|&nbsp; F · Eat<br>
+    I · Inventory &nbsp;|&nbsp; C · Craft<br>
+    T · Stats &nbsp;|&nbsp; F5 · Save
+  </div>
+  <div id="save-ind">💾 Saved!</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   BLUE GUY WORLD v5.0 — Definitive Edition
+   Full rewrite with: Gun system · Secret codes · Improved physics
+   Better AI · Enhanced combat · Armor system · Bullet tracers
+   All v4 features carried forward and improved
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── WORLD DIMS ── */
+const CW=44, CH=52, CD=44, SEA=10;
+
+/* ── BLOCK IDS ── */
+const B={AIR:0,GRASS:1,DIRT:2,STONE:3,SAND:4,WATER:5,WOOD:6,LEAVES:7,
+         PLANKS:8,COAL:9,IRON:10,EMERALD:11,DIAMOND:12,TORCH:13,GRAVEL:14,
+         GLASS:16,COBBLE:17,BEDROCK:18,BRICK:19,OBSIDIAN:20};
+
+/* ── BLOCK DATA ── */
+const BD={
+  [B.GRASS]:   {col:0x4db860,e:'🟩',n:'Grass',   hard:.55,drops:B.DIRT},
+  [B.DIRT]:    {col:0x8B5E3C,e:'🟫',n:'Dirt',    hard:.5},
+  [B.STONE]:   {col:0x969696,e:'⬜',n:'Stone',   hard:1.6,drops:B.COBBLE,need:1},
+  [B.COBBLE]:  {col:0x7a7a72,e:'⬛',n:'Cobble',  hard:1.3},
+  [B.SAND]:    {col:0xf0dc6c,e:'🟨',n:'Sand',    hard:.5},
+  [B.WATER]:   {col:0x1e88e5,e:'💧',n:'Water',   hard:-1,unbreak:true},
+  [B.WOOD]:    {col:0x6b4423,e:'🪵',n:'Log',     hard:1.0},
+  [B.LEAVES]:  {col:0x2d7a36,e:'🍃',n:'Leaves',  hard:.25},
+  [B.PLANKS]:  {col:0xd4a95a,e:'🟤',n:'Planks',  hard:.8},
+  [B.COAL]:    {col:0x3a3a40,e:'⚫',n:'Coal Ore',hard:1.9,need:1,xp:10},
+  [B.IRON]:    {col:0xcc8862,e:'🟠',n:'Iron Ore',hard:2.4,need:1,xp:15},
+  [B.EMERALD]: {col:0x00c870,e:'💚',n:'Emerald', hard:3.2,need:2,xp:30},
+  [B.DIAMOND]: {col:0x00e5ff,e:'💎',n:'Diamond', hard:4.2,need:3,xp:50},
+  [B.TORCH]:   {col:0xffcc00,e:'🕯️',n:'Torch',  hard:.1},
+  [B.GRAVEL]:  {col:0x9e9e90,e:'🩶',n:'Gravel',  hard:.6},
+  [B.GLASS]:   {col:0xaaddff,e:'🔷',n:'Glass',   hard:.4},
+  [B.BEDROCK]: {col:0x333340,e:'⬛',n:'Bedrock', hard:-1,unbreak:true},
+  [B.BRICK]:   {col:0xaa4433,e:'🧱',n:'Brick',   hard:2.0},
+  [B.OBSIDIAN]:{col:0x1a0a2e,e:'🌑',n:'Obsidian',hard:6.0,need:3,xp:80},
+};
+
+/* ── CHARACTERS ── */
+const CHARS={
+  blue: {name:'Blue Guy',  col:0x2288ff,body:0x1166cc,e:'🟦',hp:10,spd:5.6,jmp:11.5,str:5, regen:true, desc:'Balanced · Natural regen'},
+  red:  {name:'Red Guy',   col:0xff3333,body:0xcc1111,e:'🟥',hp:8, spd:7.4,jmp:10.0,str:9, crit:.25,   desc:'Fast & deadly · 25% crit'},
+  green:{name:'Green Guy', col:0x22cc44,body:0x119933,e:'🟩',hp:14,spd:4.5,jmp:10.8,str:6, armor:.2,   desc:'Tank · 20% dmg reduction'},
+};
+
+/* ── TOOLS ── */
+const TOOLS={
+  WPICK: {name:'Wood Pickaxe', e:'⛏️',spd:1.6,dur:60,  tier:1,dmg:1},
+  SPICK: {name:'Stone Pickaxe',e:'⛏️',spd:2.8,dur:130, tier:2,dmg:2},
+  IPICK: {name:'Iron Pickaxe', e:'⛏️',spd:4.5,dur:220, tier:3,dmg:3},
+  DPICK: {name:'Diamond Pick', e:'⛏️',spd:7.0,dur:450, tier:4,dmg:5},
+  WSWORD:{name:'Wood Sword',   e:'🗡️',dmg:3,  dur:80},
+  SSWORD:{name:'Stone Sword',  e:'🗡️',dmg:6,  dur:150},
+  ISWORD:{name:'Iron Sword',   e:'🗡️',dmg:10, dur:260},
+  DSWORD:{name:'Diamond Sword',e:'🗡️',dmg:16, dur:520},
+  SHIELD:{name:'Shield',       e:'🛡️',block:.5,dur:200},
+  GUN:   {name:'Pistol',       e:'🔫',dmg:12, dur:999, ranged:true, ammoMax:12, reloadTime:2.0},
+};
+
+/* ── FOOD ── */
+const FOOD={
+  apple:{name:'Apple', e:'🍎',hunger:4, heal:0},
+  bread:{name:'Bread', e:'🍞',hunger:8, heal:1},
+  meat: {name:'Meat',  e:'🥩',hunger:12,heal:2},
+};
+
+/* ── RECIPES ── */
+const RECIPES=[
+  {name:'Planks',        e:'🟤',out:B.PLANKS,    amt:4,cost:{[B.WOOD]:1},              desc:'Basic building material'},
+  {name:'Brick Block',   e:'🧱',out:B.BRICK,     amt:2,cost:{[B.COBBLE]:4},            desc:'Decorative block'},
+  {name:'Glass',         e:'🔷',out:B.GLASS,     amt:4,cost:{[B.SAND]:4},              desc:'Transparent block'},
+  {name:'Torch',         e:'🕯️',out:B.TORCH,    amt:4,cost:{[B.COAL]:1,[B.WOOD]:1},   desc:'Light source'},
+  {name:'Wood Pickaxe',  e:'⛏️',out:'WPICK',     amt:1,cost:{[B.PLANKS]:3,[B.WOOD]:2}, desc:'Mine stone & coal'},
+  {name:'Stone Pickaxe', e:'⛏️',out:'SPICK',     amt:1,cost:{[B.COBBLE]:3,[B.WOOD]:2}, desc:'Mine iron & emerald'},
+  {name:'Iron Pickaxe',  e:'⛏️',out:'IPICK',     amt:1,cost:{[B.IRON]:3,[B.WOOD]:2},   desc:'Mine diamonds'},
+  {name:'Diamond Pick',  e:'⛏️',out:'DPICK',     amt:1,cost:{[B.DIAMOND]:3,[B.WOOD]:2},desc:'Fastest pick!'},
+  {name:'Wood Sword',    e:'🗡️',out:'WSWORD',    amt:1,cost:{[B.PLANKS]:2,[B.WOOD]:1}, desc:'+3 damage'},
+  {name:'Stone Sword',   e:'🗡️',out:'SSWORD',    amt:1,cost:{[B.COBBLE]:2,[B.WOOD]:1}, desc:'+6 damage'},
+  {name:'Iron Sword',    e:'🗡️',out:'ISWORD',    amt:1,cost:{[B.IRON]:2,[B.WOOD]:1},   desc:'+10 damage'},
+  {name:'Diamond Sword', e:'🗡️',out:'DSWORD',    amt:1,cost:{[B.DIAMOND]:2,[B.WOOD]:1},desc:'+16 damage!'},
+  {name:'Shield',        e:'🛡️',out:'SHIELD',    amt:1,cost:{[B.PLANKS]:4,[B.IRON]:2}, desc:'Hold B to block 50%'},
+  {name:'Pistol',        e:'🔫',out:'GUN',        amt:1,cost:{[B.IRON]:8,[B.COAL]:4},   desc:'12-shot firearm, toggle G'},
+  {name:'Bread',         e:'🍞',out:'food_bread', amt:2,cost:{[B.GRASS]:4},             desc:'Restores 8 hunger'},
+];
+
+/* ── ENEMY TYPES ── */
+const ET=[
+  {id:'zombie', name:'Zombie',  col:0xff7700,sz:.88,hp:6, spd:2.0,dmg:1,pts:10,xp:8,  fly:false},
+  {id:'speeder',name:'Speeder', col:0xff00cc,sz:.50,hp:3, spd:5.2,dmg:1,pts:20,xp:12, fly:false},
+  {id:'tank',   name:'Tank',    col:0xaa0000,sz:1.4,hp:22,spd:.85,dmg:3,pts:60,xp:40, fly:false},
+  {id:'flyer',  name:'Flyer',   col:0x00ccff,sz:.60,hp:5, spd:3.2,dmg:2,pts:35,xp:22, fly:true},
+  {id:'ghost',  name:'Ghost',   col:0xbbaaff,sz:.75,hp:6, spd:2.4,dmg:2,pts:45,xp:28, fly:true, ghost:true},
+  {id:'brute',  name:'Brute',   col:0x882200,sz:1.1,hp:12,spd:1.5,dmg:4,pts:40,xp:30, fly:false,rage:true},
+  {id:'exploder',name:'Bomber', col:0xff4400,sz:.82,hp:4, spd:3.0,dmg:8,pts:50,xp:35, fly:false,explode:true},
+];
+
+/* ── QUESTS ── */
+const QUESTS=[
+  {id:'survive',  title:'First Night',   objs:[{text:'Mine 10 blocks',type:'mine',target:10,cur:0},{text:'Kill 3 enemies',type:'kill',target:3,cur:0}],   reward:{xp:50}},
+  {id:'build',    title:'Builder',       objs:[{text:'Place 20 blocks',type:'place',target:20,cur:0},{text:'Craft a pickaxe',type:'craft_pick',target:1,cur:0}], reward:{xp:80}},
+  {id:'miner',    title:'Deep Miner',    objs:[{text:'Mine coal ×5',type:'mine_coal',target:5,cur:0},{text:'Mine iron ×3',type:'mine_iron',target:3,cur:0}], reward:{xp:120}},
+  {id:'hunter',   title:'Monster Hunter',objs:[{text:'Kill 10 enemies',type:'kill',target:10,cur:0},{text:'Kill a Tank',type:'kill_tank',target:1,cur:0}],  reward:{xp:200}},
+  {id:'gunslinger',title:'Gunslinger',   objs:[{text:'Get the Pistol',type:'get_gun',target:1,cur:0},{text:'Shoot 20 bullets',type:'shoot',target:20,cur:0}],reward:{xp:150}},
+];
+
+/* ── LOADING TIPS ── */
+const TIPS=[
+  'Hold LMB to mine. Tool tier determines speed.',
+  'Press Q near an enemy to attack — craft a sword!',
+  'Right-click to place blocks from your hotbar.',
+  'Enemies are stronger at night — be prepared!',
+  'Diamond ore is very rare — dig deep below Y=6.',
+  'Green Guy has 20% damage reduction — great for beginners.',
+  'Red Guy has 25% crit hit chance — deadly in combat.',
+  'Blue Guy regenerates health naturally over time.',
+  'Craft a Pistol (8 iron + 4 coal) for ranged attacks!',
+  'Press G to toggle your gun — switch to gun crosshair.',
+  'Press F to eat food from your hotbar.',
+  'Press F5 to save, or use the pause menu.',
+  'Secret codes can give special powers — find them!',
+  'Bombers explode when they reach you — run!',
+  'Shield blocks 50% damage — hold B while equipped.',
+];
+
+/* ═══════════════════════════════════════════════
+   SECRET CODES SYSTEM
+═══════════════════════════════════════════════ */
+const CODES = {
+  /* Gun cheat */
+  'fgjuuy':   { name:'Armed & Dangerous', fn: activateGun,     desc:'Get a Pistol with infinite ammo' },
+  /* Invincibility */
+  '676op':    { name:'Invincible',        fn: activateInvinc,  desc:'No damage taken' },
+  /* Super speed */
+  'gogogo':   { name:'Super Speed',       fn: activateSpeed,   desc:'Move 3× faster' },
+  /* Infinite resources */
+  'gimme':    { name:'Infinite Resources',fn: activateResources,desc:'Full inventory of all blocks' },
+  /* Spawn enemies */
+  'unleash':  { name:'Enemy Swarm',       fn: activateSwarm,   desc:'Spawn 10 enemies instantly' },
+  /* Low gravity */
+  'floaty':   { name:'Low Gravity',       fn: activateLowGrav, desc:'Jump much higher, float' },
+  /* God mode (all cheats) */
+  'godmode':  { name:'GOD MODE',          fn: activateGodMode, desc:'All cheats + max level' },
+  /* Unlock all items */
+  'santa':    { name:'Item Galore',       fn: activateItems,   desc:'Get every item in the game' },
+  /* Night mode */
+  'darkness': { name:'Eternal Night',     fn: activateNight,   desc:'Permanent night time' },
+};
+
+/* Active cheat flags */
+const Cheats = {
+  invincible: false,
+  superSpeed: false,
+  lowGravity: false,
+  infiniteAmmo: false,
+  eternalNight: false,
+  active: new Set(),
+};
+
+function activateGun() {
+  if (!G.inv) return;
+  G.inv.add('GUN', 1);
+  G.inv.add(B.IRON, 24);  // ammo refill
+  notify('🔫 Pistol added to inventory!','or');
+  if (G.running) { buildHotbar(); buildInv(); }
+}
+function activateInvinc() {
+  Cheats.invincible = true;
+  G.invincible_cheat = true;
+  document.getElementById('invinc-fx').classList.add('on');
+  document.getElementById('cheat-bar').style.display = 'block';
+  notify('🛡 INVINCIBLE activated!','cy');
+}
+function activateSpeed() {
+  Cheats.superSpeed = true;
+  notify('⚡ SUPER SPEED activated!','cy');
+}
+function activateResources() {
+  if (!G.inv) return;
+  const blocks=[B.GRASS,B.DIRT,B.STONE,B.COBBLE,B.WOOD,B.PLANKS,B.SAND,B.BRICK,B.GLASS,B.TORCH];
+  blocks.forEach(b => G.inv.add(b, 64));
+  [B.COAL,B.IRON,B.EMERALD,B.DIAMOND].forEach(b => G.inv.add(b, 32));
+  notify('🎁 Infinite resources added!','x');
+  if (G.running) { buildHotbar(); buildInv(); }
+}
+function activateSwarm() {
+  if (!G.running) { notify('Start a game first!','r'); return; }
+  for(let i=0;i<10;i++) G.spawnEnemy();
+  notify('👾 10 enemies spawned!','r');
+}
+function activateLowGrav() {
+  Cheats.lowGravity = true;
+  notify('🌙 LOW GRAVITY activated! (jump=Space)','cy');
+}
+function activateGodMode() {
+  activateInvinc(); activateSpeed(); activateLowGrav(); activateGun();
+  if(G.running){ G.level=20; G.xp=0; G.xpNext=100; G.hp=G.maxHp=50; buildHP(); buildXPBar(); }
+  activateResources();
+  notify('⭐ GOD MODE ACTIVATED!','p', 5000);
+}
+function activateItems() {
+  if (!G.inv) return;
+  Object.keys(TOOLS).forEach(k => G.inv.add(k, 1));
+  ['food_apple','food_bread','food_meat'].forEach(f => G.inv.add(f, 10));
+  notify('🎄 All items unlocked!','x');
+  if (G.running) { buildHotbar(); buildInv(); }
+}
+function activateNight() {
+  Cheats.eternalNight = true;
+  if (G.running) G.dayT = 18;
+  notify('🌑 ETERNAL NIGHT activated!','p');
+}
+
+function applyCode(raw) {
+  const code = raw.toLowerCase().trim();
+  const fb = document.getElementById('code-feedback');
+  if (Cheats.active.has(code)) {
+    fb.className = 'bad'; fb.textContent = '⚠ Code already active: ' + CODES[code]?.name;
+    return;
+  }
+  if (CODES[code]) {
+    Cheats.active.add(code);
+    CODES[code].fn();
+    fb.className = 'ok'; fb.textContent = '✓ Activated: ' + CODES[code].name;
+    updateActiveCodeList();
+    document.getElementById('code-input').value = '';
+    document.getElementById('cheat-bar').style.display = 'block';
+    if (G.running) document.getElementById('cheat-bar').textContent = '⚡ CHEATS: '+[...Cheats.active].map(c=>CODES[c].name).join(' · ');
+  } else {
+    fb.className = 'bad'; fb.textContent = '✗ Unknown code — try again';
+  }
+}
+function updateActiveCodeList() {
+  const el = document.getElementById('active-code-list');
+  if (Cheats.active.size === 0) { el.textContent = 'None'; return; }
+  el.innerHTML = [...Cheats.active].map(c => `<span class="code-tag">${CODES[c]?.name||c}</span>`).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   AUDIO ENGINE
+═══════════════════════════════════════════════ */
+class AudioEngine {
+  constructor() {
+    try { this.ctx = new (window.AudioContext||window.webkitAudioContext)(); } catch { this.ctx=null; }
+    this.enabled = true;
+    this._mg = null;
+    if (this.ctx) { this._mg=this.ctx.createGain(); this._mg.gain.value=.7; this._mg.connect(this.ctx.destination); }
+  }
+  _osc(freq,dur,type='square',vol=.1,end=null,delay=0){
+    if(!this.ctx||!this.enabled)return;
+    const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    o.connect(g);g.connect(this._mg);o.type=type;o.frequency.value=freq;
+    const t=this.ctx.currentTime+delay;
+    if(end!=null)o.frequency.linearRampToValueAtTime(end,t+dur);
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.start(t);o.stop(t+dur);
+  }
+  _noise(dur,vol=.05,lp=2000){
+    if(!this.ctx||!this.enabled)return;
+    const buf=this.ctx.createBuffer(1,Math.floor(this.ctx.sampleRate*dur),this.ctx.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    const src=this.ctx.createBufferSource(),f=this.ctx.createBiquadFilter(),g=this.ctx.createGain();
+    src.buffer=buf;f.type='lowpass';f.frequency.value=lp;
+    src.connect(f);f.connect(g);g.connect(this._mg);
+    g.gain.setValueAtTime(vol,this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001,this.ctx.currentTime+dur);
+    src.start();src.stop(this.ctx.currentTime+dur);
+  }
+  step()    { this._noise(.07,.04+Math.random()*.02,600); }
+  jump()    { this._osc(240,.14,'sine',.09,460); }
+  land()    { this._noise(.09,.08,500); }
+  mine()    { this._noise(.12,.1,800); this._osc(150,.1,'sawtooth',.07,65,.02); }
+  place()   { this._osc(320,.07,'square',.07); }
+  hurt()    { this._osc(110,.32,'sawtooth',.2,45); }
+  death()   { this._osc(80,.9,'sawtooth',.26,35); }
+  craft()   { [440,554,659,880].forEach((f,i)=>this._osc(f,.1,'sine',.07,null,i*.08)); }
+  swing()   { this._noise(.1,.09,1200); }
+  eHurt()   { this._osc(200,.1,'square',.07,140); }
+  eDie()    { this._osc(150,.3,'sawtooth',.14,60); }
+  crit()    { this._osc(880,.12,'sine',.1,660); }
+  gun()     {
+    // Gunshot: sharp crack
+    this._noise(.06,.18,3000);
+    this._osc(120,.08,'sawtooth',.14,40);
+    this._osc(800,.04,'square',.05,200);
+  }
+  gunEmpty(){ this._osc(200,.08,'square',.06); this._osc(150,.06,'square',.04,null,.05); }
+  reload()  { this._osc(300,.15,'sine',.06,500); this._osc(500,.1,'sine',.05,null,.15); }
+  explode() { this._noise(.3,.22,600); this._osc(80,.3,'sawtooth',.18,30); }
+  night()   { this._osc(220,.7,'sine',.06,100); }
+  day()     { [523,659,784].forEach((f,i)=>this._osc(f,.22,'sine',.05,null,i*.14)); }
+  levelup() { [523,659,784,1046].forEach((f,i)=>this._osc(f,.2,'sine',.08,null,i*.1)); }
+  save()    { this._osc(440,.1,'sine',.06); this._osc(660,.15,'sine',.07,null,.1); }
+  quest()   { [440,550,660,880].forEach((f,i)=>this._osc(f,.18,'sine',.08,null,i*.12)); }
+  eat()     { this._noise(.15,.06,400); }
+  code()    { [880,1100,1320].forEach((f,i)=>this._osc(f,.1,'sine',.08,null,i*.06)); }
+}
+const SFX = new AudioEngine();
+
+/* ═══════════════════════════════════════════════
+   NOISE
+═══════════════════════════════════════════════ */
+class Noise {
+  constructor(s){this.s=s;}
+  n2(x,z){
+    let v=Math.sin(x*.09+this.s)*Math.cos(z*.07+this.s*.6);
+    v+=Math.sin(x*.21+this.s*1.2)*Math.cos(z*.23)*.48;
+    v+=Math.sin(x*.04+this.s*.3)*Math.cos(z*.05+this.s*1.8)*2.3;
+    v+=Math.sin(x*.44)*Math.cos(z*.40+this.s*.85)*.22;
+    v+=Math.sin(x*.01+this.s*.05)*Math.cos(z*.012)*3.5;
+    return v;
+  }
+  n3(x,y,z){
+    return Math.sin(x*.24+this.s)*Math.sin(y*.35)*Math.cos(z*.21+this.s*1.3)
+          +Math.sin(x*.1+this.s*.4)*Math.sin(y*.5)*Math.cos(z*.08)*.5;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   PROCEDURAL TEXTURES
+═══════════════════════════════════════════════ */
+const TexGen={
+  _c:{},
+  get(id){if(this._c[id])return this._c[id];const t=this._mk(id);this._c[id]=t;return t;},
+  _mk(id){
+    const sz=16,cv=document.createElement('canvas');cv.width=cv.height=sz;
+    const ctx=cv.getContext('2d');const d=BD[id];if(!d)return new THREE.CanvasTexture(cv);
+    const h=d.col,r=(h>>16)&255,g=(h>>8)&255,b=h&255;
+    ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(0,0,sz,sz);
+    const noise=(n)=>{for(let i=0;i<n;i++){const l=Math.random()*40-20;ctx.fillStyle=`rgba(${r+l},${g+l*.8},${b+l*.6},.45)`;ctx.fillRect(Math.random()*sz|0,Math.random()*sz|0,(2+Math.random()*2)|0,(2+Math.random()*2)|0);}};
+    switch(id){
+      case B.GRASS: noise(18); for(let i=0;i<8;i++){ctx.fillStyle='rgba(80,180,80,.35)';ctx.fillRect(Math.random()*sz|0,Math.random()*4|0,1,1);} break;
+      case B.DIRT:  noise(30); break;
+      case B.STONE: noise(12);ctx.strokeStyle='rgba(80,80,80,.4)';ctx.lineWidth=.5;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(Math.random()*sz,Math.random()*sz);ctx.lineTo(Math.random()*sz,Math.random()*sz);ctx.stroke();} break;
+      case B.COBBLE:noise(10);ctx.strokeStyle='rgba(50,50,50,.5)';ctx.lineWidth=1;[[0,4],[4,0],[8,4],[4,8],[0,8],[8,8],[4,12],[12,4]].forEach(([x,y])=>{ctx.strokeRect(x,y,4,4);}); break;
+      case B.WOOD:  for(let y=0;y<sz;y++){const l=Math.sin(y*1.1)*8;ctx.fillStyle=`rgba(${r+l},${g+l*.7},${b},.3)`;ctx.fillRect(0,y,sz,1);} break;
+      case B.LEAVES:for(let x=0;x<sz;x++)for(let y=0;y<sz;y++){if(Math.random()<.28){ctx.fillStyle=`rgba(${r+20},${g+30},${b},.5)`;ctx.fillRect(x,y,1,1);}} break;
+      case B.SAND:  for(let i=0;i<40;i++){const l=Math.random()*22-11;ctx.fillStyle=`rgba(${r+l},${g+l},${b+l},.4)`;ctx.fillRect(Math.random()*sz|0,Math.random()*sz|0,1,1);} break;
+      case B.COAL:  noise(8);for(let i=0;i<5;i++){ctx.fillStyle='rgba(0,0,0,.72)';const sx=Math.random()*10+1|0,sy=Math.random()*10+1|0;ctx.fillRect(sx,sy,4,4);ctx.fillStyle='rgba(70,70,70,.5)';ctx.fillRect(sx+1,sy+1,2,2);} break;
+      case B.IRON:  noise(8);for(let i=0;i<4;i++){ctx.fillStyle=`rgba(${r+40},${g+25},${b+20},.8)`;ctx.fillRect(Math.random()*10|0,Math.random()*10|0,4,3);} break;
+      case B.EMERALD:ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(0,0,sz,sz);ctx.fillStyle='rgba(80,240,160,.65)';ctx.fillRect(4,4,8,8);ctx.fillStyle='rgba(180,255,220,.7)';ctx.fillRect(6,6,4,4);ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillRect(6,6,2,2);break;
+      case B.DIAMOND:ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(0,0,sz,sz);ctx.fillStyle='rgba(80,220,255,.65)';ctx.fillRect(4,4,8,8);ctx.fillStyle='rgba(180,240,255,.7)';ctx.fillRect(6,6,4,4);ctx.fillStyle='rgba(255,255,255,.8)';ctx.fillRect(5,5,2,2);break;
+      case B.PLANKS:ctx.fillStyle=`rgba(${r-15},${g-10},${b-5},.8)`;ctx.fillRect(0,sz/2-1,sz,1);ctx.fillRect(sz/2,0,1,sz/2-1);break;
+      case B.BRICK: ctx.fillStyle=`rgba(${r-30},${g-20},${b-15},.8)`;for(let y=0;y<sz;y+=4)ctx.fillRect(0,y,sz,1);for(let x=0;x<sz;x+=8)ctx.fillRect(x,0,1,4);for(let x=4;x<sz;x+=8)ctx.fillRect(x,4,1,4);break;
+      case B.GLASS: ctx.clearRect(0,0,sz,sz);ctx.fillStyle='rgba(170,220,255,.38)';ctx.fillRect(0,0,sz,sz);ctx.strokeStyle='rgba(200,235,255,.6)';ctx.lineWidth=.5;ctx.strokeRect(0,0,sz,sz);ctx.fillStyle='rgba(255,255,255,.28)';ctx.beginPath();ctx.moveTo(2,2);ctx.lineTo(6,2);ctx.lineTo(2,6);ctx.closePath();ctx.fill();break;
+      case B.OBSIDIAN:noise(5);ctx.fillStyle='rgba(100,50,200,.12)';ctx.fillRect(0,0,sz,sz);for(let i=0;i<3;i++){ctx.fillStyle='rgba(160,80,255,.2)';ctx.fillRect(Math.random()*10|0,Math.random()*10|0,3,3);}break;
+    }
+    const t=new THREE.CanvasTexture(cv);t.magFilter=t.minFilter=THREE.NearestFilter;return t;
+  }
+};
+
+/* ═══════════════════════════════════════════════
+   INFINITE CHUNK-BASED WORLD
+   Architecture:
+   • World is divided into fixed-height columns called chunks.
+   • Each chunk covers CHUNK_W x CH x CHUNK_D blocks in world space.
+   • Chunks are identified by their column index (cx, cz) in chunk space.
+   • The ChunkWorld class generates, caches, meshes, and unloads chunks
+     dynamically as the player moves, giving an effectively infinite world.
+   • All external callers (solid, surfY, get, addBlock, removeBlock) use
+     absolute world-space coordinates — the chunking is invisible to them.
+═══════════════════════════════════════════════ */
+
+// Chunk column dimensions
+const CHUNK_W = 16;   // blocks wide  (X)
+const CHUNK_D = 16;   // blocks deep  (Z)
+// CH (height) is already defined as 52 — reused from the original constant.
+
+// How many chunk columns to keep loaded around the player (Manhattan radius)
+const LOAD_RADIUS   = 5;   // load  chunks within this radius
+const UNLOAD_RADIUS = 7;   // drop  chunks beyond this radius
+
+class Chunk {
+  /**
+   * One 16×CH×16 column of blocks.
+   * @param {number} cx  chunk column X index  (world_x = cx*CHUNK_W + local_x)
+   * @param {number} cz  chunk column Z index
+   */
+  constructor(cx, cz, noise, seed) {
+    this.cx   = cx;
+    this.cz   = cz;
+    this.data = new Uint8Array(CHUNK_W * CH * CHUNK_D); // flat array
+    this.mesh = null;   // THREE.Group for this chunk's geometry
+    this._mm  = {};     // "lx,y,lz" -> Mesh for incremental add/remove
+    this._generated = false;
+    this._generate(noise, seed);
+  }
+
+  /* ── index helpers ── */
+  _idx(lx, y, lz) { return lx + CHUNK_W * (y + CH * lz); }
+
+  getLocal(lx, y, lz) {
+    if (lx < 0 || lx >= CHUNK_W || y < 0 || y >= CH || lz < 0 || lz >= CHUNK_D) return B.AIR;
+    return this.data[this._idx(lx, y, lz)];
+  }
+  setLocal(lx, y, lz, t) {
+    if (lx < 0 || lx >= CHUNK_W || y < 0 || y >= CH || lz < 0 || lz >= CHUNK_D) return;
+    this.data[this._idx(lx, y, lz)] = t;
+  }
+
+  /* ── terrain generation ── */
+  // Uses a fast integer hash instead of Math.random() so terrain is
+  // fully deterministic: same seed + same world coords = same result
+  // whether the chunk is loaded for the first time or after an unload.
+  _hash(a, b, c) {
+    // Integer hash — maps (a,b,c) to a stable float in [0,1)
+    let h = (a * 374761393 + b * 668265263 + c * 2147483647) ^ (a >> 13);
+    h = (h ^ (h >>> 15)) * 0x85ebca77;
+    h = (h ^ (h >>> 13)) * 0xc2b2ae35;
+    h = (h ^ (h >>> 16)) >>> 0; // unsigned 32-bit
+    return h / 0x100000000;
+  }
+
+  _generate(noise, seed) {
+    const N   = noise;
+    const sx  = seed | 0; // integer seed for hash mixing
+    for (let lx = 0; lx < CHUNK_W; lx++) {
+      for (let lz = 0; lz < CHUNK_D; lz++) {
+        // Absolute world coords for noise — guarantees seamless chunk borders
+        const wx = this.cx * CHUNK_W + lx;
+        const wz = this.cz * CHUNK_D + lz;
+
+        const h = Math.floor(
+          SEA + N.n2(wx, wz) * 4.5
+          + Math.sin(wx * 0.055 + seed * 0.003) * 2.2
+          + Math.cos(wz * 0.088 + seed * 0.002) * 1.8
+        );
+        const ht      = Math.max(2, Math.min(CH - 5, h));
+        const isShore = ht <= SEA + 2;
+        const isHigh  = ht > SEA + 10;
+
+        for (let y = 0; y < CH; y++) {
+          let t = B.AIR;
+
+          if (y === 0) {
+            t = B.BEDROCK;
+          } else if (y < ht - 5) {
+            // Underground: caves + ores — fully deterministic
+            if (N.n3(wx, y, wz) > 0.44) {
+              t = B.AIR; // cave
+            } else {
+              // Use seeded hash so ores are identical on every reload
+              const r = this._hash(wx + sx, y, wz + sx * 7);
+              if      (y < 4  && r < 0.008) t = B.OBSIDIAN;
+              else if (y < 6  && r < 0.010) t = B.DIAMOND;
+              else if (y < 10 && r < 0.022) t = B.EMERALD;
+              else if (y < 18 && r < 0.050) t = B.IRON;
+              else if (            r < 0.070) t = B.COAL;
+              else                            t = B.STONE;
+            }
+          } else if (y < ht - 1) {
+            t = B.DIRT;
+          } else if (y === ht) {
+            t = isShore ? B.SAND : isHigh ? B.STONE : B.GRASS;
+          }
+
+          if (t === B.AIR && y <= SEA) t = B.WATER;
+          this.setLocal(lx, y, lz, t);
+        }
+
+        // Surface features — also deterministic
+        const rSurf = this._hash(wx + sx * 3, 0, wz + sx * 5);
+        if (isShore && rSurf < 0.35) {
+          this.setLocal(lx, ht, lz, B.GRAVEL);
+        }
+
+        const rTree = this._hash(wx + sx * 11, 1, wz + sx * 13);
+        if (!isShore && ht > SEA + 1 && rTree < 0.042) {
+          // Tree trunk
+          const rTH   = this._hash(wx + sx * 17, 2, wz + sx * 19);
+          const th    = 3 + Math.floor(rTH * 3);
+          for (let ty = 1; ty <= th; ty++) this.setLocal(lx, ht + ty, lz, B.WOOD);
+          // Leaves — only write within this chunk (cross-chunk leaves are
+          // placed by the neighbour chunk when it generates its own trees,
+          // but since trees are near chunk centres this is rarely an issue)
+          for (let dlx = -2; dlx <= 2; dlx++) for (let dlz = -2; dlz <= 2; dlz++) for (let ly = 0; ly <= 2; ly++) {
+            if (Math.abs(dlx) + Math.abs(dlz) + Math.abs(ly) > 3) continue;
+            const tlx = lx + dlx, tlz = lz + dlz;
+            // Clamp to chunk — avoids setLocal silently dropping cross-border leaves
+            if (tlx < 0 || tlx >= CHUNK_W || tlz < 0 || tlz >= CHUNK_D) continue;
+            if (this.getLocal(tlx, ht + th + ly, tlz) === B.AIR)
+              this.setLocal(tlx, ht + th + ly, tlz, B.LEAVES);
+          }
+        }
+
+        const rBould = this._hash(wx + sx * 23, 3, wz + sx * 29);
+        if (!isShore && ht > SEA + 1 && rBould < 0.018) {
+          // Boulder
+          const rBH = this._hash(wx + sx * 31, 4, wz + sx * 37);
+          const bh  = 1 + Math.floor(rBH * 2);
+          for (let dlx = -1; dlx <= 1; dlx++) for (let dlz = -1; dlz <= 1; dlz++) for (let by = 1; by <= bh; by++) {
+            if (Math.abs(dlx) + Math.abs(dlz) + by > 2) continue;
+            const tlx = lx + dlx, tlz = lz + dlz;
+            if (tlx < 0 || tlx >= CHUNK_W || tlz < 0 || tlz >= CHUNK_D) continue;
+            this.setLocal(tlx, ht + by, tlz, B.STONE);
+          }
+        }
+      }
+    }
+    this._generated = true;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   ChunkWorld  — the public World API that the rest of the game uses.
+   All methods accept absolute world-space integer coordinates.
+────────────────────────────────────────────────────────────────── */
+class ChunkWorld {
+  constructor() {
+    this.seed  = 0;
+    this.noise = null;
+    this._chunks = new Map(); // "cx,cz" -> Chunk
+    this._mats   = {};        // material cache (same as before)
+    this._scene  = null;      // stored when buildInitialChunks is called
+    // A shared unit-cube geometry reused by every block mesh
+    this._geo    = new THREE.BoxGeometry(1, 1, 1);
+  }
+
+  /* ── Chunk-space helpers ── */
+  _ck(cx, cz)  { return `${cx},${cz}`; }
+  _cxOf(wx)    { return Math.floor(wx / CHUNK_W); }
+  _czOf(wz)    { return Math.floor(wz / CHUNK_D); }
+  _lxOf(wx)    { return ((wx % CHUNK_W) + CHUNK_W) % CHUNK_W; }
+  _lzOf(wz)    { return ((wz % CHUNK_D) + CHUNK_D) % CHUNK_D; }
+
+  /* ── Seed / noise init ── */
+  init(seed) {
+    this.seed  = seed;
+    this.noise = new Noise(seed);
+  }
+
+  /* ── Chunk retrieval / generation ── */
+  _getChunk(cx, cz) {
+    const k = this._ck(cx, cz);
+    if (!this._chunks.has(k)) {
+      const c = new Chunk(cx, cz, this.noise, this.seed);
+      this._chunks.set(k, c);
+    }
+    return this._chunks.get(k);
+  }
+
+  /* ── Public block API (absolute world coords) ── */
+  get(wx, wy, wz) {
+    if (wy < 0 || wy >= CH) return B.AIR;
+    const chunk = this._getChunk(this._cxOf(wx), this._czOf(wz));
+    return chunk.getLocal(this._lxOf(wx), wy, this._lzOf(wz));
+  }
+
+  set(wx, wy, wz, t) {
+    if (wy < 0 || wy >= CH) return;
+    const chunk = this._getChunk(this._cxOf(wx), this._czOf(wz));
+    chunk.setLocal(this._lxOf(wx), wy, this._lzOf(wz), t);
+  }
+
+  solid(wx, wy, wz) {
+    const t = this.get(Math.floor(wx), Math.floor(wy), Math.floor(wz));
+    return t !== B.AIR && t !== B.WATER && t !== B.LEAVES && t !== B.TORCH && t !== B.GLASS;
+  }
+
+  surfY(wx, wz) {
+    const iwx = Math.floor(wx), iwz = Math.floor(wz);
+    for (let y = CH - 1; y >= 0; y--) {
+      if (this.get(iwx, y, iwz) !== B.AIR) return y;
+    }
+    return 0;
+  }
+
+  /* ── Material cache (identical to original World._mat) ── */
+  _mat(type) {
+    if (!this._mats[type]) {
+      this._mats[type] = new THREE.MeshLambertMaterial({
+        map:         TexGen.get(type),
+        color:       0xffffff,
+        transparent: type === B.WATER || type === B.GLASS || type === B.LEAVES,
+        opacity:     type === B.WATER ? 0.55 : type === B.GLASS ? 0.55 : type === B.LEAVES ? 0.82 : 1,
+        side:        type === B.LEAVES || type === B.GLASS ? THREE.DoubleSide : THREE.FrontSide,
+      });
+    }
+    return this._mats[type];
+  }
+
+  /* ── Face-visibility helpers ── */
+  _isTransp(t) {
+    return t === B.AIR || t === B.WATER || t === B.LEAVES || t === B.GLASS || t === B.TORCH;
+  }
+  _exposed(wx, wy, wz) {
+    const t = this.get(wx, wy, wz);
+    return [[-1,0,0],[1,0,0],[0,-1,0],[0,1,0],[0,0,-1],[0,0,1]].some(([dx,dy,dz]) => {
+      const n = this.get(wx+dx, wy+dy, wz+dz);
+      return this._isTransp(n) && (n !== t || t === B.WATER);
+    });
+  }
+
+  /* ── Build mesh for one chunk column ── */
+  _buildChunkMesh(chunk) {
+    if (chunk.mesh) {
+      this._scene.remove(chunk.mesh);
+      chunk.mesh = null;
+      chunk._mm  = {};
+    }
+    // Pre-ensure all 8 neighbours (4 cardinal + 4 diagonal) are generated
+    // before the exposure loop. Diagonal neighbours affect corners —
+    // skipping them caused seam artifacts at chunk edges.
+    for (let dn = -1; dn <= 1; dn++) {
+      for (let dm = -1; dm <= 1; dm++) {
+        if (dn === 0 && dm === 0) continue; // skip self
+        this._getChunk(chunk.cx + dn, chunk.cz + dm);
+      }
+    }
+
+    const grp = new THREE.Group();
+    // Offset the group to world space so block local coords work simply
+    grp.position.set(chunk.cx * CHUNK_W, 0, chunk.cz * CHUNK_D);
+
+    for (let lx = 0; lx < CHUNK_W; lx++) {
+      for (let ly = 0; ly < CH; ly++) {
+        for (let lz = 0; lz < CHUNK_D; lz++) {
+          const t = chunk.getLocal(lx, ly, lz);
+          if (t === B.AIR) continue;
+          // Exposure check in absolute coords
+          const wx = chunk.cx * CHUNK_W + lx;
+          const wz = chunk.cz * CHUNK_D + lz;
+          if (!this._exposed(wx, ly, wz)) continue;
+          const m = new THREE.Mesh(this._geo, this._mat(t));
+          // Position relative to group origin (group is already offset)
+          m.position.set(lx + 0.5, ly + 0.5, lz + 0.5);
+          m.castShadow = m.receiveShadow = true;
+          m.userData = { wx, wy: ly, wz, bt: t };
+          grp.add(m);
+          chunk._mm[`${lx},${ly},${lz}`] = m;
+        }
+      }
+    }
+    chunk.mesh = grp;
+    this._scene.add(grp);
+  }
+
+  /* ── Called once at game start to seed and build the initial ring ── */
+  buildInitialChunks(scene, centerWX, centerWZ) {
+    this._scene = scene;
+    const ccx = this._cxOf(centerWX);
+    const ccz = this._czOf(centerWZ);
+
+    // Pass 1: Generate ALL chunk DATA in (LOAD_RADIUS + 1) square.
+    // The +1 border ensures _exposed() never silently triggers a new
+    // chunk generation mid-mesh-build — which caused seam glitches.
+    const border = LOAD_RADIUS + 1;
+    for (let dcx = -border; dcx <= border; dcx++) {
+      for (let dcz = -border; dcz <= border; dcz++) {
+        this._getChunk(ccx + dcx, ccz + dcz); // generate data only
+      }
+    }
+
+    // Pass 2: Build meshes — Chebyshev square so corners are filled.
+    for (let dcx = -LOAD_RADIUS; dcx <= LOAD_RADIUS; dcx++) {
+      for (let dcz = -LOAD_RADIUS; dcz <= LOAD_RADIUS; dcz++) {
+        // Chebyshev (max) — fills the full square, not just a diamond
+        if (Math.max(Math.abs(dcx), Math.abs(dcz)) > LOAD_RADIUS) continue;
+        const chunk = this._getChunk(ccx + dcx, ccz + dcz);
+        this._buildChunkMesh(chunk);
+      }
+    }
+  }
+
+  /**
+   * Called every frame from the game loop.
+   * Generates and meshes chunks that entered the load radius,
+   * and removes meshes that left the unload radius.
+   * Spread over time: max 2 new chunk meshes per call to avoid frame spikes.
+   */
+  updateChunks(playerWX, playerWZ, budget) {
+    const ccx = this._cxOf(playerWX);
+    const ccz = this._czOf(playerWZ);
+
+    // ── UNLOAD pass: Chebyshev distance (square radius) ──
+    // Runs unconditionally every call regardless of build budget.
+    for (const [k, chunk] of this._chunks) {
+      if (!chunk.mesh) continue;
+      const [cx, cz] = k.split(',').map(Number);
+      // Use Chebyshev (max) distance so square region unloads cleanly
+      if (Math.max(Math.abs(cx - ccx), Math.abs(cz - ccz)) > UNLOAD_RADIUS) {
+        this._scene.remove(chunk.mesh);
+        chunk.mesh = null;
+        chunk._mm  = {};
+      }
+    }
+
+    // ── DATA pre-pass: ensure border chunks generated so exposure checks work ──
+    // Always ensure a 1-chunk border outside load radius has DATA (no mesh).
+    const dataBorder = LOAD_RADIUS + 1;
+    for (let dcx = -dataBorder; dcx <= dataBorder; dcx++) {
+      for (let dcz = -dataBorder; dcz <= dataBorder; dcz++) {
+        if (Math.max(Math.abs(dcx), Math.abs(dcz)) !== dataBorder) continue; // only the outer ring
+        const k = this._ck(ccx + dcx, ccz + dcz);
+        if (!this._chunks.has(k)) this._getChunk(ccx + dcx, ccz + dcz);
+      }
+    }
+
+    // ── LOAD pass: build missing chunk meshes (budget chunks per call) ──
+    // Default budget=4; callers can pass higher for catch-up frames.
+    const maxBuild = (budget !== undefined) ? budget : 4;
+    let built = 0;
+    // Sort chunks by proximity so closest ones appear first
+    const needed = [];
+    for (let dcx = -LOAD_RADIUS; dcx <= LOAD_RADIUS; dcx++) {
+      for (let dcz = -LOAD_RADIUS; dcz <= LOAD_RADIUS; dcz++) {
+        // Chebyshev distance — square load area (no diamond hole in corners)
+        if (Math.max(Math.abs(dcx), Math.abs(dcz)) > LOAD_RADIUS) continue;
+        const cx = ccx + dcx, cz = ccz + dcz;
+        const existing = this._chunks.get(this._ck(cx, cz));
+        if (!existing || !existing.mesh) {
+          needed.push({ cx, cz, dist: Math.abs(dcx) + Math.abs(dcz) });
+        }
+      }
+    }
+    // Closest first
+    needed.sort((a, b) => a.dist - b.dist);
+    for (const { cx, cz } of needed) {
+      const chunk = this._getChunk(cx, cz);
+      if (!chunk.mesh) {
+        this._buildChunkMesh(chunk);
+        if (++built >= maxBuild) break;
+      }
+    }
+  }
+
+  /* ── Non-generating block peek (used by minimap) ── */
+  // Returns the block type at absolute coords WITHOUT creating the chunk.
+  // Returns B.AIR if the chunk is not loaded.
+  peek(wx, wy, wz) {
+    if (wy < 0 || wy >= CH) return B.AIR;
+    const chunk = this._chunks.get(this._ck(this._cxOf(wx), this._czOf(wz)));
+    if (!chunk) return B.AIR;
+    return chunk.getLocal(this._lxOf(wx), wy, this._lzOf(wz));
+  }
+  // Like surfY but uses peek — never generates new chunks
+  peekSurfY(wx, wz) {
+    const iwx = Math.floor(wx), iwz = Math.floor(wz);
+    for (let y = CH - 1; y >= 0; y--) {
+      if (this.peek(iwx, y, iwz) !== B.AIR) return y;
+    }
+    return 0;
+  }
+
+  /* ── Per-block remove (called when player mines) ── */
+  removeBlock(wx, wy, wz) {
+    // Mark the owning chunk as player-modified (needed for sparse save)
+    const mc = this._chunks.get(this._ck(this._cxOf(wx), this._czOf(wz)));
+    if (mc) mc._dirty = true;
+    this.set(wx, wy, wz, B.AIR);
+    const chunk = this._getChunk(this._cxOf(wx), this._czOf(wz));
+    const lx = this._lxOf(wx), lz = this._lzOf(wz);
+    const k  = `${lx},${wy},${lz}`;
+    if (chunk.mesh && chunk._mm[k]) {
+      chunk.mesh.remove(chunk._mm[k]);
+      delete chunk._mm[k];
+    }
+    // Re-expose neighbouring blocks (may span chunk borders)
+    [[-1,0,0],[1,0,0],[0,-1,0],[0,1,0],[0,0,-1],[0,0,1]].forEach(([dx,dy,dz]) => {
+      this._refreshBlock(wx+dx, wy+dy, wz+dz);
+    });
+  }
+
+  /* ── Per-block add (called when player places) ── */
+  addBlock(wx, wy, wz, type) {
+    // Mark the owning chunk as player-modified (needed for sparse save)
+    const mc = this._chunks.get(this._ck(this._cxOf(wx), this._czOf(wz)));
+    if (mc) mc._dirty = true;
+    this.set(wx, wy, wz, type);
+    this._refreshBlock(wx, wy, wz);
+    // Also refresh neighbours so their newly-hidden faces disappear
+    [[-1,0,0],[1,0,0],[0,-1,0],[0,1,0],[0,0,-1],[0,0,1]].forEach(([dx,dy,dz]) => {
+      this._refreshBlock(wx+dx, wy+dy, wz+dz);
+    });
+  }
+
+  _refreshBlock(wx, wy, wz) {
+    if (wy < 0 || wy >= CH) return;
+    const t   = this.get(wx, wy, wz);
+    const cx  = this._cxOf(wx), cz = this._czOf(wz);
+    const lx  = this._lxOf(wx), lz = this._lzOf(wz);
+    const k   = `${lx},${wy},${lz}`;
+    const chunk = this._chunks.get(this._ck(cx, cz));
+    if (!chunk || !chunk.mesh) return; // chunk not loaded — skip
+
+    const existing = chunk._mm[k];
+
+    if (t === B.AIR) {
+      // Remove mesh if present
+      if (existing) { chunk.mesh.remove(existing); delete chunk._mm[k]; }
+      return;
+    }
+    if (this._exposed(wx, wy, wz)) {
+      if (!existing) {
+        // Add new mesh
+        const m = new THREE.Mesh(this._geo, this._mat(t));
+        m.position.set(lx + 0.5, wy + 0.5, lz + 0.5);
+        m.castShadow = m.receiveShadow = true;
+        m.userData = { wx, wy, wz, bt: t };
+        chunk.mesh.add(m);
+        chunk._mm[k] = m;
+      }
+    } else {
+      // Block no longer exposed — remove mesh
+      if (existing) { chunk.mesh.remove(existing); delete chunk._mm[k]; }
+    }
+  }
+
+  /* ──────────────────────────────────────────────
+     Save / Load helpers
+     The save system previously serialised the entire flat world array.
+     With infinite chunks we serialise only modified blocks as a sparse diff.
+  ────────────────────────────────────────────── */
+  serializeModified() {
+    // Save ONLY chunks the player has modified (placed/removed blocks).
+    // All other chunks will be regenerated deterministically from the seed.
+    // This keeps save files tiny regardless of how far the player explores.
+    const out = [];
+    for (const [k, chunk] of this._chunks) {
+      if (chunk._dirty) {
+        out.push({ cx: chunk.cx, cz: chunk.cz, data: Array.from(chunk.data) });
+      }
+    }
+    return { seed: this.seed, chunks: out };
+  }
+
+  deserialize(saveObj) {
+    if (!saveObj || !saveObj.seed) return false;
+    this.seed  = saveObj.seed;
+    this.noise = new Noise(this.seed);
+    (saveObj.chunks || []).forEach(({ cx, cz, data }) => {
+      const k = this._ck(cx, cz);
+      if (!this._chunks.has(k)) {
+        // Create a blank chunk without generating (we have the saved data)
+        const chunk = Object.create(Chunk.prototype);
+        chunk.cx   = cx; chunk.cz = cz;
+        chunk.data = new Uint8Array(data);
+        chunk.mesh = null; chunk._mm = {};
+        chunk._generated = true;
+        this._chunks.set(k, chunk);
+      } else {
+        this._chunks.get(k).data = new Uint8Array(data);
+      }
+    });
+    return true;
+  }
+}
+
+// Alias so the rest of the code that references "new World()" still compiles cleanly.
+const World = ChunkWorld;
+
+/* ═══════════════════════════════════════════════
+   INVENTORY
+═══════════════════════════════════════════════ */
+class Inv {
+  constructor(size=36){this.slots=Array(size).fill(null);this.size=size;this.hotSize=9;this.sel=0;}
+  add(id,count=1){
+    if(typeof id==='string'&&id.startsWith('food_')){
+      const fi=id.replace('food_','');
+      let i=this.slots.findIndex(s=>s&&s.food===fi);
+      if(i!==-1){this.slots[i].count=Math.min(64,this.slots[i].count+count);return true;}
+      i=this.slots.findIndex(s=>s===null);
+      if(i!==-1){this.slots[i]={food:fi,count};return true;}return false;
+    }
+    if(typeof id==='string'&&TOOLS[id]){
+      const i=this.slots.findIndex(s=>s===null);
+      if(i!==-1){this.slots[i]={tool:id,dur:TOOLS[id].dur};return true;}return false;
+    }
+    let i=this.slots.findIndex(s=>s&&s.id===id&&s.count<64);
+    if(i!==-1){this.slots[i].count=Math.min(64,this.slots[i].count+count);return true;}
+    i=this.slots.findIndex(s=>s===null);
+    if(i!==-1){this.slots[i]={id,count};return true;}return false;
+  }
+  remove(id,count=1){
+    let rem=count;
+    for(let i=0;i<this.slots.length&&rem>0;i++){
+      const s=this.slots[i];if(!s||s.id!==id)continue;
+      const take=Math.min(s.count,rem);s.count-=take;rem-=take;
+      if(s.count<=0)this.slots[i]=null;
+    }return rem===0;
+  }
+  count(id){return this.slots.reduce((a,s)=>a+(s&&s.id===id?s.count:0),0);}
+  sel_(){return this.slots[this.sel]||null;}
+  canCraft(r){return Object.entries(r.cost).every(([id,n])=>this.count(parseInt(id))>=n);}
+  craft(r){
+    if(!this.canCraft(r))return false;
+    Object.entries(r.cost).forEach(([id,n])=>this.remove(parseInt(id),n));
+    this.add(r.out,r.amt||1);return true;
+  }
+  damageTool(){
+    const s=this.slots[this.sel];if(!s||!s.tool)return;
+    s.dur--;if(s.dur<=0){this.slots[this.sel]=null;notify('🔨 Tool broke!','r');}
+  }
+  hasGun(){return this.slots.some(s=>s&&s.tool==='GUN');}
+}
+
+/* ═══════════════════════════════════════════════
+   PARTICLES
+═══════════════════════════════════════════════ */
+class Particles {
+  constructor(sc){this.sc=sc;this.pool=[];}
+  burst(x,y,z,col,n=10){
+    for(let i=0;i<n;i++){
+      const m=new THREE.Mesh(new THREE.BoxGeometry(.16,.16,.16),new THREE.MeshLambertMaterial({color:col}));
+      m.position.set(x+.5,y+.5,z+.5);
+      const v=new THREE.Vector3((Math.random()-.5)*7,Math.random()*5+2,(Math.random()-.5)*7);
+      this.sc.add(m);this.pool.push({m,v,life:.65+Math.random()*.3,rot:Math.random()*6});
+    }
+  }
+  hit(pos,col=0xff4400,n=5){
+    for(let i=0;i<n;i++){
+      const m=new THREE.Mesh(new THREE.SphereGeometry(.09,4,4),new THREE.MeshBasicMaterial({color:col}));
+      m.position.copy(pos).add(new THREE.Vector3((Math.random()-.5)*.4,Math.random()*.3,(Math.random()-.5)*.4));
+      const v=new THREE.Vector3((Math.random()-.5)*6,Math.random()*4+1,(Math.random()-.5)*6);
+      this.sc.add(m);this.pool.push({m,v,life:.4,rot:Math.random()*8});
+    }
+  }
+  // Bullet impact splash
+  impact(pos,n=8){
+    for(let i=0;i<n;i++){
+      const m=new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.08),new THREE.MeshBasicMaterial({color:0xffdd44}));
+      m.position.copy(pos);
+      const v=new THREE.Vector3((Math.random()-.5)*5,Math.random()*4,(Math.random()-.5)*5);
+      this.sc.add(m);this.pool.push({m,v,life:.35,rot:Math.random()*10});
+    }
+  }
+  update(dt){
+    this.pool=this.pool.filter(p=>{
+      p.life-=dt;p.v.y-=14*dt;p.m.position.addScaledVector(p.v,dt);
+      p.m.rotation.x+=p.rot*dt;p.m.rotation.z+=p.rot*.7*dt;
+      p.m.scale.setScalar(Math.max(.001,p.life*1.5));
+      if(p.life<=0){this.sc.remove(p.m);return false;}return true;
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   GUN SYSTEM
+═══════════════════════════════════════════════ */
+class GunSystem {
+  constructor(){
+    this.active    = false;  // gun mode toggled
+    this.ammo      = 12;
+    this.maxAmmo   = 12;
+    this.reloading = false;
+    this.reloadT   = 0;
+    this.shotCD    = 0;      // fire rate cooldown
+    this.shotInterval = .18; // seconds between shots
+    this.totalShot = 0;
+    this._bullets  = [];     // active bullet meshes in scene
+  }
+  toggle(inv){
+    if(!inv.hasGun()){notify('🔫 Craft or find a Pistol first!','r');return;}
+    this.active=!this.active;
+    notify(this.active?'🔫 Gun equipped — LMB to shoot':'🗡 Melee mode');
+    updateAmmoHUD(this);
+    // Update crosshair style
+    const xh=document.getElementById('xh');
+    xh.classList.toggle('gun-mode',this.active);
+    buildHotbar();
+  }
+  shoot(cam,scene,enemies,parts,quests,cheats){
+    if(!this.active)return false;
+    if(this.reloading){SFX.gunEmpty();return false;}
+    if(this.shotCD>0)return false;
+    const infiniteAmmo=cheats.infiniteAmmo||cheats.active.has('fgjuuy')||cheats.active.has('godmode');
+    if(this.ammo<=0&&!infiniteAmmo){this.startReload();return false;}
+    this.ammo=infiniteAmmo?this.maxAmmo:this.ammo-1;
+    this.shotCD=this.shotInterval;
+    this.totalShot++;
+    quests?.progress('shoot');
+    SFX.gun();
+    // Muzzle flash
+    const gf=document.getElementById('gun-flash');
+    gf.style.opacity='1';setTimeout(()=>gf.style.opacity='0',55);
+    // Screen shake
+    G.shake?.add(.25);
+    // Raycast bullet
+    const dir=new THREE.Vector3();cam.getWorldDirection(dir);
+    const origin=cam.position.clone();
+    // Check enemy hits along ray
+    let hitEnemy=null,minDist=99;
+    enemies.forEach(e=>{
+      if(e.dead||e._rm)return;
+      const toE=e.mesh.position.clone().sub(origin);
+      const proj=toE.dot(dir);
+      if(proj<0||proj>40)return;
+      const closest=origin.clone().addScaledVector(dir,proj);
+      const dist=e.mesh.position.distanceTo(closest);
+      if(dist<e.t.sz*1.2&&proj<minDist){minDist=proj;hitEnemy=e;}
+    });
+    if(hitEnemy){
+      const dmg=TOOLS.GUN.dmg+(G.level||1);
+      const isCrit=Math.random()<.1;
+      const finalDmg=isCrit?Math.floor(dmg*2):dmg;
+      hitEnemy.takeDamage(finalDmg,scene);
+      parts.hit(hitEnemy.mesh.position.clone().add(new THREE.Vector3(0,.5,0)),0xffaa00);
+      spawnDmgNum(innerWidth/2+((Math.random()-.5)*80),innerHeight/2-60,isCrit,finalDmg,'#ffaa00');
+      if(isCrit)SFX.crit();
+      // Knockback
+      const kb=hitEnemy.mesh.position.clone().sub(origin).normalize();
+      hitEnemy.vel.addScaledVector(kb,18);hitEnemy.vel.y=5;
+    } else {
+      // Hit world — find impact point
+      const rr=raycastWorld(cam,G.world,40);
+      if(rr.hit){
+        parts.impact(new THREE.Vector3(rr.bx+.5,rr.by+.5,rr.bz+.5));
+      }
+    }
+    // Bullet tracer DOM effect
+    this._spawnTracer(cam);
+    updateAmmoHUD(this);
+    return true;
+  }
+  startReload(){
+    if(this.reloading||this.ammo>=this.maxAmmo)return;
+    this.reloading=true;this.reloadT=TOOLS.GUN.reloadTime;
+    notify('🔄 Reloading…');SFX.reload();
+    updateAmmoHUD(this);
+  }
+  update(dt){
+    this.shotCD=Math.max(0,this.shotCD-dt);
+    if(this.reloading){
+      this.reloadT-=dt;
+      if(this.reloadT<=0){
+        this.reloading=false;this.ammo=this.maxAmmo;
+        notify('✅ Reloaded!');SFX.reload();updateAmmoHUD(this);
+      }
+    }
+  }
+  _spawnTracer(cam){
+    // Project a visual tracer line in DOM
+    const el=document.createElement('div');el.className='bullet-tracer';
+    const angle=(-cam.rotation.y)*180/Math.PI-90;
+    el.style.cssText=`width:60px;left:${innerWidth/2}px;top:${innerHeight/2}px;transform:rotate(${angle}deg);`;
+    document.body.appendChild(el);setTimeout(()=>el.remove(),200);
+  }
+}
+function updateAmmoHUD(gun){
+  const el=document.getElementById('ammo-hud');
+  if(!gun||!gun.active){el.style.display='none';return;}
+  el.style.display='block';
+  el.className=gun.reloading?'reloading':'';
+  el.textContent=gun.reloading
+    ?`🔄 RELOADING… (${gun.reloadT.toFixed(1)}s)`
+    :`🔫 ${gun.ammo} / ${gun.maxAmmo}`;
+}
+
+/* ═══════════════════════════════════════════════
+   ENEMY
+═══════════════════════════════════════════════ */
+class Enemy {
+  constructor(et,pos,sc){
+    this.t=et;this.hp=et.hp;this.maxHp=et.hp;
+    this.dead=false;this._rm=false;
+    this.hitCD=0;this.atkCD=0;
+    this.vel=new THREE.Vector3();this.onGnd=false;
+    this.bobT=Math.random()*Math.PI*2;
+    this.wanderA=Math.random()*Math.PI*2;this.wanderT=0;
+    this.state='idle';this.stateT=0;
+    this.explodeCD=0;// for bomber
+
+    const s=et.sz;
+    const mat=new THREE.MeshLambertMaterial({color:et.col,transparent:et.ghost||false,opacity:et.ghost?.72:1});
+    this.mesh=new THREE.Mesh(new THREE.BoxGeometry(s,s*1.15,s),mat);
+    this.mesh.position.copy(pos);this.mesh.castShadow=true;
+
+    // Eyes
+    const eg=new THREE.BoxGeometry(s*.22,s*.16,s*.06),em=new THREE.MeshBasicMaterial({color:0xffffff});
+    for(let i=0;i<2;i++){
+      const eye=new THREE.Mesh(eg,em);eye.position.set((i===0?-.2:.2)*s,s*.22,s*.52);this.mesh.add(eye);
+      const p=new THREE.Mesh(new THREE.BoxGeometry(s*.1,s*.1,s*.07),new THREE.MeshBasicMaterial({color:0x111}));
+      p.position.set((i===0?-.2:.2)*s,s*.22,s*.55);this.mesh.add(p);
+    }
+    // HP bar
+    const hbBg=new THREE.Mesh(new THREE.PlaneGeometry(s*1.35,.1),new THREE.MeshBasicMaterial({color:0x220000}));
+    hbBg.position.set(0,s*.92,.02);this.mesh.add(hbBg);
+    this.hpF=new THREE.Mesh(new THREE.PlaneGeometry(s*1.35,.1),new THREE.MeshBasicMaterial({color:0xff2020}));
+    this.hpF.position.set(0,s*.92,.03);this.mesh.add(this.hpF);
+    sc.add(this.mesh);
+  }
+  update(dt,ppos,world){
+    if(this.dead)return;
+    this.hitCD=Math.max(0,this.hitCD-dt);
+    this.atkCD=Math.max(0,this.atkCD-dt);
+    this.bobT+=dt*3.2;this.stateT-=dt;
+
+    const pos=this.mesh.position;
+    const dx=ppos.x-pos.x,dz=ppos.z-pos.z;
+    const dist=Math.sqrt(dx*dx+dz*dz);
+    const hpRatio=this.hp/this.maxHp;
+
+    // State machine
+    if(dist<1.8)this.state='attack';
+    else if(dist<28)this.state='chase';
+    else if(this.stateT<=0){this.state='idle';this.stateT=3+Math.random()*3;}
+
+    // Bombers run straight at you and explode
+    if(this.t.explode&&dist<1.5&&this.explodeCD<=0){
+      this._triggerExplosion(ppos,world);return;
+    }
+    if(this.t.explode)this.explodeCD=Math.max(0,this.explodeCD-dt);
+
+    let tvx=0,tvz=0;
+    if(this.state==='chase'||this.state==='attack'){
+      const spd=this.t.spd*(hpRatio<.3?1.4:1)*(this.t.rage&&hpRatio<.35?1.5:1);
+      tvx=(dx/dist)*spd;tvz=(dz/dist)*spd;
+    }else{
+      this.wanderT-=dt;
+      if(this.wanderT<=0){this.wanderA+=(Math.random()-.5)*1.5;this.wanderT=1.5+Math.random()*2;}
+      tvx=Math.sin(this.wanderA)*this.t.spd*.35;tvz=Math.cos(this.wanderA)*this.t.spd*.35;
+    }
+    const accel=this.state==='chase'?4.5:2.5;
+    this.vel.x+=(tvx-this.vel.x)*Math.min(1,dt*accel);
+    this.vel.z+=(tvz-this.vel.z)*Math.min(1,dt*accel);
+    pos.x+=this.vel.x*dt;pos.z+=this.vel.z*dt;
+    // No hard clamp — ChunkWorld is infinite; chunks generate on demand
+
+    // Smooth yaw
+    if(Math.abs(this.vel.x)+Math.abs(this.vel.z)>.1){
+      const ty=Math.atan2(-this.vel.x,-this.vel.z);
+      let da=ty-this.mesh.rotation.y;while(da>Math.PI)da-=Math.PI*2;while(da<-Math.PI)da+=Math.PI*2;
+      this.mesh.rotation.y+=da*dt*7;
+    }
+
+    if(this.t.fly){pos.y+=(ppos.y+1.8+Math.sin(this.bobT)*.55-pos.y)*dt*2.8;}
+    else{
+      this.vel.y-=20*dt;pos.y+=this.vel.y*dt;
+      const gy=Math.floor(pos.y-.1);
+      if(world.solid(Math.floor(pos.x),gy,Math.floor(pos.z))){
+        pos.y=gy+1+this.t.sz*.58;this.vel.y=0;this.onGnd=true;
+        if(this.state==='chase'&&dist<2.5)this.vel.y=5.5;
+      }else{this.onGnd=false;}
+      pos.y+=Math.sin(this.bobT)*.025;
+    }
+
+    // HP bar
+    const r=Math.max(0,this.hp/this.maxHp);
+    this.hpF.scale.x=r;this.hpF.position.x=(r-1)*this.t.sz*.675;
+    this.hpF.material.color.setHex(r>.5?0xff2020:r>.25?0xffa020:0xffff20);
+  }
+  _triggerExplosion(ppos,world){
+    this.dead=true;SFX.explode();
+    // Damage player in radius
+    const d=this.mesh.position.distanceTo(ppos);
+    if(d<3)G.takeDmg(this.t.dmg,'explode');
+    // Particles burst
+    G.parts?.burst(this.mesh.position.x|0,this.mesh.position.y|0,this.mesh.position.z|0,0xff6600,20);
+    G.shake?.add(.6);
+  }
+  takeDamage(amt,sc){
+    this.hp-=amt;
+    const orig=this.t.col;
+    this.mesh.material.color.setHex(0xffffff);
+    setTimeout(()=>{if(!this.dead)this.mesh.material.color.setHex(orig);},100);
+    SFX.eHurt();
+    if(this.hp<=0){this.dead=true;SFX.eDie();}
+  }
+  remove(sc){sc.remove(this.mesh);}
+}
+
+/* ═══════════════════════════════════════════════
+   RAYCAST
+═══════════════════════════════════════════════ */
+function raycastWorld(cam,world,maxD=6.5){
+  const dir=new THREE.Vector3();cam.getWorldDirection(dir);
+  const pos=cam.position.clone();const STEP=.035;
+  let t=0,last=pos.clone();
+  while(t<maxD){
+    t+=STEP;pos.addScaledVector(dir,STEP);
+    const bx=Math.floor(pos.x),by=Math.floor(pos.y),bz=Math.floor(pos.z);
+    const type=world.get(bx,by,bz);
+    if(type!==B.AIR&&type!==B.WATER)return{hit:true,bx,by,bz,type,px:Math.floor(last.x),py:Math.floor(last.y),pz:Math.floor(last.z)};
+    last.copy(pos);
+  }
+  return{hit:false};
+}
+
+/* ═══════════════════════════════════════════════
+   QUEST MANAGER
+═══════════════════════════════════════════════ */
+class QuestMgr {
+  constructor(){this.active=null;this.done=new Set();}
+  activate(){
+    for(const q of QUESTS){
+      if(!this.done.has(q.id)){this.active=JSON.parse(JSON.stringify(q));updateQuestHUD();return;}
+    }
+    this.active=null;document.getElementById('quest-panel').style.display='none';
+  }
+  progress(type,amt=1){
+    if(!this.active)return;
+    let changed=false;
+    this.active.objs.forEach(o=>{
+      if(o.type===type&&o.cur<o.target){o.cur=Math.min(o.target,o.cur+amt);changed=true;}
+    });
+    if(changed)updateQuestHUD();
+    if(this.active.objs.every(o=>o.cur>=o.target))this.complete();
+  }
+  complete(){
+    if(!this.active)return;
+    const q=this.active;this.done.add(q.id);
+    notify(`✅ Quest "${q.title}" complete! +${q.reward.xp}XP`,'x',4000);
+    SFX.quest();G.gainXP(q.reward.xp);this.active=null;
+    setTimeout(()=>this.activate(),1500);
+  }
+  serialize(){return{done:[...this.done],activeId:this.active?.id};}
+  restore(data){if(!data)return;this.done=new Set(data.done||[]);this.activate();}
+}
+
+/* ═══════════════════════════════════════════════
+   SAVE SYSTEM
+═══════════════════════════════════════════════ */
+const Save={
+  SLOT:'bgw5_save',
+  save(G){
+    try{
+      localStorage.setItem(this.SLOT,JSON.stringify({
+        ver:5,charKey:G.charKey,
+        pos:{x:G.pos.x,y:G.pos.y,z:G.pos.z},
+        hp:G.hp,hunger:G.hunger,score:G.score,kills:G.kills,
+        dayN:G.dayN,dayT:G.dayT,level:G.level,xp:G.xp,
+        invSlots:G.inv.slots,invSel:G.inv.sel,
+        chunkSave:G.world.serializeModified(),worldSeed:G.world.seed,
+        questState:G.quests.serialize(),stats:G.stats,
+        gunAmmo:G.gun.ammo,
+        activeCodes:[...Cheats.active],
+        ts:Date.now(),
+      }));return true;
+    }catch{return false;}
+  },
+  load(){
+    try{const d=JSON.parse(localStorage.getItem(this.SLOT));return d?.ver===5?d:null;}catch{return null;}
+  },
+  exists(){return this.load()!==null;},
+};
+
+/* ═══════════════════════════════════════════════
+   SCREEN SHAKE
+═══════════════════════════════════════════════ */
+class Shake{
+  constructor(){this.trauma=0;}
+  add(t){this.trauma=Math.min(1,this.trauma+t);}
+  update(dt,cam){
+    if(this.trauma<=0)return;
+    this.trauma=Math.max(0,this.trauma-dt*2.4);
+    const s=this.trauma*this.trauma*.2;
+    cam.position.x+=(Math.random()-.5)*s;
+    cam.position.y+=(Math.random()-.5)*s;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   MINIMAP
+═══════════════════════════════════════════════ */
+function drawMinimap(world,ppos,enemies){
+  const cv=document.getElementById('mm-canvas'),ctx=cv.getContext('2d');
+  const W=80,H=80,px=Math.floor(ppos.x),pz=Math.floor(ppos.z),half=20;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(0,0,W,H);
+  for(let dx=-half;dx<half;dx++)for(let dz=-half;dz<half;dz++){
+    const wx=px+dx, wz=pz+dz;
+    // Use peek (non-generating) so minimap never silently creates chunks
+    const sy=world.peekSurfY(wx,wz),t=world.peek(wx,sy,wz),d=BD[t];if(!d)continue;
+    const h=d.col,r=(h>>16)&255,g=(h>>8)&255,b=h&255;
+    const mx=Math.floor((dx+half)*(W/40)),mz=Math.floor((dz+half)*(H/40));
+    ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(mx,mz,2,2);
+  }
+  enemies.forEach(e=>{
+    const ex=Math.floor(e.mesh.position.x)-px+half,ez=Math.floor(e.mesh.position.z)-pz+half;
+    if(ex<0||ex>=40||ez<0||ez>=40)return;
+    ctx.fillStyle=e.t.explode?'#ff6600':e.t.fly?'#00ccff':'#ff4400';
+    ctx.fillRect(Math.floor(ex*2),Math.floor(ez*2),3,3);
+  });
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(W/2,H/2,3,0,Math.PI*2);ctx.fill();
+  const yaw=G.yaw||0;ctx.strokeStyle='#fff';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(W/2,H/2);ctx.lineTo(W/2+Math.sin(-yaw)*8,H/2+Math.cos(-yaw)*8);ctx.stroke();
+}
+
+/* ═══════════════════════════════════════════════
+   FLOATING DAMAGE NUMBERS
+═══════════════════════════════════════════════ */
+function spawnDmgNum(x,y,isCrit,dmg,col='#ff4400'){
+  const el=document.createElement('div');el.className='dmg-num';
+  el.textContent=isCrit?`⚡${dmg}!`:`-${dmg}`;
+  el.style.color=isCrit?'#f0c040':col;
+  el.style.fontSize=isCrit?'1.5rem':'1.05rem';
+  el.style.left=x+'px';el.style.top=y+'px';
+  document.body.appendChild(el);setTimeout(()=>el.remove(),900);
+}
+
+/* ═══════════════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════════════ */
+function showScr(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.add('off'));
+  const el=document.getElementById(id);if(el){el.classList.remove('off');el.classList.add('fi');}
+}
+function notify(msg,type='',dur=3000){
+  const area=document.getElementById('notifs'),el=document.createElement('div');
+  el.className='ntf'+(type?' '+type:'');el.textContent=msg;
+  area.appendChild(el);setTimeout(()=>el.remove(),dur+300);
+}
+function healFX(){const h=document.getElementById('healfx');h.style.opacity='1';setTimeout(()=>h.style.opacity='0',400);}
+function updateQuestHUD(){
+  const q=G.quests?.active,qp=document.getElementById('quest-panel');
+  if(!q){qp.style.display='none';return;}
+  qp.style.display='block';
+  document.getElementById('quest-title').textContent='📋 '+q.title;
+  const ob=document.getElementById('quest-objs');ob.innerHTML='';
+  q.objs.forEach(o=>{
+    const el=document.createElement('div');el.className='q-obj'+(o.cur>=o.target?' done':'');
+    el.textContent=`${o.cur>=o.target?'✓':'○'} ${o.text} (${Math.min(o.cur,o.target)}/${o.target})`;
+    ob.appendChild(el);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   UI BUILD
+═══════════════════════════════════════════════ */
+function buildHP(){
+  const row=document.getElementById('hp-row');row.innerHTML='';
+  for(let i=0;i<G.maxHp;i++){const e=document.createElement('span');e.className='hrt'+(i<G.hp?'full':'emp');e.textContent='❤';row.appendChild(e);}
+}
+function buildHunger(){
+  const row=document.getElementById('hng-row');row.innerHTML='';
+  if(!G.doHunger)return;
+  for(let i=0;i<10;i++){const e=document.createElement('span');e.className='hng'+(i>=Math.ceil(G.hunger/2)?' emp':'');e.textContent='🍗';row.appendChild(e);}
+}
+function buildXPBar(){
+  document.getElementById('xp-fill').style.width=(G.xp/G.xpNext*100)+'%';
+  document.getElementById('xp-label').textContent=`Level ${G.level} — ${G.xp}/${G.xpNext} XP`;
+}
+function buildHotbar(){
+  const bar=document.getElementById('hotbar');bar.innerHTML='';if(!G.inv)return;
+  const gunActive=G.gun?.active;
+  for(let i=0;i<G.inv.hotSize;i++){
+    const s=G.inv.slots[i];
+    const isGunSlot=s&&s.tool==='GUN';
+    const el=document.createElement('div');
+    el.className='hs'+(i===G.inv.sel?' act':'')+(gunActive&&isGunSlot?' gun-act':'');
+    el.innerHTML=`<span class="hs-k">${i+1}</span>`;
+    if(s){
+      if(s.tool){
+        const td=TOOLS[s.tool];el.innerHTML+=td?.e||'?';
+        const pct=(s.dur/td.dur)*100;const col=pct>50?'#f0c040':pct>20?'#ff8020':'#ff2020';
+        el.innerHTML+=`<div class="hs-dur" style="background:${col};width:${pct}%"></div>`;
+      }else if(s.food){el.innerHTML+=FOOD[s.food]?.e||'?';if(s.count>1)el.innerHTML+=`<span class="hs-n">${s.count}</span>`;}
+      else{el.innerHTML+=(BD[s.id]?.e||'?');if(s.count>1)el.innerHTML+=`<span class="hs-n">${s.count}</span>`;}
+    }
+    el.addEventListener('click',()=>{G.inv.sel=i;buildHotbar();});
+    bar.appendChild(el);
+  }
+}
+function buildInv(){
+  const g=document.getElementById('inv-grid');g.innerHTML='';if(!G.inv)return;
+  G.inv.slots.forEach((s,i)=>{
+    const el=document.createElement('div');el.className='islot'+(i===G.inv.sel?' sel':'');
+    if(s){
+      let ico='?',cnt='',tip='';
+      if(s.tool){const td=TOOLS[s.tool];ico=td?.e||'?';tip=`${td?.name} (${s.dur}/${td?.dur} uses)`;}
+      else if(s.food){const fd=FOOD[s.food];ico=fd?.e||'?';cnt=s.count;tip=`${fd?.name} ×${s.count}`;}
+      else{ico=BD[s.id]?.e||'?';cnt=s.count;tip=`${BD[s.id]?.n||'?'} ×${s.count}`;}
+      el.innerHTML=`${ico}${cnt>1?`<span class="islot-n">${cnt}</span>`:''}
+                    <div class="islot-tip">${tip}</div>`;
+    }
+    el.addEventListener('click',()=>{G.inv.sel=i;buildInv();buildHotbar();
+      document.getElementById('inv-sel-info').textContent=s?(s.tool?TOOLS[s.tool]?.name:s.food?FOOD[s.food]?.name:`${BD[s.id]?.n||'?'} ×${s.count}`):'';
+    });
+    el.addEventListener('contextmenu',e=>{e.preventDefault();
+      if(s&&!s.tool&&s.count>0){s.count--;if(s.count<=0)G.inv.slots[i]=null;}
+      buildInv();buildHotbar();
+    });
+    g.appendChild(el);
+  });
+}
+function buildCraftList(){
+  const g=document.getElementById('rlist');g.innerHTML='';
+  RECIPES.forEach(r=>{
+    const can=G.inv?.canCraft(r)||false;
+    const costStr=Object.entries(r.cost).map(([id,n])=>`${n}×${BD[id]?.n||id}`).join(', ');
+    const row=document.createElement('div');row.className='rrow'+(can?' ok':'');
+    row.innerHTML=`<div class="ricon">${r.e}</div><div class="rinfo">
+      <div class="rname">${r.name}${r.amt>1?' ×'+r.amt:''}</div>
+      <div class="rcost">Needs: ${costStr}</div>
+      <div class="ryield">${r.desc}</div>
+    </div><button class="rcbtn"${can?'':' disabled'}>CRAFT</button>`;
+    row.querySelector('.rcbtn').addEventListener('click',e=>{
+      e.stopPropagation();
+      if(G.inv?.craft(r)){
+        SFX.craft();buildCraftList();buildHotbar();buildInv();
+        notify(`✅ Crafted ${r.name}!`,'g');G.gainXP(10);
+        if(r.out==='WPICK'||r.out==='SPICK'||r.out==='IPICK'||r.out==='DPICK')G.quests?.progress('craft_pick');
+        if(r.out==='GUN'){G.quests?.progress('get_gun');notify('🔫 Press G to equip your Pistol!','or');}
+      }
+    });
+    g.appendChild(row);
+  });
+}
+function buildStats(){
+  const g=document.getElementById('stat-grid');g.innerHTML='';
+  const ents=[
+    ['🏆 Score',G.score,'gold'],['⭐ Level',G.level,'green'],
+    ['💀 Kills',G.kills,''],['☀️ Days',G.dayN,''],
+    ['⛏ Mined',G.stats?.blocksMined||0,''],['🧱 Placed',G.stats?.blocksPlaced||0,''],
+    ['🔫 Shots',G.gun?.totalShot||0,''],['🏃 Meters',Math.floor(G.stats?.metersTraveled||0),''],
+    ['❤ Max HP',G.maxHp,''],['⭐ XP',G.xp,''],
+  ];
+  ents.forEach(([lbl,val,cls])=>{
+    const box=document.createElement('div');box.className='stat-box';
+    box.innerHTML=`<div class="stat-label">${lbl}</div><div class="stat-val${cls?' '+cls:''}">${val}</div>`;
+    g.appendChild(box);
+  });
+}
+function buildCharGrid(){
+  const g=document.getElementById('char-row');g.innerHTML='';
+  Object.entries(CHARS).forEach(([key,c])=>{
+    const hx=c.col.toString(16).padStart(6,'0'),bx=c.body.toString(16).padStart(6,'0');
+    const el=document.createElement('div');el.className='ccard'+(G.charKey===key?' sel':'');
+    el.innerHTML=`<div class="cfig">
+      <div class="ch" style="background:#${hx};box-shadow:0 0 10px #${hx}88"></div>
+      <div class="cb" style="background:#${bx}"></div>
+      <div class="cl"><div class="clg" style="background:#${bx}"></div><div class="clg" style="background:#${bx}"></div></div>
+    </div>
+    <div class="cname">${c.name}</div><div class="cdesc">${c.desc}</div>
+    <div class="cbar-row"><span>❤</span><div class="cbar-tr"><div class="cbar-f" style="width:${c.hp*7}%;background:#e03333"></div></div></div>
+    <div class="cbar-row"><span>⚡</span><div class="cbar-tr"><div class="cbar-f" style="width:${c.spd*9}%;background:#3b9eff"></div></div></div>
+    <div class="cbar-row"><span>🦘</span><div class="cbar-tr"><div class="cbar-f" style="width:${c.jmp*9}%;background:#3afa80"></div></div></div>
+    <div class="cbar-row"><span>⚒</span><div class="cbar-tr"><div class="cbar-f" style="width:${c.str*7}%;background:#f0c040"></div></div></div>`;
+    el.addEventListener('click',()=>{G.charKey=key;document.querySelectorAll('.ccard').forEach(c2=>c2.classList.remove('sel'));el.classList.add('sel');});
+    g.appendChild(el);
+  });
+}
+
+function openInv()   {G.invOpen=true;  buildInv();       showScr('s-inv');  G.unlock();}
+function closeInv()  {G.invOpen=false; document.getElementById('s-inv').classList.add('off');G.relock();}
+function openCraft() {G.craftOpen=true;buildCraftList(); showScr('s-craft');G.unlock();}
+function closeCraft(){G.craftOpen=false;document.getElementById('s-craft').classList.add('off');G.relock();}
+function openStats() {G.statsOpen=true;buildStats();     showScr('s-stats');G.unlock();}
+function closeStats(){G.statsOpen=false;document.getElementById('s-stats').classList.add('off');if(G.running)G.relock();}
+
+/* ═══════════════════════════════════════════════
+   MENU PARTICLES
+═══════════════════════════════════════════════ */
+function initMenuParticles(){
+  const cv=document.getElementById('menu-particles');if(!cv)return;
+  cv.width=innerWidth;cv.height=innerHeight;const ctx=cv.getContext('2d');
+  const pts=Array.from({length:55},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,
+    vx:(Math.random()-.5)*.32,vy:(Math.random()-.5)*.32,r:Math.random()*2.2+.5,a:Math.random()*.65+.12,
+    col:`hsl(${200+Math.random()*60},80%,60%)`}));
+  let run=true;
+  function frame(){
+    if(!run)return;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0)p.x=cv.width;if(p.x>cv.width)p.x=0;
+      if(p.y<0)p.y=cv.height;if(p.y>cv.height)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=p.col;ctx.globalAlpha=p.a;ctx.fill();
+    });
+    ctx.globalAlpha=1;
+    if(!document.getElementById('s-main')?.classList.contains('off'))requestAnimationFrame(frame);
+    else run=false;
+  }
+  frame();
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN GAME OBJECT
+═══════════════════════════════════════════════ */
+const G={
+  sc:null,cam:null,ren:null,clock:null,animId:null,running:false,
+  world:null,inv:null,parts:null,shake:null,quests:null,gun:null,
+  enemies:[],
+  pos:new THREE.Vector3(),vel:new THREE.Vector3(),
+  yaw:0,pitch:0,onGnd:false,prevGnd:false,
+  _coyoteT:0,          // coyote-time counter (s)
+  _jumpBuffered:false, // jump buffered from keydown
+  _jumpBufferT:0,      // buffer window countdown (s)
+  hp:10,maxHp:10,hunger:20,
+  score:0,kills:0,dayN:1,dayT:6,
+  level:1,xp:0,xpNext:100,
+  blocking:false,
+  bobT:0,bobAmt:0,
+  brk:null,
+  keys:{},locked:false,paused:false,
+  invOpen:false,craftOpen:false,statsOpen:false,
+  invincible_cheat:false,
+  sens:.003,fov:80,doBob:true,doHunger:true,doShake:true,difficulty:'normal',
+  charKey:'blue',charDef:null,
+  _spawnT:8,_regen:0,_hungerT:0,_stepT:0,_mmT:0,_autosaveT:300,
+  invincible:false,
+  stats:{blocksMined:0,blocksPlaced:0,enemiesKilled:0,metersTraveled:0,daysAlive:1},
+  _lastPos:new THREE.Vector3(),
+
+  initThree(){
+    this.sc=new THREE.Scene();this.sc.fog=new THREE.FogExp2(0x87ceeb,.016);
+    this.cam=new THREE.PerspectiveCamera(this.fov,innerWidth/innerHeight,.05,130);
+    this.cam.rotation.order='YXZ';
+    const canvas=document.getElementById('c');
+    this.ren=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
+    this.ren.setSize(innerWidth,innerHeight);
+    this.ren.setPixelRatio(Math.min(devicePixelRatio,1.5));
+    this.ren.shadowMap.enabled=true;this.ren.shadowMap.type=THREE.BasicShadowMap;
+    canvas.style.display='block';
+    this.ambient=new THREE.AmbientLight(0xffffff,.55);this.sc.add(this.ambient);
+    this.sun=new THREE.DirectionalLight(0xfff5e0,1.3);
+    this.sun.castShadow=true;this.sun.shadow.mapSize.set(1024,1024);
+    Object.assign(this.sun.shadow.camera,{near:.5,far:120,left:-38,right:38,bottom:-38,top:38});
+    this.sc.add(this.sun);
+    this.moon=new THREE.DirectionalLight(0x5577cc,0);this.sc.add(this.moon);
+    this.hl=new THREE.Mesh(new THREE.BoxGeometry(1.04,1.04,1.04),
+      new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,transparent:true,opacity:.55}));
+    this.hl.visible=false;this.sc.add(this.hl);
+    this.parts=new Particles(this.sc);this.shake=new Shake();
+    this.gun=new GunSystem();this.clock=new THREE.Clock();
+  },
+
+  initWorld(saved){
+    this.world = new ChunkWorld();
+    if (saved && saved.chunkSave) {
+      // Restore from new chunk-based save format
+      this.world.deserialize(saved.chunkSave);
+    } else if (saved && saved.worldSeed) {
+      // Legacy save: just re-init with the original seed (blocks regenerated)
+      this.world.init(saved.worldSeed);
+    } else {
+      // Fresh game
+      this.world.init(Math.random() * 99999 | 0);
+    }
+    // Build the initial ring of chunks around the spawn point
+    const spawnWX = saved ? (saved.pos ? saved.pos.x : 8) : 8;
+    const spawnWZ = saved ? (saved.pos ? saved.pos.z : 8) : 8;
+    this.world.buildInitialChunks(this.sc, spawnWX, spawnWZ);
+  },
+
+  spawnPlayer(saved){
+    this.charDef=CHARS[this.charKey];this.maxHp=this.charDef.hp;
+    this.quests=new QuestMgr();
+    if(saved){
+      this.hp=saved.hp||this.maxHp;this.hunger=saved.hunger||20;
+      this.score=saved.score||0;this.kills=saved.kills||0;
+      this.dayN=saved.dayN||1;this.dayT=saved.dayT||6;
+      this.level=saved.level||1;this.xp=saved.xp||0;this.xpNext=this.level*100;
+      this.stats=saved.stats||this.stats;
+      this.pos.set(saved.pos.x,saved.pos.y,saved.pos.z);
+      this.vel.set(0,0,0);
+      this.inv=new Inv(36);this.inv.slots=saved.invSlots.map(s=>s?{...s}:null);this.inv.sel=saved.invSel||0;
+      this.quests.restore(saved.questState);
+      if(saved.gunAmmo!=null)this.gun.ammo=saved.gunAmmo;
+      // Restore active codes
+      if(saved.activeCodes){saved.activeCodes.forEach(c=>{if(CODES[c]&&!Cheats.active.has(c)){Cheats.active.add(c);CODES[c].fn();}});}
+    }else{
+      this.hp=this.maxHp;this.hunger=20;this.score=0;this.kills=0;this.dayN=1;this.dayT=6;
+      this.level=1;this.xp=0;this.xpNext=100;
+      // Spawn near world origin (chunk 0,0 centre) — CW/CD are legacy
+      // fixed-world dimensions, not valid as ChunkWorld coords.
+      const sx = 8, sz = 8; // centre of chunk (0,0)
+      const sy = this.world.surfY(sx, sz);
+      this.pos.set(sx + 0.5, sy + 2.8, sz + 0.5); this.vel.set(0, 0, 0);
+      this.inv=new Inv(36);
+      this.inv.add(B.GRASS,5);this.inv.add(B.DIRT,5);this.inv.add(B.WOOD,4);this.inv.add(B.SAND,3);
+      this.quests.activate();
+    }
+    this._lastPos.copy(this.pos);
+  },
+
+  spawnEnemy(forceType){
+    const maxByDiff={easy:4,normal:8,hard:14,nightmare:22}[this.difficulty]||8;
+    if(this.enemies.filter(e=>!e.dead).length>=maxByDiff)return;
+    let pool=this.level<3?ET.slice(0,4):ET;
+    const t=forceType||pool[Math.floor(Math.random()*pool.length)];
+    const scaled={...t,hp:Math.floor(t.hp*(1+this.level*.1)),spd:t.spd*(1+this.level*.03)};
+    const a=Math.random()*Math.PI*2,d=13+Math.random()*10;
+    const ex=this.pos.x+Math.cos(a)*d,ez=this.pos.z+Math.sin(a)*d;
+    const cx=Math.floor(ex),cz=Math.floor(ez); // ChunkWorld: no boundary to clamp to
+    const ey=this.world.surfY(cx,cz)+2;
+    this.enemies.push(new Enemy(scaled,new THREE.Vector3(cx+.5,ey,cz+.5),this.sc));
+  },
+
+  gainXP(amt){
+    this.xp+=amt;
+    while(this.xp>=this.xpNext){
+      this.xp-=this.xpNext;this.level++;this.xpNext=this.level*100;
+      this.maxHp=this.charDef.hp+Math.floor(this.level*1.5);
+      this.hp=Math.min(this.hp+2,this.maxHp);SFX.levelup();
+      // Level up overlay
+      const old=document.getElementById('lvlup-ov');if(old)old.remove();
+      const el=document.createElement('div');el.id='lvlup-ov';
+      el.innerHTML=`<div class="lvl-text">LEVEL UP!</div><div class="lvl-sub">Level ${this.level}</div>`;
+      document.body.appendChild(el);setTimeout(()=>el.remove(),2600);
+      const lf=document.getElementById('lvlfx');lf.style.opacity='1';setTimeout(()=>lf.style.opacity='0',600);
+      notify(`⬆ Level ${this.level}! Max HP +${Math.floor(this.level*.15+1)}`,'p',4000);
+    }
+    buildXPBar();
+  },
+
+  bindEvents(){
+    const canvas=document.getElementById('c');
+    canvas.addEventListener('click',()=>{if(!this.paused&&!this.invOpen&&!this.craftOpen&&!this.statsOpen)canvas.requestPointerLock();});
+    document.addEventListener('pointerlockchange',()=>{this.locked=document.pointerLockElement===canvas;});
+
+    document.addEventListener('mousemove',e=>{
+      if(!this.locked||this.paused||this.invOpen||this.craftOpen||this.statsOpen)return;
+      this.yaw-=e.movementX*this.sens;
+      this.pitch=Math.max(-1.42,Math.min(1.42,this.pitch-e.movementY*this.sens));
+    });
+
+    document.addEventListener('keydown',e=>{
+      if(!this.running)return;
+      this.keys[e.code]=true;
+      if(e.code==='Escape'||e.code==='KeyP'){
+        if(this.invOpen){closeInv();return;}if(this.craftOpen){closeCraft();return;}
+        if(this.statsOpen){closeStats();return;}
+        this.paused?this.resume_():this.pause_();return;
+      }
+      if(e.code==='F5'){e.preventDefault();this.saveGame();return;}
+      if(!this.paused&&!this.invOpen&&!this.craftOpen){
+        if(e.code==='KeyI')this.invOpen?closeInv():openInv();
+        if(e.code==='KeyC')this.craftOpen?closeCraft():openCraft();
+        if(e.code==='KeyT')openStats();
+        if(e.code==='KeyG')this.gun.toggle(this.inv);
+        if(e.code==='KeyR')this.gun.startReload();
+        if(e.code==='KeyF')this.eatFood();
+        if(e.code==='Space'){
+          // Buffer the jump — processed in updatePlayer for instant, consistent response.
+          // This eliminates any frame-delay between pressing Space and leaving the ground.
+          this._jumpBuffered=true;
+          this._jumpBufferT=0.12; // 120ms buffer window
+        }
+        const n=parseInt(e.key)-1;if(n>=0&&n<9){this.inv.sel=n;buildHotbar();}
+        if(e.code==='Tab'){e.preventDefault();this.inv.sel=(this.inv.sel+1)%9;buildHotbar();}
+      }
+    });
+    document.addEventListener('keyup',e=>{this.keys[e.code]=false;});
+
+    canvas.addEventListener('wheel',e=>{
+      if(this.paused||this.invOpen||this.craftOpen)return;
+      this.inv.sel=(this.inv.sel+(e.deltaY>0?1:-1)+9)%9;buildHotbar();
+    },{passive:true});
+
+    // Mouse — mine / shoot / place
+    let mineHeld=false;
+    document.addEventListener('mousedown',e=>{
+      if(!this.locked||this.paused||this.invOpen||this.craftOpen||this.hp<=0)return;
+      if(e.button===0){
+        // Gun shoots, otherwise mine
+        if(this.gun.active){
+          this.gun.shoot(this.cam,this.sc,this.enemies,this.parts,this.quests,Cheats);
+          return;
+        }
+        mineHeld=true;
+        const r=raycastWorld(this.cam,this.world);
+        if(!r.hit)return;const bd=BD[r.type];if(!bd||bd.unbreak)return;
+        const sel=this.inv.sel_();let spd=1;
+        if(sel&&sel.tool){const td=TOOLS[sel.tool];if(td.spd&&(!bd.need||td.tier>=bd.need))spd=td.spd;}
+        this.brk={bx:r.bx,by:r.by,bz:r.bz,prog:0,total:bd.hard/spd};
+      }
+      if(e.button===2)this._placeBlock();
+    });
+    document.addEventListener('mouseup',e=>{if(e.button===0){mineHeld=false;if(!this.gun.active)this.brk=null;}});
+    document.addEventListener('contextmenu',e=>e.preventDefault());
+    window.addEventListener('resize',()=>{
+      if(!this.ren)return;this.cam.aspect=innerWidth/innerHeight;
+      this.cam.updateProjectionMatrix();this.ren.setSize(innerWidth,innerHeight);
+    });
+  },
+
+  _placeBlock(){
+    const r=raycastWorld(this.cam,this.world);if(!r.hit)return;
+    const sel=this.inv.sel_();if(!sel||sel.tool||sel.food)return;
+    const px=r.px+.5,py=r.py+.5,pz=r.pz+.5;
+    if(Math.abs(px-this.pos.x)<.65&&Math.abs(py-this.pos.y)<1.85&&Math.abs(pz-this.pos.z)<.65)return;
+    this.world.addBlock(r.px,r.py,r.pz,sel.id);
+    this.inv.remove(sel.id,1);SFX.place();buildHotbar();buildInv();
+    this.stats.blocksPlaced++;this.quests?.progress('place');
+  },
+
+  eatFood(){
+    for(let i=0;i<9;i++){
+      const s=this.inv.slots[i];if(!s||!s.food)continue;
+      const fd=FOOD[s.food];if(!fd)continue;
+      this.hunger=Math.min(20,this.hunger+fd.hunger);
+      this.hp=Math.min(this.maxHp,this.hp+fd.heal);
+      s.count--;if(s.count<=0)this.inv.slots[i]=null;
+      SFX.eat();notify(`🍽 Ate ${fd.name}`);
+      buildHotbar();buildInv();buildHP();buildHunger();return;
+    }
+    notify('No food in hotbar!','r');
+  },
+
+  unlock(){try{if(document.pointerLockElement)document.exitPointerLock();}catch{}},
+  relock(){if(!this.paused)this.ren?.domElement.requestPointerLock();},
+  pause_(){this.paused=true;this.unlock();showScr('s-pause');},
+  resume_(){this.paused=false;document.getElementById('s-pause').classList.add('off');this.relock();},
+
+  saveGame(){
+    if(Save.save(this)){
+      SFX.save();const ind=document.getElementById('save-ind');
+      ind.style.opacity='1';setTimeout(()=>ind.style.opacity='0',2200);
+    }else notify('Save failed!','r');
+  },
+
+  /* ── PLAYER UPDATE ── */
+  updatePlayer(dt){
+    if(this.hp<=0)return;
+    const cd=this.charDef;
+
+    const fwd=new THREE.Vector3(-Math.sin(this.yaw),0,-Math.cos(this.yaw));
+    const rgt=new THREE.Vector3(Math.cos(this.yaw),0,-Math.sin(this.yaw));
+    const dir=new THREE.Vector3();
+    if(this.keys['KeyW']||this.keys['ArrowUp'])   dir.add(fwd);
+    if(this.keys['KeyS']||this.keys['ArrowDown']) dir.sub(fwd);
+    if(this.keys['KeyD']||this.keys['ArrowRight'])dir.add(rgt);
+    if(this.keys['KeyA']||this.keys['ArrowLeft']) dir.sub(rgt);
+
+    const sprinting=(this.keys['ShiftLeft']||this.keys['ShiftRight'])&&this.hunger>0;
+    const speedMult=Cheats.superSpeed?3.0:1.0;
+    const spd=cd.spd*(sprinting?1.65:1)*speedMult;
+
+    if(dir.lengthSq()>.001){
+      dir.normalize();
+      this.vel.x+=(dir.x*spd-this.vel.x)*Math.min(1,dt*15);
+      this.vel.z+=(dir.z*spd-this.vel.z)*Math.min(1,dt*15);
+    }else{
+      const dec=this.onGnd?Math.pow(.01,dt):Math.pow(.3,dt);
+      this.vel.x*=dec;this.vel.z*=dec;
+      if(Math.abs(this.vel.x)<.01)this.vel.x=0;if(Math.abs(this.vel.z)<.01)this.vel.z=0;
+    }
+
+    // Gravity: 18 base gives a natural jump arc without floatiness.
+    // Fall multiplier kicks in after apex so landing feels snappy and grounded.
+    const gravity = Cheats.lowGravity ? 6 : 18;
+    const fallMult = (!Cheats.lowGravity && this.vel.y < 0) ? 1.6 : 1.0;
+    this.vel.y -= gravity * fallMult * dt;
+
+    // ── JUMP PROCESSING ──
+    // Coyote time: allow jump for a brief window after walking off an edge
+    if(this.onGnd) this._coyoteT = 0.12;
+    else           this._coyoteT = Math.max(0, (this._coyoteT||0) - dt);
+    // Jump buffer timer — count down regardless of ground state
+    if(this._jumpBufferT > 0) this._jumpBufferT -= dt;
+    else this._jumpBuffered = false;
+    // Fire the jump if buffer active AND (on ground OR coyote window open)
+    const canJump = this.onGnd || this._coyoteT > 0;
+    if(this._jumpBuffered && canJump){
+      // Full jmp stat used directly — no hidden multiplier cutting height
+      this.vel.y = Cheats.lowGravity ? this.charDef.jmp * 1.4 : this.charDef.jmp;
+      this.onGnd = false;
+      this._coyoteT = 0;     // consume coyote window
+      this._jumpBuffered = false;
+      this._jumpBufferT = 0;
+      SFX.jump();
+    }
+
+    const moving=dir.lengthSq()>.001&&this.onGnd;
+    if(moving){this._stepT-=dt;if(this._stepT<=0){SFX.step();this._stepT=sprinting?.25:.37;}}
+    if(this.doBob&&moving&&this.onGnd){this.bobT+=dt*(sprinting?10:6.5);this.bobAmt+=(.048-this.bobAmt)*dt*9;}
+    else{this.bobAmt*=Math.pow(.04,dt);}
+
+    if(this.doHunger&&sprinting&&moving){this._hungerT+=dt;if(this._hungerT>.45){this.hunger=Math.max(0,this.hunger-.5);this._hungerT=0;buildHunger();}}
+    if(this.doHunger&&this.hunger<=1&&this.hp>1){this.hp=Math.max(1,this.hp-dt*.4);buildHP();}
+
+    const regenRate=cd.regen?2.5:5;
+    if(this.hunger>15&&this.hp<this.maxHp){this._regen+=dt;if(this._regen>regenRate){this.hp=Math.min(this.maxHp,this.hp+1);this._regen=0;buildHP();healFX();}}
+
+    const moved=this.pos.distanceTo(this._lastPos);this.stats.metersTraveled+=moved;this._lastPos.copy(this.pos);
+
+    this._moveAndCollide(dt);
+
+    this.cam.rotation.y=this.yaw;this.cam.rotation.x=this.pitch;
+    this.cam.position.x=this.pos.x;this.cam.position.z=this.pos.z;
+    this.cam.position.y=this.pos.y+1.72+Math.sin(this.bobT)*this.bobAmt*.5;
+  },
+
+  /* ── COLLISION (12-point AABB, axis-separated) ── */
+  _moveAndCollide(dt){
+    const p=this.pos,v=this.vel;const H=.40,TOP=1.72;
+    this.prevGnd=this.onGnd;
+
+    // ── X axis ──
+    p.x+=v.x*dt;
+    if(this._blocked(p.x,p.y,p.z,H,TOP)){p.x-=v.x*dt;v.x=0;}
+
+    // ── Z axis ──
+    p.z+=v.z*dt;
+    if(this._blocked(p.x,p.y,p.z,H,TOP)){p.z-=v.z*dt;v.z=0;}
+
+    // ── Y axis (vertical — most important for jump feel) ──
+    p.y+=v.y*dt;
+    this.onGnd=false;
+    if(this._blocked(p.x,p.y,p.z,H,TOP)){
+      if(v.y<=0){
+        // Landing: only when moving downward (or stationary — covers edge-case resting)
+        this.onGnd=true;
+        if(!this.prevGnd){
+          // True landing event
+          SFX.land();
+          const fallSpeed=Math.abs(v.y);
+          if(fallSpeed>12) this.takeDmg(Math.floor((fallSpeed-12)*.32),'fall');
+        }
+      }
+      // Revert y movement and zero vertical velocity
+      p.y-=v.y*dt;
+      v.y=0;
+    }
+
+    // Hard floor safety net
+    if(p.y<1.2){p.y=1.2;v.y=0;this.onGnd=true;}
+
+    // World boundary clamp (X/Z only)
+    // ChunkWorld is infinite — no X/Z boundary clamp needed
+  },
+  _blocked(x,y,z,h,top){
+    const W=this.world;
+    if(W.solid(x-h,y-.05,z-h)||W.solid(x+h,y-.05,z-h)||W.solid(x-h,y-.05,z+h)||W.solid(x+h,y-.05,z+h))return true;
+    const ym=y+top*.45;
+    if(W.solid(x-h,ym,z-h)||W.solid(x+h,ym,z-h)||W.solid(x-h,ym,z+h)||W.solid(x+h,ym,z+h))return true;
+    if(W.solid(x-h,y+top,z-h)||W.solid(x+h,y+top,z-h)||W.solid(x-h,y+top,z+h)||W.solid(x+h,y+top,z+h))return true;
+    return false;
+  },
+
+  /* ── BLOCK BREAKING ── */
+  updateBreaking(dt){
+    const bw=document.getElementById('brk-wrap');
+    if(!this.brk||this.gun.active){bw.style.display='none';return;}
+    const r=raycastWorld(this.cam,this.world);
+    if(!r.hit||r.bx!==this.brk.bx||r.by!==this.brk.by||r.bz!==this.brk.bz){this.brk=null;bw.style.display='none';return;}
+    this.brk.prog+=dt;
+    const pct=Math.min(100,(this.brk.prog/this.brk.total)*100);
+    bw.style.display='block';document.getElementById('brk-bar').style.width=pct+'%';
+    if(this.brk.prog>=this.brk.total){
+      const{bx,by,bz}=this.brk;const type=this.world.get(bx,by,bz);
+      const bd=BD[type]||{};const drops=bd.drops||type;
+      this.world.removeBlock(bx,by,bz);this.parts.burst(bx,by,bz,bd.col||0xffffff);
+      this.inv.add(drops,1);SFX.mine();this.inv.damageTool();
+      buildHotbar();buildInv();this.stats.blocksMined++;this.quests?.progress('mine');this.gainXP(bd.xp||2);
+      if(type===B.COAL)this.quests?.progress('mine_coal');
+      if(type===B.IRON)this.quests?.progress('mine_iron');
+      if(type===B.DIAMOND){notify('💎 Diamond! Extremely rare!','x');this.gainXP(50);}
+      else if(type===B.EMERALD){notify('💚 Emerald ore!','x');this.gainXP(25);}
+      else if(type===B.OBSIDIAN){notify('🌑 Obsidian! Very hard material!','p');}
+      this.brk=null;bw.style.display='none';
+    }
+  },
+
+  /* ── ENEMY UPDATE & COMBAT ── */
+  updateEnemies(dt){
+    const alive=[];
+    this.enemies.forEach(e=>{
+      if(e._rm)return;
+      e.update(dt,this.pos,this.world);
+      // Enemy attacks player
+      if(!e.dead&&e.atkCD<=0){
+        const d=e.mesh.position.distanceTo(this.pos);
+        if(d<1.1+e.t.sz*.55){
+          let dmg=e.t.dmg;
+          if(this.charDef.armor)dmg=Math.max(1,Math.floor(dmg*(1-this.charDef.armor)));
+          if(this.blocking)dmg=Math.max(0,Math.floor(dmg*.5));
+          this.takeDmg(dmg,'enemy');e.atkCD=1.5;
+        }
+      }
+      // Player melee attack Q
+      if(!e.dead&&this.keys['KeyQ']&&!this.gun.active){
+        const d=e.mesh.position.distanceTo(this.pos);
+        if(d<3.0){
+          this.keys['KeyQ']=false;
+          const sel=this.inv.sel_();let dmg=Math.floor(this.charDef.str*.55+2);
+          if(sel&&sel.tool&&TOOLS[sel.tool]?.dmg)dmg+=TOOLS[sel.tool].dmg;
+          const critChance=this.charDef.crit||.05;const isCrit=Math.random()<critChance;
+          if(isCrit){dmg=Math.floor(dmg*2.2);SFX.crit();}
+          e.takeDamage(dmg,this.sc);this.parts.hit(e.mesh.position.clone().add(new THREE.Vector3(0,.5,0)),0xff4400);
+          const sv=e.mesh.position.clone().project(this.cam);
+          spawnDmgNum((sv.x+1)/2*innerWidth,(1-sv.y)/2*innerHeight-30,isCrit,dmg);
+          document.getElementById('xh').classList.add('hit');setTimeout(()=>document.getElementById('xh').classList.remove('hit'),200);
+          const kb=e.mesh.position.clone().sub(this.pos).normalize();
+          e.vel.addScaledVector(kb,11);e.vel.y=4.8;
+          this.inv.damageTool();buildHotbar();if(this.doShake)this.shake.add(.2);
+        }
+      }
+      // Cleanup dead enemies
+      if(e.dead&&!e._rm){
+        e.remove(this.sc);e._rm=true;this.score+=e.t.pts;this.kills++;this.stats.enemiesKilled++;
+        this.gainXP(e.t.xp);notify(`${e.t.name} defeated! +${e.t.pts}pts +${e.t.xp}xp`,'g');
+        this.quests?.progress('kill');if(e.t.id==='tank')this.quests?.progress('kill_tank');
+        if(Math.random()<.25){this.inv.add('food_meat',1);buildHotbar();notify('🥩 Dropped meat!');}
+      }else if(!e._rm)alive.push(e);
+    });
+    this.enemies=alive;
+  },
+
+  /* ── DAY / NIGHT ── */
+  updateDayNight(dt){
+    if(Cheats.eternalNight){this.dayT=18;}
+    else{
+      const prev=this.dayT;this.dayT=(this.dayT+dt*.30)%24;
+      if(prev>22&&this.dayT<2){this.dayN++;this.stats.daysAlive++;SFX.day();notify(`☀️ Day ${this.dayN} begins!`);}
+      if(prev<17&&this.dayT>=17){SFX.night();notify('🌙 Night — enemies grow stronger!','r');}
+    }
+    const t=this.dayT/24,dayness=Math.max(0,Math.sin(t*Math.PI*2-Math.PI*.5)*.5+.5),night=1-dayness;
+    const skyd=new THREE.Color(0x87ceeb),skys=new THREE.Color(0xff7030),skyn=new THREE.Color(0x040b18);
+    let sky=new THREE.Color();
+    if(t>.29&&t<.38)sky.lerpColors(skyd,skys,(t-.29)/.09);
+    else if(t>.38&&t<.48)sky.lerpColors(skys,skyn,(t-.38)/.1);
+    else if(t>.70&&t<.76)sky.lerpColors(skyn,skys,(t-.70)/.06);
+    else if(t>.76&&t<.88)sky.lerpColors(skys,skyd,(t-.76)/.12);
+    else if(dayness>.5)sky.copy(skyd);else sky.copy(skyn);
+    this.sc.background=sky;this.sc.fog.color.copy(sky);
+    const ang=t*Math.PI*2;
+    this.sun.position.set(Math.cos(ang)*58,Math.sin(ang)*58,30);
+    this.sun.intensity=dayness*1.35;this.ambient.intensity=.1+dayness*.55;
+    this.moon.position.set(-Math.cos(ang)*58,-Math.sin(ang)*58,30);this.moon.intensity=night*.42;
+    this._spawnT-=dt*(night>.65?1.8:.5);
+    if(this._spawnT<=0){this.spawnEnemy();this._spawnT=7+Math.random()*7;}
+    const phases=['Midnight','Late Night','Before Dawn','Dawn','Early Morning','Morning',
+                  'Noon','Afternoon','Late Afternoon','Evening','Dusk','Twilight'];
+    const pi=Math.floor((this.dayT/24)*phases.length)%phases.length;
+    document.getElementById('ir-day').textContent=`${night>.65?'🌙':'☀️'} Day ${this.dayN}`;
+    document.getElementById('ir-time').textContent=phases[pi];
+    document.getElementById('ir-score').textContent=`🏆 ${this.score} pts`;
+    document.getElementById('ir-kills').textContent=`💀 ${this.kills} kills`;
+  },
+
+  /* ── TAKE DAMAGE ── */
+  takeDmg(amt,src){
+    if(this.invincible||this.invincible_cheat||amt<=0)return;
+    this.hp=Math.max(0,this.hp-amt);SFX.hurt();buildHP();
+    const d=document.getElementById('dmgfx');d.style.opacity='1';setTimeout(()=>d.style.opacity='0',350);
+    if(this.doShake)this.shake.add(.35);
+    document.querySelectorAll('.hrt').forEach(h=>{h.classList.add('pulse');setTimeout(()=>h.classList.remove('pulse'),260);});
+    this.invincible=true;setTimeout(()=>this.invincible=false,1000);
+    if(this.hp<=0)this.die();
+  },
+
+  die(){
+    this.unlock();SFX.death();
+    document.getElementById('die-info').innerHTML=
+      `Score: <b>${this.score}</b> &nbsp;|&nbsp; Kills: <b>${this.kills}</b><br>` +
+      `Days: <b>${this.dayN}</b> &nbsp;|&nbsp; Level: <b>${this.level}</b><br>` +
+      `Blocks mined: <b>${this.stats.blocksMined}</b> &nbsp;|&nbsp; Shots: <b>${this.gun.totalShot}</b>`;
+    showScr('s-die');
+  },
+
+  respawn(){
+    document.getElementById('s-die').classList.add('off');
+    document.getElementById('hud').classList.remove('off');
+    this.hp=this.maxHp;this.hunger=18;
+    const sx = 8, sz = 8; // chunk (0,0) centre — ChunkWorld origin
+    const sy = this.world.surfY(sx, sz);
+    this.pos.set(sx + 0.5, sy + 2.8, sz + 0.5); this.vel.set(0, 0, 0);
+    this.enemies.forEach(e=>e.remove(this.sc));this.enemies=[];
+    this.invincible=true;setTimeout(()=>this.invincible=false,2500);
+    buildHP();buildHunger();buildHotbar();this.relock();
+    notify('Respawned! All enemies cleared.','g');
+  },
+
+  returnMenu(){
+    this.running=false;if(this.animId)cancelAnimationFrame(this.animId);
+    this.unlock();this.enemies.forEach(e=>e.remove(this.sc));this.enemies=[];
+    this.sc?.clear();document.getElementById('c').style.display='none';
+    document.getElementById('hud').classList.add('off');
+    ['s-pause','s-inv','s-craft','s-die','s-stats'].forEach(id=>document.getElementById(id)?.classList.add('off'));
+    this.invOpen=false;this.craftOpen=false;this.statsOpen=false;
+    if(this.ren){this.ren.dispose();this.ren=null;}
+    document.getElementById('cheat-bar').style.display='none';
+    document.getElementById('invinc-fx').classList.remove('on');
+    showScr('s-main');
+    document.getElementById('btn-load').style.opacity=Save.exists()?'1':'.45';
+  },
+
+  /* ── HUD ── */
+  updateHUD(){
+    const p=this.pos;
+    document.getElementById('il-char').textContent=`${this.charDef.e} ${this.charDef.name}`;
+    document.getElementById('il-pos').textContent=`📍 ${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}`;
+    document.getElementById('il-lvl').textContent=`⭐ Level ${this.level}`;
+    document.getElementById('il-foes').textContent=`👾 ${this.enemies.length} enemies`;
+    const r=raycastWorld(this.cam,this.world);const tt=document.getElementById('blk-tip');
+    if(r.hit&&BD[r.type]&&!this.gun.active){this.hl.visible=true;this.hl.position.set(r.bx+.5,r.by+.5,r.bz+.5);tt.textContent=BD[r.type].n;tt.style.opacity='1';}
+    else{this.hl.visible=false;tt.style.opacity='0';}
+    const sel=this.inv.sel_();const tw=document.getElementById('tool-wrap');
+    if(sel&&sel.tool&&sel.tool!=='GUN'){
+      const td=TOOLS[sel.tool];tw.style.display='block';
+      document.getElementById('tool-lbl').textContent=`${td.name} (${sel.dur}/${td.dur})`;
+      const pct=(sel.dur/td.dur)*100;
+      document.getElementById('tool-fill').style.width=pct+'%';
+      document.getElementById('tool-fill').style.background=pct>50?'#f0c040':pct>20?'#ff8020':'#ff2020';
+    }else tw.style.display='none';
+    this.gun.update(0);// just to refresh ammo HUD timer
+    updateAmmoHUD(this.gun);
+  },
+
+  /* ── MAIN LOOP ── */
+  loop(){
+    if(!this.running)return;
+    this.animId=requestAnimationFrame(()=>this.loop());
+    const dt=Math.min(this.clock.getDelta(),.05);
+    if(!this.paused&&!this.invOpen&&!this.craftOpen&&!this.statsOpen){
+      this.updatePlayer(dt);this.updateBreaking(dt);
+      this.updateEnemies(dt);this.updateDayNight(dt);
+      this.parts.update(dt);this.shake.update(dt,this.cam);
+      this.gun.update(dt);this.updateHUD();
+      // Stream in new chunks around the player every frame.
+      // Normal budget = 4; pass undefined to use the default.
+      this.world.updateChunks(this.pos.x, this.pos.z);
+      this._mmT-=dt;if(this._mmT<=0){drawMinimap(this.world,this.pos,this.enemies);this._mmT=.25;}
+      this._autosaveT-=dt;if(this._autosaveT<=0){this._autosaveT=300;Save.save(this);}
+    }
+    this.ren.render(this.sc,this.cam);
+  },
+
+  readSettings(){
+    this.sens=parseInt(document.getElementById('set-sens').value)*.00038;
+    this.fov=parseInt(document.getElementById('set-fov').value);
+    this.doBob=document.getElementById('set-bob').classList.contains('on');
+    SFX.enabled=document.getElementById('set-snd').classList.contains('on');
+    this.doHunger=document.getElementById('set-hng').classList.contains('on');
+    this.doShake=document.getElementById('set-shake').classList.contains('on');
+    this.difficulty=document.getElementById('set-diff').value;
+  },
+
+  async start(saved=null){
+    this.readSettings();showScr('s-load');
+    const setLD=(p,m)=>{document.getElementById('ld-fill').style.width=p+'%';document.getElementById('ld-msg').textContent=m;};
+    document.getElementById('ld-tip').textContent='💡 '+TIPS[Math.floor(Math.random()*TIPS.length)];
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    setLD(8,'Creating renderer…');await wait(55);this.initThree();
+    setLD(22,'Generating terrain…');await wait(80);this.initWorld(saved);
+    setLD(50,'Carving caves & ores…');await wait(80);
+    setLD(70,'Growing trees…');await wait(60);
+    setLD(80,'Spawning player…');await wait(40);
+    if(saved)this.charKey=saved.charKey;this.spawnPlayer(saved);
+    setLD(90,'Awakening enemies…');await wait(40);
+    const sc=saved?3:4;for(let i=0;i<sc;i++)this.spawnEnemy();
+    setLD(100,'Ready!');await wait(350);
+    document.getElementById('s-load').classList.add('off');
+    document.getElementById('hud').classList.remove('off');
+    document.getElementById('c').style.display='block';
+    buildHP();buildHunger();buildHotbar();buildInv();buildXPBar();
+    updateQuestHUD();
+    // Re-apply any active cheats
+    if(Cheats.active.size>0){
+      document.getElementById('cheat-bar').style.display='block';
+      document.getElementById('cheat-bar').textContent='⚡ CHEATS: '+[...Cheats.active].map(c=>CODES[c]?.name||c).join(' · ');
+    }
+    this.bindEvents();this.running=true;
+    // Catch-up: build ALL chunks in the load radius synchronously before
+    // the first rendered frame. Prevents the 1-2 second void flash on spawn.
+    this.world.updateChunks(this.pos.x, this.pos.z, 9999);
+    this.loop();
+    setTimeout(()=>this.ren.domElement.requestPointerLock(),200);
+    if(saved)notify(`Welcome back, ${this.charDef.name}!`,'g');
+    else{notify(`Welcome, ${this.charDef.name}! Hold LMB to mine.`);notify('G=Gun · Q=Attack · C=Craft · F5=Save');}
+  },
+};
+
+/* ═══════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════ */
+window.addEventListener('load',()=>{
+  buildCharGrid();
+  setTimeout(()=>{
+    document.getElementById('s-load').classList.add('off');
+    showScr('s-main');
+    document.getElementById('btn-load').style.opacity=Save.exists()?'1':'.45';
+    initMenuParticles();
+  },850);
+
+  /* ── Button wiring ── */
+  document.getElementById('btn-play').addEventListener('click',()=>{buildCharGrid();showScr('s-char');});
+  document.getElementById('btn-load').addEventListener('click',()=>{
+    const d=Save.load();if(d){G.charKey=d.charKey||'blue';G.start(d);}
+    else notify('No save found — start a new game!','r');
+  });
+  document.getElementById('btn-char').addEventListener('click',()=>{buildCharGrid();showScr('s-char');});
+  document.getElementById('btn-set').addEventListener('click',()=>showScr('s-set'));
+  document.getElementById('btn-codes').addEventListener('click',()=>{updateActiveCodeList();showScr('s-codes');});
+  document.getElementById('btn-stats-menu').addEventListener('click',()=>{buildStats();showScr('s-stats');});
+  document.getElementById('btn-start').addEventListener('click',()=>G.start());
+  document.getElementById('btn-resume').addEventListener('click',()=>G.resume_());
+  document.getElementById('btn-save-p').addEventListener('click',()=>G.saveGame());
+  document.getElementById('btn-set-p').addEventListener('click',()=>showScr('s-set'));
+  document.getElementById('btn-codes-p').addEventListener('click',()=>{updateActiveCodeList();showScr('s-codes');});
+  document.getElementById('btn-qmenu').addEventListener('click',()=>G.returnMenu());
+  document.getElementById('btn-resp').addEventListener('click',()=>G.respawn());
+  document.getElementById('btn-dmenu').addEventListener('click',()=>G.returnMenu());
+  document.getElementById('btn-stats-close').addEventListener('click',()=>closeStats());
+
+  /* ── Live settings ── */
+  document.getElementById('set-sens').addEventListener('input',function(){
+    document.getElementById('sv-sens').textContent=this.value;
+    if(G.running)G.sens=parseInt(this.value)*.00038;
+  });
+  document.getElementById('set-fov').addEventListener('input',function(){
+    document.getElementById('sv-fov').textContent=this.value;
+    if(G.cam){G.cam.fov=parseInt(this.value);G.cam.updateProjectionMatrix();}
+  });
+
+  /* ── Secret codes input ── */
+  document.getElementById('code-input').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){applyCode(e.target.value);}
+    // Clear feedback on typing
+    if(e.key!=='Enter')document.getElementById('code-feedback').textContent='';
+  });
+  // Also try on each keyup in case they paste
+  document.getElementById('code-input').addEventListener('input',()=>{
+    document.getElementById('code-feedback').textContent='';
+  });
+
+  /* ── Global keys ── */
+  document.addEventListener('keydown',e=>{
+    if(e.code==='KeyT'&&G.running&&!G.paused&&!G.invOpen&&!G.craftOpen)openStats();
+    if(e.code==='Escape'&&G.statsOpen)closeStats();
+  });
+});
+</script>
+</body>
+</html>
