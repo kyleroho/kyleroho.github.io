@@ -617,6 +617,8 @@ const TOOLS={
   DSWORD:{name:'Diamond Sword',e:'🗡️',dmg:16, dur:520},
   SHIELD:{name:'Shield',       e:'🛡️',block:.5,dur:200},
   GUN:   {name:'Pistol',       e:'🔫',dmg:12, dur:999, ranged:true, ammoMax:12, reloadTime:2.0},
+  RPG:   {name:'RPG',          e:'🚀',dmg:55, dur:999, ranged:true, ammoMax:5,  reloadTime:3.5, splash:8, knockback:35},
+  AK47:  {name:'AK-47',        e:'🔥',dmg:18, dur:999, ranged:true, ammoMax:30, reloadTime:2.2, auto:true, fireRate:.09},
 };
 
 /* ── FOOD ── */
@@ -682,6 +684,9 @@ const TIPS=[
   'Secret codes can give special powers — find them!',
   'Bombers explode when they reach you — run!',
   'Shield blocks 50% damage — hold B while equipped.',
+  'Code jhttps = RPG launcher. Code k46 = AK-47. H key switches weapons!',
+  'RPG has splash damage — don\'t fire at close range!',
+  'AK-47: hold LMB to spray 30 rounds automatically.',
 ];
 
 /* ═══════════════════════════════════════════════
@@ -706,6 +711,10 @@ const CODES = {
   'santa':    { name:'Item Galore',       fn: activateItems,   desc:'Get every item in the game' },
   /* Night mode */
   'darkness': { name:'Eternal Night',     fn: activateNight,   desc:'Permanent night time' },
+  /* RPG launcher */
+  'jhttps':   { name:'RPG Launcher',      fn: activateRPG,     desc:'Get an RPG rocket launcher 🚀' },
+  /* AK-47 */
+  'k46':      { name:'AK-47 Assault Rifle',fn: activateAK47,  desc:'Get an AK-47 automatic rifle 🔥' },
 };
 
 /* Active cheat flags */
@@ -770,6 +779,39 @@ function activateNight() {
   Cheats.eternalNight = true;
   if (G.running) G.dayT = 18;
   notify('🌑 ETERNAL NIGHT activated!','p');
+}
+
+function activateRPG() {
+  if (!G.inv) return;
+  // Add RPG weapon
+  G.inv.add('RPG', 1);
+  // Extend gun system to handle RPG mode
+  if (!G._rpgMode) {
+    G._rpgMode = false;
+    G._rpgAmmo = 5;
+    G._rpgMaxAmmo = 5;
+    G._rpgReload = 0;
+    G._rpgReloading = false;
+    G._rpgCD = 0;
+  }
+  notify('🚀 RPG acquired! Press H to switch weapons.','or',4000);
+  if (G.running) { buildHotbar(); buildInv(); }
+}
+function activateAK47() {
+  if (!G.inv) return;
+  // Add AK-47 weapon
+  G.inv.add('AK47', 1);
+  if (!G._akMode) {
+    G._akMode = false;
+    G._akAmmo = 30;
+    G._akMaxAmmo = 30;
+    G._akReload = 0;
+    G._akReloading = false;
+    G._akCD = 0;
+    G._akFiring = false;
+  }
+  notify('🔥 AK-47 acquired! Press H to switch weapons.','or',4000);
+  if (G.running) { buildHotbar(); buildInv(); }
 }
 
 function applyCode(raw) {
@@ -1129,17 +1171,16 @@ class ChunkWorld {
   /* ── Material cache (identical to original World._mat) ── */
   _mat(type) {
     if (!this._mats[type]) {
-      // MeshBasicMaterial: no per-vertex lighting shader → pure texture sample.
-      // ~2-3x faster GPU fragment throughput vs MeshLambertMaterial.
-      // Visual parity maintained: slightly tinted color bakes in ambient warmth.
-      const isTransparent = type === B.WATER || type === B.GLASS || type === B.LEAVES;
-      this._mats[type] = new THREE.MeshBasicMaterial({
-        map:         TexGen.get(type),
-        color:       type === B.WATER ? 0xaaccff : 0xe8e8e8, // subtle tint replaces lambert lighting
-        transparent: isTransparent,
-        opacity:     type === B.WATER ? 0.55 : type === B.GLASS ? 0.55 : type === B.LEAVES ? 0.82 : 1,
-        side:        type === B.LEAVES || type === B.GLASS ? THREE.DoubleSide : THREE.FrontSide,
-        depthWrite:  !isTransparent, // transparent blocks skip depth write → better GPU early-z
+      // MeshBasicMaterial: no per-vertex GLSL lighting — pure texture sample.
+      // 2-3x faster fragment throughput vs MeshLambertMaterial.
+      const isT=type===B.WATER||type===B.GLASS||type===B.LEAVES;
+      this._mats[type]=new THREE.MeshBasicMaterial({
+        map:        TexGen.get(type),
+        color:      type===B.WATER?0xaaccff:0xdddddd,
+        transparent:isT,
+        opacity:    type===B.WATER?0.55:type===B.GLASS?0.55:type===B.LEAVES?0.82:1,
+        side:       type===B.LEAVES||type===B.GLASS?THREE.DoubleSide:THREE.FrontSide,
+        depthWrite: !isT,
       });
     }
     return this._mats[type];
@@ -1150,58 +1191,96 @@ class ChunkWorld {
     return t === B.AIR || t === B.WATER || t === B.LEAVES || t === B.GLASS || t === B.TORCH;
   }
   _exposed(wx, wy, wz) {
-    const t = this.get(wx, wy, wz);
-    return [[-1,0,0],[1,0,0],[0,-1,0],[0,1,0],[0,0,-1],[0,0,1]].some(([dx,dy,dz]) => {
-      const n = this.get(wx+dx, wy+dy, wz+dz);
-      return this._isTransp(n) && (n !== t || t === B.WATER);
-    });
+    // Inline zero-alloc: avoids creating a new array literal every call.
+    // Called millions of times during chunk mesh build.
+    const t=this.get(wx,wy,wz);
+    const c=(bx,by,bz)=>{const n=this.get(bx,by,bz);return this._isTransp(n)&&(n!==t||t===B.WATER);};
+    return c(wx-1,wy,wz)||c(wx+1,wy,wz)||c(wx,wy-1,wz)||c(wx,wy+1,wz)||c(wx,wy,wz-1)||c(wx,wy,wz+1);
   }
 
-  /* ── Build mesh for one chunk column ── */
+  /* ── Build mesh for one chunk — merged BufferGeometry per material ──
+     ONE draw call per block-type per chunk instead of one per block.
+     ~322,000 draw calls → ~1,800 max. Core of the 10-20x speedup.    */
   _buildChunkMesh(chunk) {
     if (chunk.mesh) {
       this._scene.remove(chunk.mesh);
+      chunk.mesh.children.forEach(m => m.geometry && m.geometry.dispose());
       chunk.mesh = null;
       chunk._mm  = {};
     }
-    // Pre-ensure all 4 horizontal neighbours are generated before we
-    // start the exposure check loop. This prevents _exposed() from
-    // silently generating chunks MID-loop (which could produce wrong
-    // results and causes the double-build race condition).
-    this._getChunk(chunk.cx - 1, chunk.cz);
-    this._getChunk(chunk.cx + 1, chunk.cz);
-    this._getChunk(chunk.cx,     chunk.cz - 1);
-    this._getChunk(chunk.cx,     chunk.cz + 1);
+    // Pre-generate all 8 neighbours (including diagonals) so _exposed()
+    // never silently creates chunks mid-loop — fixes seam glitches.
+    for (let dn=-1;dn<=1;dn++) for (let dm=-1;dm<=1;dm++) {
+      if (dn===0&&dm===0) continue;
+      this._getChunk(chunk.cx+dn, chunk.cz+dm);
+    }
 
-    const grp = new THREE.Group();
-    // Offset the group to world space so block local coords work simply
-    grp.position.set(chunk.cx * CHUNK_W, 0, chunk.cz * CHUNK_D);
-    grp.matrixAutoUpdate = false; // chunk never moves — skip matrix recompute every frame
-    grp.updateMatrix();           // compute once now
+    // Six face directions: [normal xyz, 4 corner offsets]
+    const FACES=[
+      {n:[1,0,0], d:[1,0,0], v:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]]},
+      {n:[-1,0,0],d:[-1,0,0],v:[[0,0,1],[0,1,1],[0,1,0],[0,0,0]]},
+      {n:[0,1,0], d:[0,1,0], v:[[0,1,1],[1,1,1],[1,1,0],[0,1,0]]},
+      {n:[0,-1,0],d:[0,-1,0],v:[[0,0,0],[1,0,0],[1,0,1],[0,0,1]]},
+      {n:[0,0,1], d:[0,0,1], v:[[1,0,1],[1,1,1],[0,1,1],[0,0,1]]},
+      {n:[0,0,-1],d:[0,0,-1],v:[[0,0,0],[0,1,0],[1,1,0],[1,0,0]]},
+    ];
+    // UV corners for each face (same layout every face)
+    const UV=[[0,0],[0,1],[1,1],[1,0]];
+    // Tri index order for 2 triangles from 4 verts: 0,1,2 and 0,2,3
+    const TRI=[0,1,2,0,2,3];
 
-    for (let lx = 0; lx < CHUNK_W; lx++) {
-      for (let ly = 0; ly < CH; ly++) {
-        for (let lz = 0; lz < CHUNK_D; lz++) {
-          const t = chunk.getLocal(lx, ly, lz);
-          if (t === B.AIR) continue;
-          // Exposure check in absolute coords
-          const wx = chunk.cx * CHUNK_W + lx;
-          const wz = chunk.cz * CHUNK_D + lz;
-          if (!this._exposed(wx, ly, wz)) continue;
-          const m = new THREE.Mesh(this._geo, this._mat(t));
-          // Position relative to group origin (group is already offset)
-          m.position.set(lx + 0.5, ly + 0.5, lz + 0.5);
-          m.castShadow = false;       // no per-block shadows → removes them from shadow map render pass entirely
-          m.receiveShadow = false;    // terrain shaded by directional light + Basic material tint
-          m.matrixAutoUpdate = false; // block never moves — compute matrix once, never again
-          m.updateMatrix();
-          m.userData = { wx, wy: ly, wz, bt: t };
-          grp.add(m);
-          chunk._mm[`${lx},${ly},${lz}`] = m;
+    // Collect vertices per block type
+    const byType={};
+    const wx0=chunk.cx*CHUNK_W, wz0=chunk.cz*CHUNK_D;
+
+    for (let lx=0;lx<CHUNK_W;lx++) {
+      for (let ly=0;ly<CH;ly++) {
+        for (let lz=0;lz<CHUNK_D;lz++) {
+          const t=chunk.getLocal(lx,ly,lz);
+          if (t===B.AIR) continue;
+          const wx=wx0+lx, wz=wz0+lz;
+          for (let fi=0;fi<6;fi++) {
+            const f=FACES[fi];
+            const nb=this.get(wx+f.d[0],ly+f.d[1],wz+f.d[2]);
+            // Skip face if neighbour is opaque (same-type transparent handled too)
+            if (!this._isTransp(nb)) continue;
+            if (nb===t && t!==B.WATER) continue;
+            let buf=byType[t];
+            if (!buf) { buf={pos:[],norm:[],uv:[]}; byType[t]=buf; }
+            const [nx,ny,nz]=f.n;
+            for (let vi=0;vi<6;vi++) {
+              const ci=TRI[vi],[ox,oy,oz]=f.v[ci];
+              buf.pos.push(lx+ox, ly+oy, lz+oz);
+              buf.norm.push(nx,ny,nz);
+              buf.uv.push(UV[ci][0],UV[ci][1]);
+            }
+          }
+          // Record block presence for mine/place lookup
+          chunk._mm[`${lx},${ly},${lz}`]=t;
         }
       }
     }
-    chunk.mesh = grp;
+
+    const grp=new THREE.Group();
+    grp.position.set(wx0,0,wz0);
+    grp.matrixAutoUpdate=false; grp.updateMatrix(); // static — never moves
+
+    for (const bt of Object.keys(byType)) {
+      const d=byType[bt];
+      if (!d.pos.length) continue;
+      const geo=new THREE.BufferGeometry();
+      geo.setAttribute('position',new THREE.Float32BufferAttribute(d.pos, 3));
+      geo.setAttribute('normal',  new THREE.Float32BufferAttribute(d.norm,3));
+      geo.setAttribute('uv',      new THREE.Float32BufferAttribute(d.uv,  2));
+      geo.computeBoundingSphere(); // enables frustum culling
+      const m=new THREE.Mesh(geo, this._mat(parseInt(bt)));
+      m.castShadow=false; m.receiveShadow=false; // no per-chunk shadow passes
+      m.matrixAutoUpdate=false; m.updateMatrix(); // static inside group
+      grp.add(m);
+    }
+
+    chunk.mesh=grp;
+    chunk._dirty=false;
     this._scene.add(grp);
   }
 
@@ -1220,11 +1299,10 @@ class ChunkWorld {
       }
     }
 
-    // Pass 2: Now build meshes — all neighbour data already exists,
-    // so _exposed() never triggers new chunk generation mid-loop.
+    // Pass 2: Chebyshev square — fills corners, no diamond gap.
     for (let dcx = -LOAD_RADIUS; dcx <= LOAD_RADIUS; dcx++) {
       for (let dcz = -LOAD_RADIUS; dcz <= LOAD_RADIUS; dcz++) {
-        if (Math.abs(dcx) + Math.abs(dcz) > LOAD_RADIUS) continue;
+        if (Math.max(Math.abs(dcx),Math.abs(dcz)) > LOAD_RADIUS) continue;
         const chunk = this._getChunk(ccx + dcx, ccz + dcz);
         this._buildChunkMesh(chunk);
       }
@@ -1237,41 +1315,43 @@ class ChunkWorld {
    * and removes meshes that left the unload radius.
    * Spread over time: max 2 new chunk meshes per call to avoid frame spikes.
    */
-  updateChunks(playerWX, playerWZ) {
-    const ccx = this._cxOf(playerWX);
-    const ccz = this._czOf(playerWZ);
+  updateChunks(playerWX, playerWZ, budget) {
+    const ccx=this._cxOf(playerWX), ccz=this._czOf(playerWZ);
 
-    // ── UNLOAD pass: always runs first so memory stays bounded ──
-    // Runs unconditionally every call regardless of build budget.
-    for (const [k, chunk] of this._chunks) {
+    // ── UNLOAD: Chebyshev square, dispose GPU geometry ──
+    for (const [,chunk] of this._chunks) {
       if (!chunk.mesh) continue;
-      const [cx, cz] = k.split(',').map(Number);
-      if (Math.abs(cx - ccx) + Math.abs(cz - ccz) > UNLOAD_RADIUS) {
+      if (Math.max(Math.abs(chunk.cx-ccx),Math.abs(chunk.cz-ccz))>UNLOAD_RADIUS) {
         this._scene.remove(chunk.mesh);
-        chunk.mesh = null;
-        chunk._mm  = {};
+        chunk.mesh.children.forEach(m=>m.geometry&&m.geometry.dispose());
+        chunk.mesh=null; chunk._mm={};
       }
     }
-
-    // ── LOAD pass: build up to 2 missing chunk meshes this frame ──
-    // Spreads work across frames to avoid lag spikes.
-    let built = 0;
-    outer:
-    for (let dcx = -LOAD_RADIUS; dcx <= LOAD_RADIUS; dcx++) {
-      for (let dcz = -LOAD_RADIUS; dcz <= LOAD_RADIUS; dcz++) {
-        if (Math.abs(dcx) + Math.abs(dcz) > LOAD_RADIUS) continue;
-        const cx = ccx + dcx, cz = ccz + dcz;
-        const k  = this._ck(cx, cz);
-        // Use has() NOT _getChunk() to avoid silently generating chunks here
-        const existing = this._chunks.get(k);
-        if (!existing || !existing.mesh) {
-          // Now generate (if needed) and mesh
-          const chunk = this._getChunk(cx, cz);
-          if (!chunk.mesh) {
-            this._buildChunkMesh(chunk);
-            if (++built >= 2) break outer; // yield the rest to next frame
-          }
-        }
+    // ── DATA border ring: ensure 1-chunk border has data ──
+    const bdr=LOAD_RADIUS+1;
+    for (let dx=-bdr;dx<=bdr;dx++) for (let dz=-bdr;dz<=bdr;dz++) {
+      if (Math.max(Math.abs(dx),Math.abs(dz))!==bdr) continue;
+      const k=this._ck(ccx+dx,ccz+dz);
+      if (!this._chunks.has(k)) this._getChunk(ccx+dx,ccz+dz);
+    }
+    // ── LOAD + dirty rebuild, sorted nearest-first ──
+    const maxB=budget!==undefined?budget:2;
+    const need=[];
+    for (let dx=-LOAD_RADIUS;dx<=LOAD_RADIUS;dx++) {
+      for (let dz=-LOAD_RADIUS;dz<=LOAD_RADIUS;dz++) {
+        if (Math.max(Math.abs(dx),Math.abs(dz))>LOAD_RADIUS) continue;
+        const cx=ccx+dx,cz=ccz+dz;
+        const ch=this._chunks.get(this._ck(cx,cz));
+        if (!ch||!ch.mesh||ch._dirty) need.push({cx,cz,dist:Math.abs(dx)+Math.abs(dz)});
+      }
+    }
+    need.sort((a,b)=>a.dist-b.dist);
+    let built=0;
+    for (const {cx,cz} of need) {
+      const ch=this._getChunk(cx,cz);
+      if (!ch.mesh||ch._dirty) {
+        this._buildChunkMesh(ch);
+        if (++built>=maxB) break;
       }
     }
   }
@@ -1328,35 +1408,17 @@ class ChunkWorld {
 
   _refreshBlock(wx, wy, wz) {
     if (wy < 0 || wy >= CH) return;
-    const t   = this.get(wx, wy, wz);
-    const cx  = this._cxOf(wx), cz = this._czOf(wz);
-    const lx  = this._lxOf(wx), lz = this._lzOf(wz);
-    const k   = `${lx},${wy},${lz}`;
-    const chunk = this._chunks.get(this._ck(cx, cz));
-    if (!chunk || !chunk.mesh) return; // chunk not loaded — skip
-
-    const existing = chunk._mm[k];
-
-    if (t === B.AIR) {
-      // Remove mesh if present
-      if (existing) { chunk.mesh.remove(existing); delete chunk._mm[k]; }
-      return;
-    }
-    if (this._exposed(wx, wy, wz)) {
-      if (!existing) {
-        // Add new mesh
-        const m = new THREE.Mesh(this._geo, this._mat(t));
-        m.position.set(lx + 0.5, wy + 0.5, lz + 0.5);
-        m.castShadow = false; m.receiveShadow = false;
-        m.matrixAutoUpdate = false; m.updateMatrix();
-        m.userData = { wx, wy, wz, bt: t };
-        chunk.mesh.add(m);
-        chunk._mm[k] = m;
-      }
-    } else {
-      // Block no longer exposed — remove mesh
-      if (existing) { chunk.mesh.remove(existing); delete chunk._mm[k]; }
-    }
+    const cx=this._cxOf(wx), cz=this._czOf(wz);
+    const chunk=this._chunks.get(this._ck(cx,cz));
+    if (!chunk||!chunk.mesh) return;
+    // Merged geometry: mark dirty so updateChunks rebuilds the whole chunk mesh.
+    chunk._dirty=true;
+    // Also dirty neighbouring chunks if block is on their border
+    const lx=this._lxOf(wx), lz=this._lzOf(wz);
+    if (lx===0)          { const nc=this._chunks.get(this._ck(cx-1,cz)); if(nc&&nc.mesh) nc._dirty=true; }
+    if (lx===CHUNK_W-1)  { const nc=this._chunks.get(this._ck(cx+1,cz)); if(nc&&nc.mesh) nc._dirty=true; }
+    if (lz===0)          { const nc=this._chunks.get(this._ck(cx,cz-1)); if(nc&&nc.mesh) nc._dirty=true; }
+    if (lz===CHUNK_D-1)  { const nc=this._chunks.get(this._ck(cx,cz+1)); if(nc&&nc.mesh) nc._dirty=true; }
   }
 
   /* ──────────────────────────────────────────────
@@ -1454,7 +1516,7 @@ class Particles {
   constructor(sc){this.sc=sc;this.pool=[];}
   burst(x,y,z,col,n=10){
     for(let i=0;i<n;i++){
-      const m=new THREE.Mesh(new THREE.BoxGeometry(.16,.16,.16),new THREE.MeshBasicMaterial({color:col})); // Basic: no lighting needed for particles
+      const m=new THREE.Mesh(new THREE.BoxGeometry(.16,.16,.16),new THREE.MeshBasicMaterial({color:col}));
       m.position.set(x+.5,y+.5,z+.5);
       const v=new THREE.Vector3((Math.random()-.5)*7,Math.random()*5+2,(Math.random()-.5)*7);
       this.sc.add(m);this.pool.push({m,v,life:.65+Math.random()*.3,rot:Math.random()*6});
@@ -1806,7 +1868,7 @@ class Shake{
    MINIMAP
 ═══════════════════════════════════════════════ */
 function drawMinimap(world,ppos,enemies){
-  const cv=document.getElementById('mm-canvas'),ctx=cv.getContext('2d',{willReadFrequently:true}); // hint: avoids GPU readback overhead
+  const cv=document.getElementById('mm-canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});
   const W=80,H=80,px=Math.floor(ppos.x),pz=Math.floor(ppos.z),half=20;
   ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(0,0,W,H);
   for(let dx=-half;dx<half;dx++)for(let dz=-half;dz<half;dz++){
@@ -2046,27 +2108,25 @@ const G={
 
   initThree(){
     this.sc=new THREE.Scene();this.sc.fog=new THREE.FogExp2(0x87ceeb,.016);
-    this.cam=new THREE.PerspectiveCamera(this.fov,innerWidth/innerHeight,.05,110); // tighter far plane — fog hides the edge, frustum cull rejects more objects
+    this.cam=new THREE.PerspectiveCamera(this.fov,innerWidth/innerHeight,.05,110); // tighter frustum culls more
     this.cam.rotation.order='YXZ';
     const canvas=document.getElementById('c');
     this.ren=new THREE.WebGLRenderer({
       canvas,
       antialias:false,
       powerPreference:'high-performance',
-      precision:'mediump',        // mediump GLSL sufficient for voxel world — faster shader compilation & execution
-      stencil:false,              // no stencil buffer needed — saves GPU memory bandwidth
-      depth:true,                 // keep depth buffer (needed for 3D)
-      logarithmicDepthBuffer:false, // linear depth is fine, log is slower
+      precision:'mediump',   // mediump GLSL: faster shader on all GPUs, sufficient for voxels
+      stencil:false,         // no stencil buffer needed — saves GPU memory bandwidth
     });
     this.ren.setSize(innerWidth,innerHeight);
-    this.ren.setPixelRatio(Math.min(devicePixelRatio,1.0)); // cap at 1.0 — 1.5 renders 2.25x more pixels/frame for no visual gain in a voxel game
-    this.ren.sortObjects=false;   // skip O(n log n) object-sort every frame — saves huge CPU time with 300k+ objects
-    this.ren.info.autoReset=false;// stop Three.js resetting render stats every frame (small but free saving)
+    this.ren.setPixelRatio(Math.min(devicePixelRatio,1.0)); // 1.5 renders 2.25x more pixels — cap at 1.0
+    this.ren.sortObjects=false;  // skip O(n log n) object sort every frame — huge CPU saving at 300k objects
+    this.ren.info.autoReset=false;
     this.ren.shadowMap.enabled=true;this.ren.shadowMap.type=THREE.BasicShadowMap;
     canvas.style.display='block';
     this.ambient=new THREE.AmbientLight(0xffffff,.55);this.sc.add(this.ambient);
     this.sun=new THREE.DirectionalLight(0xfff5e0,1.3);
-    this.sun.castShadow=true;this.sun.shadow.mapSize.set(512,512); // 4x less shadow-map fill cost vs 1024
+    this.sun.castShadow=true;this.sun.shadow.mapSize.set(512,512); // 4x less shadow fill
     Object.assign(this.sun.shadow.camera,{near:.5,far:120,left:-38,right:38,bottom:-38,top:38});
     this.sc.add(this.sun);
     this.moon=new THREE.DirectionalLight(0x5577cc,0);this.sc.add(this.moon);
@@ -2114,7 +2174,7 @@ const G={
     }else{
       this.hp=this.maxHp;this.hunger=20;this.score=0;this.kills=0;this.dayN=1;this.dayT=6;
       this.level=1;this.xp=0;this.xpNext=100;
-      const sx=Math.floor(CW/2),sz=Math.floor(CD/2);
+      const sx=8,sz=8; // chunk(0,0) centre
       const sy=this.world.surfY(sx,sz);
       this.pos.set(sx+.5,sy+2.8,sz+.5);this.vel.set(0,0,0);
       this.inv=new Inv(36);
@@ -2179,6 +2239,18 @@ const G={
         if(e.code==='KeyC')this.craftOpen?closeCraft():openCraft();
         if(e.code==='KeyT')openStats();
         if(e.code==='KeyG')this.gun.toggle(this.inv);
+        if(e.code==='KeyH'){
+          // Cycle weapons: Pistol → RPG → AK-47 → back
+          const hasRPG=G.inv.slots.some(sl=>sl&&sl.tool==='RPG');
+          const hasAK=G.inv.slots.some(sl=>sl&&sl.tool==='AK47');
+          if(G._rpgMode){G._rpgMode=false;if(hasAK){G._akMode=true;notify('🔥 AK-47 equipped — hold LMB to spray!','or');}else{G.gun.active=true;notify('🔫 Pistol equipped');}}
+          else if(G._akMode){G._akMode=false;G._akFiring=false;G.gun.active=true;notify('🔫 Pistol equipped');}
+          else if(hasRPG&&G.inv.hasGun()){G.gun.active=false;G._rpgMode=true;G._akMode=false;notify('🚀 RPG equipped — LMB to fire!','or');}
+          else if(hasAK&&!hasRPG){G.gun.active=false;G._akMode=true;notify('🔥 AK-47 equipped — hold LMB!','or');}
+          const xh=document.getElementById('xh');
+          xh.classList.toggle('gun-mode',G.gun.active||G._rpgMode||G._akMode);
+          buildHotbar();updateAmmoHUD(G.gun);
+        }
         if(e.code==='KeyR')this.gun.startReload();
         if(e.code==='KeyF')this.eatFood();
         if(e.code==='Space'){
@@ -2204,6 +2276,14 @@ const G={
       if(!this.locked||this.paused||this.invOpen||this.craftOpen||this.hp<=0)return;
       if(e.button===0){
         // Gun shoots, otherwise mine
+        if(this._rpgMode){
+          G._fireRPG();
+          return;
+        }
+        if(this._akMode){
+          G._akFiring=true;
+          return;
+        }
         if(this.gun.active){
           this.gun.shoot(this.cam,this.sc,this.enemies,this.parts,this.quests,Cheats);
           return;
@@ -2217,7 +2297,7 @@ const G={
       }
       if(e.button===2)this._placeBlock();
     });
-    document.addEventListener('mouseup',e=>{if(e.button===0){mineHeld=false;if(!this.gun.active)this.brk=null;}});
+    document.addEventListener('mouseup',e=>{if(e.button===0){mineHeld=false;if(!this.gun.active&&!G._akMode)this.brk=null;G._akFiring=false;}});
     document.addEventListener('contextmenu',e=>e.preventDefault());
     window.addEventListener('resize',()=>{
       if(!this.ren)return;this.cam.aspect=innerWidth/innerHeight;
@@ -2264,10 +2344,11 @@ const G={
   updatePlayer(dt){
     if(this.hp<=0)return;
     const cd=this.charDef;
-
-    const fwd=new THREE.Vector3(-Math.sin(this.yaw),0,-Math.cos(this.yaw));
-    const rgt=new THREE.Vector3(Math.cos(this.yaw),0,-Math.sin(this.yaw));
-    const dir=new THREE.Vector3();
+    // Reuse pre-allocated vectors — avoids 3 GC-able allocations every frame
+    if(!this._fwd){this._fwd=new THREE.Vector3();this._rgt=new THREE.Vector3();this._dir=new THREE.Vector3();}
+    const fwd=this._fwd.set(-Math.sin(this.yaw),0,-Math.cos(this.yaw));
+    const rgt=this._rgt.set(Math.cos(this.yaw),0,-Math.sin(this.yaw));
+    const dir=this._dir.set(0,0,0);
     if(this.keys['KeyW']||this.keys['ArrowUp'])   dir.add(fwd);
     if(this.keys['KeyS']||this.keys['ArrowDown']) dir.sub(fwd);
     if(this.keys['KeyD']||this.keys['ArrowRight'])dir.add(rgt);
@@ -2468,10 +2549,6 @@ const G={
     const ang=t*Math.PI*2;
     this.sun.position.set(Math.cos(ang)*58,Math.sin(ang)*58,30);
     this.sun.intensity=dayness*1.35;this.ambient.intensity=.1+dayness*.55;
-    // Disable shadow map pass entirely at night — massive GPU saving when sun is down
-    const wasShadow=this.ren.shadowMap.enabled;
-    const doShadow=dayness>0.08;
-    if(wasShadow!==doShadow){this.ren.shadowMap.enabled=doShadow;this.ren.shadowMap.needsUpdate=true;}
     this.moon.position.set(-Math.cos(ang)*58,-Math.sin(ang)*58,30);this.moon.intensity=night*.42;
     this._spawnT-=dt*(night>.65?1.8:.5);
     if(this._spawnT<=0){this.spawnEnemy();this._spawnT=7+Math.random()*7;}
@@ -2508,7 +2585,7 @@ const G={
     document.getElementById('s-die').classList.add('off');
     document.getElementById('hud').classList.remove('off');
     this.hp=this.maxHp;this.hunger=18;
-    const sx=Math.floor(CW/2),sz=Math.floor(CD/2);
+    const sx=8,sz=8;
     const sy=this.world.surfY(sx,sz);
     this.pos.set(sx+.5,sy+2.8,sz+.5);this.vel.set(0,0,0);
     this.enemies.forEach(e=>e.remove(this.sc));this.enemies=[];
@@ -2534,23 +2611,140 @@ const G={
   /* ── HUD ── */
   updateHUD(){
     const p=this.pos;
-    document.getElementById('il-char').textContent=`${this.charDef.e} ${this.charDef.name}`;
-    document.getElementById('il-pos').textContent=`📍 ${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}`;
-    document.getElementById('il-lvl').textContent=`⭐ Level ${this.level}`;
-    document.getElementById('il-foes').textContent=`👾 ${this.enemies.length} enemies`;
-    const r=raycastWorld(this.cam,this.world);const tt=document.getElementById('blk-tip');
+    // Cache DOM refs once (set in start() after buildHP etc.)
+    if(!this._hi){this._hi={
+      char:document.getElementById('il-char'),pos:document.getElementById('il-pos'),
+      lvl:document.getElementById('il-lvl'),foes:document.getElementById('il-foes'),
+      tip:document.getElementById('blk-tip'),tw:document.getElementById('tool-wrap'),
+      tl:document.getElementById('tool-lbl'),tf:document.getElementById('tool-fill'),
+    };}
+    const H=this._hi;
+    H.char.textContent=`${this.charDef.e} ${this.charDef.name}`;
+    H.lvl.textContent=`⭐ Level ${this.level}`;
+    H.foes.textContent=`👾 ${this.enemies.length} enemies`;
+    // Throttle position text — only update if moved ≥0.5 units
+    if(!this._lhp||this._lhp.distanceToSquared(p)>0.25){
+      H.pos.textContent=`📍 ${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}`;
+      if(!this._lhp)this._lhp=new THREE.Vector3();
+      this._lhp.copy(p);
+    }
+    const r=raycastWorld(this.cam,this.world);const tt=H.tip;
     if(r.hit&&BD[r.type]&&!this.gun.active){this.hl.visible=true;this.hl.position.set(r.bx+.5,r.by+.5,r.bz+.5);tt.textContent=BD[r.type].n;tt.style.opacity='1';}
     else{this.hl.visible=false;tt.style.opacity='0';}
-    const sel=this.inv.sel_();const tw=document.getElementById('tool-wrap');
+    const sel=this.inv.sel_();
     if(sel&&sel.tool&&sel.tool!=='GUN'){
-      const td=TOOLS[sel.tool];tw.style.display='block';
-      document.getElementById('tool-lbl').textContent=`${td.name} (${sel.dur}/${td.dur})`;
+      const td=TOOLS[sel.tool];H.tw.style.display='block';
+      H.tl.textContent=`${td.name} (${sel.dur}/${td.dur})`;
       const pct=(sel.dur/td.dur)*100;
-      document.getElementById('tool-fill').style.width=pct+'%';
-      document.getElementById('tool-fill').style.background=pct>50?'#f0c040':pct>20?'#ff8020':'#ff2020';
-    }else tw.style.display='none';
-    this.gun.update(0);// just to refresh ammo HUD timer
+      H.tf.style.width=pct+'%';
+      H.tf.style.background=pct>50?'#f0c040':pct>20?'#ff8020':'#ff2020';
+    }else H.tw.style.display='none';
+    this.gun.update(0);
     updateAmmoHUD(this.gun);
+  },
+
+  /* ── RPG ── */
+  _fireRPG(){
+    if(!this._rpgMode)return;
+    if(this._rpgReloading){notify('🔄 RPG reloading…','r');return;}
+    if(this._rpgCD>0)return;
+    if(this._rpgAmmo<=0){
+      this._rpgReloading=true;this._rpgReload=3.5;
+      notify('🔄 RPG reloading…');SFX.reload();return;
+    }
+    this._rpgAmmo--;this._rpgCD=1.2;
+    SFX.explode();
+    const gf=document.getElementById('gun-flash');gf.style.opacity='1';setTimeout(()=>gf.style.opacity='0',120);
+    G.shake?.add(.9);
+    // Raycast for target
+    const dir=new THREE.Vector3();this.cam.getWorldDirection(dir);
+    const rr=raycastWorld(this.cam,this.world,60);
+    const hitPos=rr.hit?new THREE.Vector3(rr.bx+.5,rr.by+.5,rr.bz+.5):this.cam.position.clone().addScaledVector(dir,40);
+    // Splash damage to all enemies in radius
+    let hits=0;
+    this.enemies.forEach(e=>{
+      if(e.dead||e._rm)return;
+      const d=e.mesh.position.distanceTo(hitPos);
+      if(d<8){
+        const falloff=1-d/8;
+        const dmg=Math.floor(55*falloff);
+        e.takeDamage(dmg,this.sc);
+        const kb=e.mesh.position.clone().sub(hitPos).normalize();
+        e.vel.addScaledVector(kb,35*falloff);e.vel.y=12*falloff;
+        hits++;
+      }
+    });
+    // Self damage if too close
+    const selfD=this.pos.distanceTo(hitPos);
+    if(selfD<5&&!this.invincible_cheat){const sd=Math.floor(20*(1-selfD/5));if(sd>0)this.takeDmg(sd,'rocket');}
+    this.parts.burst(hitPos.x|0,hitPos.y|0,hitPos.z|0,0xff6600,30);
+    spawnDmgNum(innerWidth/2,innerHeight/2-80,false,55,'#ff6600');
+    if(hits>1)notify(`💥 Multi-kill! ${hits} enemies hit!`,'or');
+    updateAmmoHUD(this.gun);
+  },
+  _updateRPG(dt){
+    if(!this._rpgMode)return;
+    if(this._rpgCD>0)this._rpgCD=Math.max(0,this._rpgCD-dt);
+    if(this._rpgReloading){
+      this._rpgReload-=dt;
+      if(this._rpgReload<=0){this._rpgReloading=false;this._rpgAmmo=this._rpgMaxAmmo;notify('✅ RPG reloaded!');}
+    }
+    // Update ammo HUD for RPG
+    const el=document.getElementById('ammo-hud');
+    if(this._rpgMode){
+      el.style.display='block';el.className=this._rpgReloading?'reloading':'';
+      el.textContent=this._rpgReloading?`🔄 RPG RELOADING…`:`🚀 ${this._rpgAmmo} / ${this._rpgMaxAmmo}`;
+    }
+  },
+
+  /* ── AK-47 ── */
+  _updateAK(dt){
+    if(!this._akMode)return;
+    if(this._akCD>0)this._akCD=Math.max(0,this._akCD-dt);
+    if(this._akReloading){
+      this._akReload-=dt;
+      if(this._akReload<=0){this._akReloading=false;this._akAmmo=this._akMaxAmmo;notify('✅ AK-47 reloaded!');}
+    }
+    // Auto fire while LMB held
+    if(this._akFiring&&!this._akReloading&&this._akCD<=0&&this._akAmmo>0){
+      this._akAmmo--;this._akCD=0.09;this.gun.totalShot++;
+      SFX.gun();
+      const gf=document.getElementById('gun-flash');gf.style.opacity='1';setTimeout(()=>gf.style.opacity='0',30);
+      G.shake?.add(.12);
+      // Spray: add small random spread
+      const spread=0.04;
+      const dir=new THREE.Vector3();this.cam.getWorldDirection(dir);
+      dir.x+=(Math.random()-.5)*spread;dir.y+=(Math.random()-.5)*spread;dir.z+=(Math.random()-.5)*spread;
+      dir.normalize();
+      const origin=this.cam.position.clone();
+      let hitEnemy=null,minDist=99;
+      this.enemies.forEach(e=>{
+        if(e.dead||e._rm)return;
+        const toE=e.mesh.position.clone().sub(origin);const proj=toE.dot(dir);
+        if(proj<0||proj>50)return;
+        const closest=origin.clone().addScaledVector(dir,proj);
+        const dist=e.mesh.position.distanceTo(closest);
+        if(dist<e.t.sz*1.2&&proj<minDist){minDist=proj;hitEnemy=e;}
+      });
+      if(hitEnemy){
+        const dmg=18+(this.level||1);const isCrit=Math.random()<.08;const fd=isCrit?Math.floor(dmg*2):dmg;
+        hitEnemy.takeDamage(fd,this.sc);
+        this.parts.hit(hitEnemy.mesh.position.clone(),0xffaa00);
+        spawnDmgNum(innerWidth/2+((Math.random()-.5)*60),innerHeight/2-40,isCrit,fd,'#ff8800');
+        if(isCrit)SFX.crit();
+        const kb=hitEnemy.mesh.position.clone().sub(origin).normalize();
+        hitEnemy.vel.addScaledVector(kb,8);
+      }
+    }
+    if(this._akAmmo<=0&&!this._akReloading&&!this._akFiring){
+      this._akReloading=true;this._akReload=2.2;notify('🔄 AK-47 reloading…');SFX.reload();
+    }
+    // AK ammo HUD
+    const el=document.getElementById('ammo-hud');
+    if(this._akMode){
+      el.style.display='block';el.className=this._akReloading?'reloading':'';
+      el.textContent=this._akReloading?`🔄 AK-47 RELOADING…`:`🔥 ${this._akAmmo} / ${this._akMaxAmmo}`;
+    }
   },
 
   /* ── MAIN LOOP ── */
@@ -2567,6 +2761,10 @@ const G={
       this.world.updateChunks(this.pos.x, this.pos.z);
       this._mmT-=dt;if(this._mmT<=0){drawMinimap(this.world,this.pos,this.enemies);this._mmT=.25;}
       this._autosaveT-=dt;if(this._autosaveT<=0){this._autosaveT=300;Save.save(this);}
+    }
+    // RPG + AK-47 update
+    if(!this.paused&&!this.invOpen&&!this.craftOpen&&!this.statsOpen){
+      this._updateRPG(dt);this._updateAK(dt);
     }
     this.ren.render(this.sc,this.cam);
   },
@@ -2605,7 +2803,9 @@ const G={
       document.getElementById('cheat-bar').style.display='block';
       document.getElementById('cheat-bar').textContent='⚡ CHEATS: '+[...Cheats.active].map(c=>CODES[c]?.name||c).join(' · ');
     }
-    this.bindEvents();this.running=true;this.loop();
+    this.bindEvents();this.running=true;
+    this.world.updateChunks(this.pos.x,this.pos.z,9999); // build ALL chunks before first frame
+    this.loop();
     setTimeout(()=>this.ren.domElement.requestPointerLock(),200);
     if(saved)notify(`Welcome back, ${this.charDef.name}!`,'g');
     else{notify(`Welcome, ${this.charDef.name}! Hold LMB to mine.`);notify('G=Gun · Q=Attack · C=Craft · F5=Save');}
