@@ -7,18 +7,114 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#0a0f0a;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:"Courier New",monospace;color:#eee;overflow:hidden;}
 canvas{display:block;cursor:crosshair;}
-#hud{display:flex;gap:16px;padding:8px 16px;font-size:13px;align-items:center;flex-wrap:wrap;justify-content:center;}
+#hud{display:flex;gap:10px;padding:6px 12px;font-size:12px;align-items:center;flex-wrap:wrap;justify-content:center;}
 #hud span{color:#aaa;}#hud b{color:#88ff88;}
 .warn{color:#ff4444!important;}
 a{color:#88ff88;font-size:11px;text-decoration:none;}a:hover{color:#fff;}
-#tbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:4px;}
+#tbar{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;padding:3px;}
 .tbtn{background:#0a1a0a;border:2px solid #1a3a1a;color:#88ff88;font-family:"Courier New",monospace;
-  font-size:11px;padding:6px 12px;cursor:pointer;border-radius:4px;transition:all .15s;}
+  font-size:10px;padding:5px 9px;cursor:pointer;border-radius:4px;transition:all .15s;}
 .tbtn:hover,.tbtn.sel{background:#1a3a1a;border-color:#88ff88;}
 .tbtn.sel{box-shadow:0 0 8px rgba(136,255,136,.3);}
+.tbtn.hero{border-color:#aa44ff;color:#cc88ff;}
+.tbtn.hero:hover,.tbtn.hero.sel{background:#1a0a3a;border-color:#cc88ff;}
+.tbtn.mapbtn{border-color:#ffd700;color:#ffd700;}
+.tbtn.mapbtn:hover,.tbtn.mapbtn.sel{background:#1a1500;border-color:#ffd700;}
+
+/* ── MAP MAKER OVERLAY ── */
+#mm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:200;
+  flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow-y:auto;padding:8px 0;}
+#mm-overlay.open{display:flex;}
+#mm-overlay h2{color:#ffd700;letter-spacing:.2em;font-size:1rem;margin-bottom:2px;}
+/* Theme picker */
+#mm-theme-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:4px;}
+.mm-theme{background:#0a0f0a;border:2px solid #222;border-radius:6px;padding:6px 11px;
+  cursor:pointer;font-family:"Courier New",monospace;font-size:10px;color:#888;transition:.15s;}
+.mm-theme:hover,.mm-theme.sel{border-color:#ffd700;color:#ffd700;background:#1a1400;}
+/* Tool palette */
+#mm-palette{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;max-width:720px;}
+.mm-tool{background:#0a0f0a;border:1px solid #222;border-radius:4px;padding:4px 8px;
+  cursor:pointer;font-family:"Courier New",monospace;font-size:10px;color:#888;
+  transition:.12s;display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.mm-tool:hover{border-color:#aaa;color:#ddd;}
+.mm-tool.sel{border-color:#fff;color:#fff;background:#1a1a1a;box-shadow:0 0 6px rgba(255,255,255,.2);}
+.mm-tool.cat-path{border-color:#8B5E3C88;}
+.mm-tool.cat-path.sel{border-color:#8B5E3C;background:#1a0e00;}
+.mm-tool.cat-spawn{border-color:#ff444488;}
+.mm-tool.cat-spawn.sel{border-color:#ff4444;background:#1a0000;}
+.mm-tool.cat-deco{border-color:#44aaff88;}
+.mm-tool.cat-deco.sel{border-color:#44aaff;background:#00101a;}
+.mm-tool.cat-special{border-color:#cc44ff88;}
+.mm-tool.cat-special.sel{border-color:#cc44ff;background:#10001a;}
+.mm-tool.cat-erase{border-color:#ff666688;}
+.mm-tool.cat-erase.sel{border-color:#ff6666;background:#1a0808;}
+/* Canvas */
+#mm-c{cursor:crosshair;display:block;}
+#mm-canvas-wrap{position:relative;border:2px solid #333;border-radius:4px;}
+/* Action row */
+#mm-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+.mm-action{background:#0a0f0a;border:1px solid #333;color:#aaa;font-family:"Courier New",monospace;
+  font-size:10px;padding:5px 12px;cursor:pointer;border-radius:4px;transition:.12s;}
+.mm-action:hover{background:#1a1a1a;color:#fff;}
+.mm-action.play{border-color:#ffd700;color:#ffd700;}
+.mm-action.play:hover{background:#1a1400;}
+.mm-action.danger{border-color:#ff4444;color:#ff6666;}
+.mm-action.danger:hover{background:#1a0808;}
+#mm-status{color:#446644;font-size:9px;letter-spacing:.08em;min-height:13px;}
+
+/* ── HERO PANEL ── */
+#hero-panel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:#0a0514;border:2px solid #aa44ff;border-radius:8px;padding:20px;z-index:300;
+  min-width:320px;text-align:center;}
+#hero-panel h3{color:#cc88ff;margin-bottom:12px;letter-spacing:.15em;}
+.hcard{background:#110820;border:1px solid #332244;border-radius:6px;padding:10px;margin:6px 0;cursor:pointer;transition:.15s;}
+.hcard:hover{border-color:#aa44ff;background:#1a0a30;}
+.hcard h4{color:#fff;font-size:.9rem;}
+.hcard p{color:#776688;font-size:.72rem;margin-top:3px;}
+.hcard .hcost{color:#ffd700;font-size:.8rem;font-weight:bold;margin-top:4px;}
+
+/* ── BORAD SHOT OVERLAY ── */
+#dru-flash{position:fixed;inset:0;pointer-events:none;z-index:500;
+  background:radial-gradient(circle at 50% 40%,rgba(255,140,0,.55),transparent 65%);
+  opacity:0;transition:opacity .06s;}
+#dru-label{position:fixed;top:30%;left:50%;transform:translateX(-50%);
+  color:#ff8800;font-size:2rem;font-weight:900;letter-spacing:.1em;opacity:0;
+  pointer-events:none;z-index:501;text-shadow:0 0 20px #ff4400;transition:opacity .08s;}
+
+/* ── CHAR SELECT SCREEN ── */
+#char-screen{display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:400;
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+#char-screen.open{display:flex;}
+#char-screen h2{color:#ffd700;letter-spacing:.2em;}
+.char-cards{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+.ccard{width:160px;background:#0a0514;border:2px solid #332244;border-radius:8px;
+  padding:14px;text-align:center;cursor:pointer;transition:.2s;}
+.ccard:hover{border-color:#aa44ff;transform:translateY(-4px);}
+.ccard.sel{border-color:#ffd700;background:#1a1000;}
+.ccard h4{color:#fff;font-size:.85rem;margin:6px 0 3px;}
+.ccard .cdesc{color:#665577;font-size:.66rem;line-height:1.5;}
+.ccard .ccost{color:#ffd700;font-size:.8rem;font-weight:bold;margin-top:6px;}
+.ccard .cstat{color:#44aaff;font-size:.68rem;margin-top:4px;}
+.ccard.locked{opacity:.4;cursor:default;}
+.ccard.locked:hover{transform:none;}
+
+/* ── STAGE SELECT ── */
+#stage-screen{display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:400;
+  flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+#stage-screen.open{display:flex;}
+#stage-screen h2{color:#ffd700;letter-spacing:.2em;}
+.stage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:660px;}
+.scard{background:#0a0f0a;border:2px solid #1a3a1a;border-radius:6px;padding:10px;
+  text-align:center;cursor:pointer;transition:.15s;}
+.scard:hover{border-color:#88ff88;background:#0e1e0e;}
+.scard .sname{color:#88ff88;font-size:.8rem;font-weight:bold;}
+.scard .sdesc{color:#446644;font-size:.65rem;margin-top:3px;}
+.scard .sdiff{margin-top:4px;font-size:.7rem;}
 </style>
 </head>
 <body>
+
+<!-- HUD -->
 <div id="hud">
   <span>❤️ <b id="h-hp">20</b></span>
   <span>💰 <b id="h-gold">150</b></span>
@@ -27,34 +123,123 @@ a{color:#88ff88;font-size:11px;text-decoration:none;}a:hover{color:#fff;}
   <span id="h-msg" style="color:#ff4444;"></span>
   <a href="index.html">← Back</a>
   <span style="font-size:9px;color:#446644;display:flex;align-items:center;gap:4px;">
-    <input id="tsCode" maxlength="6" placeholder="CODE" style="background:#050f05;border:1px solid #1a3a1a;color:#88ff88;font-family:monospace;font-size:9px;padding:2px 6px;width:70px;text-transform:uppercase;">
+    <input id="tsCode" maxlength="8" placeholder="CODE" style="background:#050f05;border:1px solid #1a3a1a;color:#88ff88;font-family:monospace;font-size:9px;padding:2px 6px;width:70px;text-transform:uppercase;">
     <button onclick="tsRedeem()" style="background:transparent;border:1px solid #1a3a1a;color:#446644;font-family:monospace;font-size:8px;padding:2px 6px;cursor:pointer;">USE</button>
   </span>
   <span id="tsMsg" style="font-size:9px;color:#44ff88;"></span>
 </div>
+
 <canvas id="c"></canvas>
+
+<!-- TOWER BAR -->
 <div id="tbar">
   <button class="tbtn sel" onclick="selTower(0)">[1] 🗼 Archer 50💰</button>
   <button class="tbtn" onclick="selTower(1)">[2] 💥 Cannon 80💰</button>
   <button class="tbtn" onclick="selTower(2)">[3] ❄️ Frost 70💰</button>
   <button class="tbtn" onclick="selTower(3)">[4] ⚡ Tesla 120💰</button>
   <button class="tbtn" onclick="selTower(4)">[5] 🔥 Inferno 100💰</button>
+  <button class="tbtn hero" onclick="selTower(5)">[6] 🦸 STAKE BOARD 3000💰</button>
+  <button class="tbtn hero" onclick="selTower(6)">[7] 🌀 WOWY 2500💰</button>
+  <button class="tbtn mapbtn" onclick="openMapMaker()">🗺 MAP MAKER</button>
+  <button class="tbtn" style="border-color:#44aaff;color:#44aaff;" onclick="openStageSelect()">📋 STAGES</button>
   <button class="tbtn" style="border-color:#ffd700;color:#ffd700;" onclick="startWave()">[SPACE] SEND WAVE</button>
 </div>
 
+<!-- BORAD SHOT OVERLAY (always present, hidden by default) -->
+<div id="dru-flash"></div>
+<div id="dru-label">🏀 BORAD SHOT!!</div>
+
+<!-- MAP MAKER -->
+<div id="mm-overlay">
+  <h2>🗺 MAP MAKER</h2>
+
+  <!-- Step 1: Theme -->
+  <div style="color:#888;font-size:9px;letter-spacing:.12em;margin-bottom:2px;">① PICK A THEME</div>
+  <div id="mm-theme-row">
+    <button class="mm-theme sel" data-theme="grass"   onclick="mmSetTheme('grass')">🌿 Grass</button>
+    <button class="mm-theme"     data-theme="lava"    onclick="mmSetTheme('lava')">🌋 Lava</button>
+    <button class="mm-theme"     data-theme="ice"     onclick="mmSetTheme('ice')">❄️ Ice</button>
+    <button class="mm-theme"     data-theme="desert"  onclick="mmSetTheme('desert')">🏜 Desert</button>
+    <button class="mm-theme"     data-theme="night"   onclick="mmSetTheme('night')">🌙 Night</button>
+    <button class="mm-theme"     data-theme="candy"   onclick="mmSetTheme('candy')">🍭 Candy</button>
+    <button class="mm-theme"     data-theme="space"   onclick="mmSetTheme('space')">🚀 Space</button>
+    <button class="mm-theme"     data-theme="swamp"   onclick="mmSetTheme('swamp')">🐸 Swamp</button>
+  </div>
+
+  <!-- Step 2: Tool palette -->
+  <div style="color:#888;font-size:9px;letter-spacing:.12em;margin-bottom:2px;">② PAINT YOUR MAP — click or drag</div>
+  <div id="mm-palette">
+    <span style="color:#8B5E3C;font-size:9px;align-self:center;">PATH:</span>
+    <button class="mm-tool cat-path sel" data-tool="path"     onclick="mmSelTool('path')">🟫 Dirt Path</button>
+    <button class="mm-tool cat-path"     data-tool="path2"    onclick="mmSelTool('path2')">🪨 Stone Path</button>
+    <button class="mm-tool cat-path"     data-tool="bridge"   onclick="mmSelTool('bridge')">🌉 Bridge</button>
+
+    <span style="color:#ff4444;font-size:9px;align-self:center;margin-left:4px;">SPAWN:</span>
+    <button class="mm-tool cat-spawn"    data-tool="spawn"    onclick="mmSelTool('spawn')">🔴 Enemy Spawn</button>
+    <button class="mm-tool cat-spawn"    data-tool="bosszone" onclick="mmSelTool('bosszone')">💀 Boss Zone</button>
+
+    <span style="color:#44aaff;font-size:9px;align-self:center;margin-left:4px;">DECO:</span>
+    <button class="mm-tool cat-deco"     data-tool="tree"     onclick="mmSelTool('tree')">🌲 Tree</button>
+    <button class="mm-tool cat-deco"     data-tool="rock"     onclick="mmSelTool('rock')">🪨 Rock</button>
+    <button class="mm-tool cat-deco"     data-tool="water"    onclick="mmSelTool('water')">💧 Water</button>
+    <button class="mm-tool cat-deco"     data-tool="flower"   onclick="mmSelTool('flower')">🌸 Flower</button>
+    <button class="mm-tool cat-deco"     data-tool="torch"    onclick="mmSelTool('torch')">🔦 Torch</button>
+    <button class="mm-tool cat-deco"     data-tool="ruin"     onclick="mmSelTool('ruin')">🏚 Ruin</button>
+    <button class="mm-tool cat-deco"     data-tool="crystal"  onclick="mmSelTool('crystal')">💎 Crystal</button>
+    <button class="mm-tool cat-deco"     data-tool="mushroom" onclick="mmSelTool('mushroom')">🍄 Mushroom</button>
+    <button class="mm-tool cat-deco"     data-tool="lava_deco"onclick="mmSelTool('lava_deco')">🔥 Lava Vent</button>
+    <button class="mm-tool cat-deco"     data-tool="snow"     onclick="mmSelTool('snow')">⛄ Snow</button>
+    <button class="mm-tool cat-deco"     data-tool="cactus"   onclick="mmSelTool('cactus')">🌵 Cactus</button>
+    <button class="mm-tool cat-deco"     data-tool="skull"    onclick="mmSelTool('skull')">💀 Skull</button>
+
+    <span style="color:#cc44ff;font-size:9px;align-self:center;margin-left:4px;">SPECIAL:</span>
+    <button class="mm-tool cat-special"  data-tool="gold"     onclick="mmSelTool('gold')">💰 Gold Pile</button>
+    <button class="mm-tool cat-special"  data-tool="trap"     onclick="mmSelTool('trap')">⚠️ Slow Trap</button>
+    <button class="mm-tool cat-special"  data-tool="base"     onclick="mmSelTool('base')">🏰 Castle</button>
+
+    <span style="color:#ff6666;font-size:9px;align-self:center;margin-left:4px;">ERASE:</span>
+    <button class="mm-tool cat-erase"    data-tool="erase"    onclick="mmSelTool('erase')">🗑 Erase</button>
+  </div>
+
+  <!-- Canvas -->
+  <div id="mm-canvas-wrap">
+    <canvas id="mm-c" width="680" height="440"></canvas>
+  </div>
+
+  <!-- Actions -->
+  <div id="mm-actions">
+    <button class="mm-action" onclick="mmUndo()">↩ Undo</button>
+    <button class="mm-action danger" onclick="mmClear()">🔄 Clear All</button>
+    <button class="mm-action" onclick="mmFillBg()">🖌 Fill BG</button>
+    <button class="mm-action play" onclick="mmLoad()">▶ PLAY THIS MAP</button>
+    <button class="mm-action danger" onclick="closeMapMaker()">✕ Close</button>
+  </div>
+  <div id="mm-status">Draw a PATH from the 🟢 LEFT edge to the 🔴 RIGHT edge, then hit PLAY</div>
+</div>
+
+<!-- STAGE SELECT -->
+<div id="stage-screen">
+  <h2>📋 SELECT STAGE</h2>
+  <div class="stage-grid" id="stage-grid"></div>
+  <button class="tbtn" style="margin-top:8px;" onclick="closeStageSelect()">← Back</button>
+</div>
+
 <script>
+// ─────────────────────────────────────────────
+// CODES
+// ─────────────────────────────────────────────
 let usedTsCodes=[];
-let activeMap='forest'; // 'forest' or 'lava'
-// Lava map path - a gnarly S-curve through volcanic terrain
-// LAVA_PATH_PTS built after TS is defined (see below)
+let infiniteGold=false;
+let activeMap='forest';
 let LAVA_PATH_PTS=[];
 
 const TS_CODES={
-  'GOLD99':{gold:999,lava:true,msg:'🌋 +999 gold & LAVA MAP unlocked!'},
-  'TOWERS':{gold:500,msg:'💰 +500 gold!'},
-  'DEFEND':{hp:10,msg:'❤️ +10 HP!'},
-  'WAVES99':{gold:300,msg:'⚡ +300 gold, waves powered up!'},
-  'SECRET':{gold:300,hp:5,msg:'🎉 +300 gold +5 HP!'},
+  'GOLD99':  {infiniteGold:true, msg:'♾ INFINITE GOLD activated!'},
+  'TOWERS':  {gold:500,          msg:'💰 +500 gold!'},
+  'DEFEND':  {hp:10,             msg:'❤️ +10 HP!'},
+  'WAVES99': {gold:300,          msg:'⚡ +300 gold!'},
+  'SECRET':  {gold:300,hp:5,     msg:'🎉 +300 gold +5 HP!'},
+  'LAVA':    {lava:true,         msg:'🌋 LAVA MAP unlocked!'},
 };
 function tsRedeem(){
   const code=document.getElementById('tsCode').value.toUpperCase().trim();
@@ -63,45 +248,79 @@ function tsRedeem(){
   if(usedTsCodes.includes(code)){m.textContent='Used!';m.style.color='#ff8800';setTimeout(()=>m.textContent='',1500);return;}
   usedTsCodes.push(code);
   const r=TS_CODES[code];
-  if(r.gold){gold+=r.gold;updateHUD();}
-  if(r.hp){hp+=r.hp;updateHUD();}
-  if(r.lava){activateLavaMap();}
+  if(r.infiniteGold){infiniteGold=true;gold=999999;}
+  if(r.gold)gold+=r.gold;
+  if(r.hp)hp+=r.hp;
+  if(r.lava)activateLavaMap();
+  updateHUD();
   m.textContent=r.msg;m.style.color='#44ff88';
   document.getElementById('tsCode').value='';
   setTimeout(()=>m.textContent='',3000);
 }
 
-function activateLavaMap(){
-  activeMap='lava';
-  PATH_PTS.length=0;
-  LAVA_PATH_PTS.forEach(p=>PATH_PTS.push(p));
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) IS_PATH[r][c]=onPath(c,r);
-  towers=[];enemies=[];bullets=[];particles=[];
-  wave=0;hp=25;gameState='waiting';
-  updateHUD();
-  showMsg('🌋 LAVA MAP ACTIVATED! Place towers & press SPACE!');
+// Spend gold (respects infinite gold)
+function spendGold(amt){
+  if(infiniteGold)return true;
+  if(gold<amt)return false;
+  gold-=amt;updateHUD();return true;
 }
 
+// ─────────────────────────────────────────────
+// CANVAS & CONSTANTS
+// ─────────────────────────────────────────────
 const C=document.getElementById('c'),ctx=C.getContext('2d');
 const W=680,H=440;C.width=W;C.height=H;
 const COLS=17,ROWS=11,TS=40;
-// Build lava path now that TS is defined
+
 LAVA_PATH_PTS=[
   [0,2],[3,2],[3,5],[6,5],[6,1],[10,1],[10,9],[13,9],[13,4],[17,4]
 ].map(([c,r])=>({x:c*TS+TS/2,y:r*TS+TS/2}));
 
-const TDEFS=[
-  {name:'Archer', cost:50, col:'#88ff88', range:3.5, dmg:8, rate:40, type:'single', emoji:'🗼'},
-  {name:'Cannon', cost:80, col:'#ff8844', range:2.5, dmg:30, rate:90, type:'splash', emoji:'💥'},
-  {name:'Frost',  cost:70, col:'#88ccff', range:3, dmg:4, rate:50, type:'slow', emoji:'❄️'},
-  {name:'Tesla',  cost:120,col:'#ffff44', range:3, dmg:15, rate:35, type:'chain', emoji:'⚡'},
-  {name:'Inferno',cost:100,col:'#ff4422', range:2.8, dmg:6, rate:20, type:'burn', emoji:'🔥'},
+// ─────────────────────────────────────────────
+// STAGES — built-in maps
+// ─────────────────────────────────────────────
+const STAGES=[
+  {name:'GRASS FIELDS',   emoji:'🌿', desc:'Classic S-curve. Good for beginners.',       diff:'⭐',     col:'#1a3a1a',
+   path:[[0,5],[2,5],[2,2],[5,2],[5,8],[9,8],[9,3],[13,3],[13,7],[16,7],[16,5],[17,5]]},
+  {name:'LAVA CROSSING',  emoji:'🌋', desc:'Long S through volcanic terrain.',            diff:'⭐⭐',   col:'#3a1000',
+   path:[[0,2],[3,2],[3,5],[6,5],[6,1],[10,1],[10,9],[13,9],[13,4],[17,4]]},
+  {name:'SPIRAL CANYON',  emoji:'🌀', desc:'Tight spiral — towers overlap a lot.',        diff:'⭐⭐⭐', col:'#0a1a2a',
+   path:[[0,5],[3,5],[3,2],[8,2],[8,8],[13,8],[13,3],[16,3],[16,8],[17,8]]},
+  {name:'ZIGZAG PLAINS',  emoji:'⚡', desc:'Fast zigzag — enemies rush through quick.',   diff:'⭐⭐',   col:'#1a1a0a',
+   path:[[0,1],[4,1],[4,9],[8,9],[8,1],[12,1],[12,9],[16,9],[16,5],[17,5]]},
+  {name:'LONG ROAD',      emoji:'🛣', desc:'Nearly straight — use your best towers.',     diff:'⭐',     col:'#0a0a1a',
+   path:[[0,5],[4,5],[4,3],[8,3],[8,7],[12,7],[12,5],[17,5]]},
+  {name:'DOUBLE CROSS',   emoji:'✂️', desc:'Two paths converge in the middle.',           diff:'⭐⭐⭐', col:'#1a0a1a',
+   path:[[0,2],[5,2],[5,5],[9,5],[9,2],[13,2],[13,8],[9,8],[9,5],[5,5],[5,8],[0,8]]},
+  {name:'ICE MAZE',       emoji:'❄️', desc:'Complex maze. Maximum strategy needed.',     diff:'⭐⭐⭐⭐',col:'#0a1a2a',
+   path:[[0,9],[2,9],[2,1],[5,1],[5,5],[8,5],[8,1],[11,1],[11,9],[14,9],[14,5],[17,5]]},
+  {name:'NIGHTMARE RUSH', emoji:'💀', desc:'Short path, maximum enemy speed.',           diff:'💀💀💀', col:'#1a0000',
+   path:[[0,5],[3,5],[3,2],[6,2],[6,8],[9,8],[9,2],[12,2],[12,8],[17,8]]},
 ];
 
-// ── PATH ──
-let PATH_PTS=[
-  [0,5],[2,5],[2,2],[5,2],[5,8],[9,8],[9,3],[13,3],[13,7],[16,7],[16,5],[17,5]
-].map(([c,r])=>({x:c*TS+TS/2,y:r*TS+TS/2}));
+let currentStage=0;
+
+// ─────────────────────────────────────────────
+// TOWER DEFS (including hero towers)
+// ─────────────────────────────────────────────
+const TDEFS=[
+  {name:'Archer',    cost:50,   col:'#88ff88', range:3.5, dmg:8,  rate:40, type:'single', emoji:'🗼'},
+  {name:'Cannon',    cost:80,   col:'#ff8844', range:2.5, dmg:30, rate:90, type:'splash', emoji:'💥'},
+  {name:'Frost',     cost:70,   col:'#88ccff', range:3,   dmg:4,  rate:50, type:'slow',   emoji:'❄️'},
+  {name:'Tesla',     cost:120,  col:'#ffff44', range:3,   dmg:15, rate:35, type:'chain',  emoji:'⚡'},
+  {name:'Inferno',   cost:100,  col:'#ff4422', range:2.8, dmg:6,  rate:20, type:'burn',   emoji:'🔥'},
+  // Hero tower 1: STAKE BOARD (5-enemy wipe, 1-wave cooldown)
+  {name:'STAKE BOARD',cost:3000,col:'#cc44ff', range:4.5, dmg:999,rate:180,type:'stake',  emoji:'🦸',
+   hero:true, heroDesc:'WIPES 5 enemies instantly · 1-wave cooldown'},
+  // Hero tower 2: WOWY DESTROYER
+  {name:'WOWY DESTROYER',cost:2500,col:'#ff44aa',range:5.0,dmg:80,rate:120,type:'wowy',  emoji:'🌀',
+   hero:true, heroDesc:'Area pulse every 2s · destroys clusters'},
+];
+
+// ─────────────────────────────────────────────
+// PATH & IS_PATH
+// ─────────────────────────────────────────────
+let PATH_PTS=[...STAGES[0].path].map(([c,r])=>({x:c*TS+TS/2,y:r*TS+TS/2}));
 
 function onPath(col,row){
   for(let i=0;i<PATH_PTS.length-1;i++){
@@ -113,25 +332,120 @@ function onPath(col,row){
   }
   return false;
 }
-
+function rebuildIsPath(){
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) IS_PATH[r][c]=onPath(c,r);
+}
 let IS_PATH=Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>onPath(c,r)));
 
-// ── STATE ──
+// ─────────────────────────────────────────────
+// GAME STATE
+// ─────────────────────────────────────────────
 let towers=[],enemies=[],bullets=[],particles=[];
 let gold=150,hp=20,wave=0,kills=0;
-let selIdx=0,gameState='waiting',waveTimer=0;
-let hovCol=-1,hovRow=-1,tick=0;
+let selIdx=0,gameState='waiting',tick=0;
 let msg='',msgT=0;
+let hovCol=-1,hovRow=-1;
+// Hero cooldown tracking
+let stakeCooldownWave=0; // can fire again after this wave
 
-function selTower(i){selIdx=i;document.querySelectorAll('.tbtn').forEach((b,j)=>b.classList.toggle('sel',j===i));}
+// ─────────────────────────────────────────────
+// HERO TOWER LOGIC
+// ─────────────────────────────────────────────
+function fireStakeBoard(tower){
+  // Wipe up to 5 enemies nearest the end of the path
+  if(stakeCooldownWave>wave){
+    showMsg('⏳ STAKE BOARD cooling down until wave '+(stakeCooldownWave));
+    return;
+  }
+  const targets=enemies.filter(e=>!e.dead&&!e.reached)
+    .sort((a,b)=>b.wpt-a.wpt||b.x-a.x).slice(0,5);
+  if(!targets.length)return;
+  targets.forEach(e=>{
+    e.dead=true;kills++;gold+=e.type==='boss'?20:5;
+    spawnPart(e.x,e.y,'#cc44ff',20);
+    spawnPart(e.x,e.y,'#ffffff',8);
+  });
+  stakeCooldownWave=wave+1; // cooldown = 1 wave
+  // Big flash
+  particles.push({x:tower.x,y:tower.y,vx:0,vy:-3,col:'#cc44ff',life:60,sz:30});
+  showMsg(`🦸 STAKE BOARD FIRED! ${targets.length} enemies WIPED!`);
+  updateHUD();
+}
+
+function fireWowy(tower){
+  // Pulse area — damage all enemies in range heavily
+  const range=tower.range*TS;
+  const hit=enemies.filter(e=>!e.dead&&!e.reached&&Math.hypot(e.x-tower.x,e.y-tower.y)<=range);
+  hit.forEach(e=>{
+    e.hp-=tower.dmg;spawnPart(e.x,e.y,'#ff44aa',10);
+    if(e.hp<=0){e.dead=true;kills++;gold+=e.type==='boss'?18:4;}
+  });
+  // Pulse ring particle
+  for(let a=0;a<20;a++){
+    const ang=a/20*Math.PI*2;
+    particles.push({x:tower.x+Math.cos(ang)*range,y:tower.y+Math.sin(ang)*range,
+      vx:Math.cos(ang)*2,vy:Math.sin(ang)*2,col:'#ff44aa',life:25,sz:4});
+  }
+  updateHUD();
+}
+
+// ─────────────────────────────────────────────
+// BORAD SHOT — fires when Borad lands a kill while game is running
+// ─────────────────────────────────────────────
+let boradKills=0;
+function triggerBoradShot(){
+  boradKills++;
+  const fl=document.getElementById('dru-flash');
+  const lb=document.getElementById('dru-label');
+  lb.textContent=['🏀 BORAD SHOT!!','🔥 BORAD GOES OFF!','💥 BORAD IS COOKING!','👑 BORAD MVP!!'][Math.floor(Math.random()*4)];
+  fl.style.opacity='1';lb.style.opacity='1';
+  setTimeout(()=>{fl.style.opacity='0';lb.style.opacity='0';},450);
+  // Borad bonus: a random nearby enemy gets extra damage while game continues
+  const extras=enemies.filter(e=>!e.dead&&!e.reached);
+  if(extras.length){
+    const bonus=extras[Math.floor(Math.random()*extras.length)];
+    bonus.hp-=30;spawnPart(bonus.x,bonus.y,'#ff8800',12);
+    if(bonus.hp<=0){bonus.dead=true;kills++;gold+=bonus.type==='boss'?18:4;updateHUD();}
+  }
+}
+
+// ─────────────────────────────────────────────
+// TOWER SELECTION / PLACEMENT
+// ─────────────────────────────────────────────
+function selTower(i){
+  selIdx=i;
+  document.querySelectorAll('.tbtn').forEach((b,j)=>b.classList.toggle('sel',j===i));
+}
 
 function placeTower(col,row){
   if(IS_PATH[row]?.[col])return;
-  if(towers.find(t=>t.tCol===col&&t.tRow===row))return;
+  // STACKING: allow placing ON existing tower (upgrades / stacks)
+  const existing=towers.find(t=>t.tCol===col&&t.tRow===row);
+  if(existing){
+    // Stack same type = upgrade, different = replace
+    if(existing.name===TDEFS[selIdx].name){
+      // Upgrade: costs 50% of original, increases damage and range
+      const upgCost=Math.floor(TDEFS[selIdx].cost*.5);
+      if(!spendGold(upgCost)){showMsg('Not enough gold to upgrade!');return;}
+      existing.level=(existing.level||1)+1;
+      existing.dmg=Math.floor(existing.dmg*1.3);
+      existing.range+=0.3;
+      existing.rate=Math.max(8,Math.floor(existing.rate*.88));
+      showMsg(`⬆ ${existing.name} upgraded to level ${existing.level}!`);
+      updateHUD();return;
+    } else {
+      // Place on top — remove old, place new (backplacing)
+      gold+=Math.floor(existing.cost*.4); // refund 40% of old
+      towers.splice(towers.indexOf(existing),1);
+    }
+  }
   const def=TDEFS[selIdx];
-  if(gold<def.cost){showMsg('Not enough gold!');return;}
-  gold-=def.cost;
-  towers.push({gridCol:col,gridRow:row,col:col,row:row,x:col*TS+TS/2,y:row*TS+TS/2,...def,tCol:col,tRow:row,cd:0,kills:0,level:1});
+  if(!spendGold(def.cost)){showMsg('Not enough gold!');return;}
+  towers.push({
+    gridCol:col,gridRow:row,tCol:col,tRow:row,
+    x:col*TS+TS/2,y:row*TS+TS/2,
+    ...def,cd:0,kills:0,level:1
+  });
   updateHUD();
 }
 
@@ -142,6 +456,9 @@ function sellTower(col,row){
   towers.splice(i,1);updateHUD();
 }
 
+// ─────────────────────────────────────────────
+// WAVE SYSTEM
+// ─────────────────────────────────────────────
 function startWave(){
   if(gameState!=='waiting')return;
   wave++;gameState='wave';spawnWave();
@@ -151,47 +468,49 @@ function startWave(){
 function spawnWave(){
   const n=5+wave*3;const isBoss=wave%5===0;
   for(let i=0;i<n;i++){
-    const fast=wave>3&&Math.random()<0.3;
-    const tank=wave>5&&Math.random()<0.2;
-    const hp2=tank?(60+wave*20):(fast?(20+wave*5):(30+wave*10));
-    const spd=fast?1.5:(tank?0.5:0.9);
+    const fast=wave>3&&Math.random()<.3;
+    const tank=wave>5&&Math.random()<.2;
+    const hpE=tank?(60+wave*20):(fast?(20+wave*5):(30+wave*10));
+    const spd=fast?1.5:(tank?.5:.9);
     setTimeout(()=>enemies.push({
       x:PATH_PTS[0].x,y:PATH_PTS[0].y,
-      wpt:1,hp:hp2,maxHp:hp2,spd,
-      slow:0,burn:0,
+      wpt:1,hp:hpE,maxHp:hpE,spd,slow:0,burn:0,
       type:tank?'tank':(fast?'fast':'normal'),
       dead:false,reached:false,
       col:tank?'#cc4444':(fast?'#44ccff':'#ff6644'),
-    }),i*300+(isBoss?0:0));
+    }),i*300);
   }
   if(isBoss){
     const bHp=300+wave*80;
     setTimeout(()=>enemies.push({
       x:PATH_PTS[0].x,y:PATH_PTS[0].y,
-      wpt:1,hp:bHp,maxHp:bHp,spd:0.4,slow:0,burn:0,
+      wpt:1,hp:bHp,maxHp:bHp,spd:.4,slow:0,burn:0,
       type:'boss',dead:false,reached:false,col:'#ff2200',
     }),n*350);
   }
 }
 
+// ─────────────────────────────────────────────
+// UPDATE LOOPS
+// ─────────────────────────────────────────────
 function updEnemies(){
   for(const e of enemies){
     if(e.dead||e.reached)continue;
-    const spd=e.slow>0?e.spd*0.4:e.spd;
+    const spd=e.slow>0?e.spd*.4:e.spd;
     e.slow=Math.max(0,e.slow-1);
-    if(e.burn>0){e.hp-=0.3;e.burn--;}
+    if(e.burn>0){e.hp-=.3;e.burn--;}
     const t=PATH_PTS[e.wpt];
     const dx=t.x-e.x,dy=t.y-e.y,d=Math.hypot(dx,dy);
     if(d<3){
       e.wpt++;
       if(e.wpt>=PATH_PTS.length){e.reached=true;hp-=e.type==='boss'?5:1;updateHUD();if(hp<=0)gameState='dead';continue;}
-    } else {e.x+=dx/d*spd;e.y+=dy/d*spd;}
+    }else{e.x+=dx/d*spd;e.y+=dy/d*spd;}
   }
   enemies=enemies.filter(e=>!e.dead);
   const alive=enemies.filter(e=>!e.reached);
   if(gameState==='wave'&&alive.length===0&&enemies.every(e=>e.reached||e.dead)){
     gameState='waiting';
-    gold+=20+wave*5;
+    gold+=20+wave*5;if(infiniteGold)gold=999999;
     showMsg(`Wave ${wave} cleared! +${20+wave*5}💰`);
     updateHUD();
   }
@@ -203,26 +522,26 @@ function updTowers(){
     const range=t.range*TS;
     const targets=enemies.filter(e=>!e.dead&&!e.reached&&Math.hypot(e.x-t.x,e.y-t.y)<=range);
     if(!targets.length)continue;
-    // Pick furthest along path
     const target=targets.sort((a,b)=>b.wpt-a.wpt)[0];
     t.cd=t.rate;
+    if(t.type==='stake'){fireStakeBoard(t);t.cd=t.rate;continue;}
+    if(t.type==='wowy'){fireWowy(t);continue;}
     fire(t,target);
   }
 }
 
 function fire(tower,target){
   if(tower.type==='single'||tower.type==='burn'){
-    bullets.push({x:tower.x,y:tower.y,tx:target,spd:6,col:tower.col,dmg:tower.dmg,type:tower.type,life:120});
-  } else if(tower.type==='splash'){
-    bullets.push({x:tower.x,y:tower.y,tx:target,spd:4.5,col:tower.col,dmg:tower.dmg,type:'splash',life:120,r:tower.range*TS*0.5});
-  } else if(tower.type==='slow'){
+    bullets.push({x:tower.x,y:tower.y,tx:target,spd:6,col:tower.col,dmg:tower.dmg,type:tower.type,life:120,isDru:tower.name==='Archer'&&Math.random()<.12});
+  }else if(tower.type==='splash'){
+    bullets.push({x:tower.x,y:tower.y,tx:target,spd:4.5,col:tower.col,dmg:tower.dmg,type:'splash',life:120,r:tower.range*TS*.5});
+  }else if(tower.type==='slow'){
     bullets.push({x:tower.x,y:tower.y,tx:target,spd:5,col:'#88ccff',dmg:tower.dmg,type:'slow',life:120});
-  } else if(tower.type==='chain'){
-    // Instant chain
+  }else if(tower.type==='chain'){
     let cur=target,chains=3;
     while(cur&&chains-->0){
       cur.hp-=tower.dmg;spawnPart(cur.x,cur.y,'#ffff44',8);
-      if(cur.hp<=0){cur.dead=true;kills++;gold+=cur.type==='boss'?15:3;}
+      if(cur.hp<=0){cur.dead=true;kills++;gold+=cur.type==='boss'?15:3;if(infiniteGold)gold=999999;}
       const next=enemies.filter(e=>!e.dead&&!e.reached&&e!==cur&&Math.hypot(e.x-cur.x,e.y-cur.y)<80)[0];
       bullets.push({x:cur.x,y:cur.y,tx2:{x:next?next.x:cur.x+20,y:next?next.y:cur.y},col:'#ffff44',type:'zap',life:10});
       cur=next;
@@ -239,17 +558,21 @@ function updBullets(){
     if(!t||t.dead||t.reached){b.life=0;continue;}
     const dx=t.x-b.x,dy=t.y-b.y,d=Math.hypot(dx,dy);
     if(d<b.spd+4){
-      // Hit
       if(b.type==='splash'){
         enemies.filter(e=>!e.dead&&!e.reached&&Math.hypot(e.x-t.x,e.y-t.y)<b.r).forEach(e=>{
-          e.hp-=b.dmg;spawnPart(e.x,e.y,b.col,5);if(e.hp<=0){e.dead=true;kills++;gold+=3;}
+          e.hp-=b.dmg;spawnPart(e.x,e.y,b.col,5);
+          if(e.hp<=0){e.dead=true;kills++;gold+=3;if(infiniteGold)gold=999999;}
         });spawnPart(t.x,t.y,b.col,15);
-      } else if(b.type==='slow'){t.slow=120;t.hp-=b.dmg;spawnPart(t.x,t.y,'#88ccff',8);}
+      }else if(b.type==='slow'){t.slow=120;t.hp-=b.dmg;spawnPart(t.x,t.y,'#88ccff',8);}
       else if(b.type==='burn'){t.burn=180;t.hp-=b.dmg;spawnPart(t.x,t.y,'#ff4422',8);}
-      else {t.hp-=b.dmg;spawnPart(t.x,t.y,b.col,4);}
-      if(t.hp<=0&&!t.dead){t.dead=true;kills++;gold+=t.type==='boss'?15:3;updateHUD();}
+      else{
+        t.hp-=b.dmg;spawnPart(t.x,t.y,b.col,4);
+        // BORAD SHOT: when this bullet (special flagged) kills, trigger Borad overlay
+        if(b.isDru&&t.hp<=0&&!t.dead) triggerBoradShot();
+      }
+      if(t.hp<=0&&!t.dead){t.dead=true;kills++;gold+=t.type==='boss'?15:3;if(infiniteGold)gold=999999;updateHUD();}
       b.life=0;
-    } else {b.x+=dx/d*b.spd;b.y+=dy/d*b.spd;}
+    }else{b.x+=dx/d*b.spd;b.y+=dy/d*b.spd;}
   }
   bullets=bullets.filter(b=>b.life>0);
 }
@@ -258,82 +581,109 @@ function spawnPart(x,y,col,n){
   for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*3,vy:(Math.random()-.5)*3,col,life:20});
 }
 
+// ─────────────────────────────────────────────
+// HUD
+// ─────────────────────────────────────────────
 function updateHUD(){
   document.getElementById('h-hp').textContent=hp;
   document.getElementById('h-hp').className=hp<=5?'warn':'';
-  document.getElementById('h-gold').textContent=gold;
+  document.getElementById('h-gold').textContent=infiniteGold?'∞':gold;
   document.getElementById('h-wave').textContent=wave;
   document.getElementById('h-kills').textContent=kills;
 }
-function showMsg(t){msg=t;msgT=180;document.getElementById('h-msg').textContent=t;setTimeout(()=>document.getElementById('h-msg').textContent='',3000);}
+function showMsg(t){msg=t;msgT=200;document.getElementById('h-msg').textContent=t;setTimeout(()=>document.getElementById('h-msg').textContent='',3200);}
 
-// ── DRAW ──
+// ─────────────────────────────────────────────
+// DRAW
+// ─────────────────────────────────────────────
 function drawGround(){
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+  // Custom map maker theme
+  const cmt=activeMap==='custom'&&window._mmTheme;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
     const ip=IS_PATH[r]?.[c];
-    if(activeMap==='lava'){
-      ctx.fillStyle=ip?'#3a1400':(r%2===c%2?'#1a0800':'#1f0a00');
-    } else {
-      ctx.fillStyle=ip?'#1a1208':(r%2===c%2?'#0c150c':'#0e170e');
-    }
+    if(activeMap==='lava'){ctx.fillStyle=ip?'#3a1400':(r%2===c%2?'#1a0800':'#1f0a00');}
+    else if(cmt){ctx.fillStyle=ip?'#5a3a1a':(r%2===c%2?cmt.bg:cmt.grid);}
+    else{ctx.fillStyle=ip?'#1a1208':(r%2===c%2?'#0c150c':'#0e170e');}
     ctx.fillRect(c*TS,r*TS,TS,TS);
-    if(!ip&&Math.random()<0.003){ctx.fillStyle='rgba(255,255,255,.03)';ctx.fillRect(c*TS+5,r*TS+5,2,2);}
+    if(!ip&&Math.random()<.002){ctx.fillStyle='rgba(255,255,255,.03)';ctx.fillRect(c*TS+5,r*TS+5,2,2);}
   }
-  // Path
-  // Path color changes by map
   ctx.strokeStyle=activeMap==='lava'?'#5a2000':'#2a2010';ctx.lineWidth=TS-2;
   ctx.beginPath();PATH_PTS.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
   ctx.strokeStyle=activeMap==='lava'?'#8a3400':'#342818';ctx.lineWidth=TS-12;
   ctx.beginPath();PATH_PTS.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
-  // Start/end markers
-  // Lava map: animated lava glow on path
   if(activeMap==='lava'){
-    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
       if(!IS_PATH[r]?.[c])continue;
       const glow=Math.sin(tick*.08+c*.4+r*.3)*.5+.5;
       ctx.fillStyle=`rgba(255,${Math.floor(60+glow*80)},0,${.08+glow*.08})`;
       ctx.fillRect(c*TS,r*TS,TS,TS);
     }
-    // Lava bubbles
     if(tick%15===0){
       const br=Math.floor(Math.random()*ROWS),bc=Math.floor(Math.random()*COLS);
-      if(IS_PATH[br]?.[bc]) particles.push({x:bc*TS+TS/2,y:br*TS+TS/2,vx:(Math.random()-.5)*2,vy:-1-Math.random()*2,col:'#ff4400',life:20,sz:3+Math.random()*3});
+      if(IS_PATH[br]?.[bc])particles.push({x:bc*TS+TS/2,y:br*TS+TS/2,vx:(Math.random()-.5)*2,vy:-1-Math.random()*2,col:'#ff4400',life:20,sz:3+Math.random()*3});
     }
   }
   ctx.fillStyle='#88ff88';ctx.font='18px serif';ctx.textAlign='center';
   ctx.fillText('▶',PATH_PTS[0].x-14,PATH_PTS[0].y+6);
   ctx.fillStyle='#ff4444';ctx.fillText('🏰',PATH_PTS[PATH_PTS.length-1].x+12,PATH_PTS[PATH_PTS.length-1].y+6);
+  // Draw custom map decorations in game view
+  if(activeMap==='custom'&&typeof mmGrid!=='undefined'){
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+      const tile=mmGrid[r][c];
+      if(!tile||MM_PATH_TILES.has(tile)||MM_SPAWN_TILES.has(tile))continue;
+      const st=MM_TILE_STYLE[tile];
+      if(!st)continue;
+      if(st.bg){ctx.fillStyle=st.bg;ctx.fillRect(c*TS,r*TS,TS,TS);}
+      if(st.ol){ctx.fillStyle=st.ol;ctx.fillRect(c*TS,r*TS,TS,TS);}
+      if(st.emoji){ctx.font=`${TS*.5}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(st.emoji,c*TS+TS/2,r*TS+TS/2);}
+    }
+    ctx.textBaseline='alphabetic';
+  }
 }
 
 function drawHover(){
   if(hovCol<0||hovRow<0)return;
   if(IS_PATH[hovRow]?.[hovCol])return;
   const hasTower=towers.find(t=>t.tCol===hovCol&&t.tRow===hovRow);
-  ctx.fillStyle=hasTower?'rgba(255,0,0,.15)':'rgba(136,255,136,.1)';
-  ctx.fillRect(hovCol*TS,hovRow*TS,TS,TS);
-  ctx.strokeStyle=hasTower?'rgba(255,0,0,.4)':'rgba(136,255,136,.4)';
-  ctx.strokeRect(hovCol*TS,hovRow*TS,TS,TS);
-  if(!hasTower){
-    const def=TDEFS[selIdx];
-    ctx.strokeStyle=def.col+'44';ctx.lineWidth=1;
+  const def=TDEFS[selIdx];
+  if(hasTower&&hasTower.name===def.name){
+    ctx.fillStyle='rgba(100,200,100,.15)';ctx.fillRect(hovCol*TS,hovRow*TS,TS,TS);
+    ctx.strokeStyle='rgba(100,255,100,.5)';ctx.lineWidth=2;ctx.strokeRect(hovCol*TS,hovRow*TS,TS,TS);
+    // show "UPGRADE" label
+    ctx.fillStyle='#88ff88';ctx.font='bold 7px monospace';ctx.textAlign='center';
+    ctx.fillText('UPGRADE',hovCol*TS+TS/2,hovRow*TS+TS*.7);
+  } else {
+    ctx.fillStyle=hasTower?'rgba(255,100,0,.15)':'rgba(136,255,136,.08)';
+    ctx.fillRect(hovCol*TS,hovRow*TS,TS,TS);
+    ctx.strokeStyle=hasTower?'rgba(255,100,0,.4)':'rgba(136,255,136,.35)';
+    ctx.lineWidth=1;ctx.strokeRect(hovCol*TS,hovRow*TS,TS,TS);
+    if(hasTower){
+      ctx.fillStyle='#ff8800';ctx.font='bold 7px monospace';ctx.textAlign='center';
+      ctx.fillText('REPLACE',hovCol*TS+TS/2,hovRow*TS+TS*.7);
+    }
+  }
+  if(!hasTower||hasTower.name!==def.name){
+    ctx.strokeStyle=def.col+'55';ctx.lineWidth=1;
     ctx.beginPath();ctx.arc(hovCol*TS+TS/2,hovRow*TS+TS/2,def.range*TS,0,Math.PI*2);ctx.stroke();
   }
 }
 
 function drawTowers(){
   for(const t of towers){
-    // Shadow
+    const isHero=t.hero;
     ctx.fillStyle='rgba(0,0,0,.4)';ctx.beginPath();ctx.ellipse(t.x+2,t.y+6,10,5,0,0,Math.PI*2);ctx.fill();
-    // Tower base (use t.x,t.y which are correctly set at placement)
-    ctx.shadowColor=t.col;ctx.shadowBlur=10;
-    ctx.fillStyle=t.col+'33';ctx.fillRect(t.x-TS/2+2,t.y-TS/2+2,TS-4,TS-4);
-    ctx.strokeStyle=t.col;ctx.lineWidth=2;ctx.strokeRect(t.x-TS/2+2,t.y-TS/2+2,TS-4,TS-4);
+    ctx.shadowColor=t.col;ctx.shadowBlur=isHero?18:10;
+    ctx.fillStyle=t.col+(isHero?'55':'33');ctx.fillRect(t.x-TS/2+2,t.y-TS/2+2,TS-4,TS-4);
+    ctx.strokeStyle=t.col;ctx.lineWidth=isHero?3:2;ctx.strokeRect(t.x-TS/2+2,t.y-TS/2+2,TS-4,TS-4);
     ctx.shadowBlur=0;
-    // Tower icon
-    ctx.font='20px serif';ctx.textAlign='center';ctx.fillText(t.emoji,t.x,t.y+7);
-    // Level star
-    if(t.level>1){ctx.fillStyle='#ffd700';ctx.font='bold 8px monospace';ctx.fillText('★',t.x+14,t.y-TS/2+14);}
-    // Range ring on hover
+    ctx.font=(isHero?'22':'20')+'px serif';ctx.textAlign='center';ctx.fillText(t.emoji,t.x,t.y+7);
+    if(t.level>1){ctx.fillStyle='#ffd700';ctx.font='bold 8px monospace';ctx.fillText('★'+t.level,t.x+14,t.y-TS/2+14);}
+    // Stake board cooldown indicator
+    if(t.type==='stake'&&stakeCooldownWave>wave){
+      ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(t.x-TS/2+2,t.y-TS/2+2,TS-4,TS-4);
+      ctx.fillStyle='#888';ctx.font='7px monospace';ctx.textAlign='center';
+      ctx.fillText('CD W'+(stakeCooldownWave),t.x,t.y+4);
+    }
   }
 }
 
@@ -341,7 +691,6 @@ function drawEnemies(){
   for(const e of enemies){
     if(e.dead||e.reached)continue;
     ctx.fillStyle='rgba(0,0,0,.4)';ctx.beginPath();ctx.ellipse(e.x+2,e.y+8,8,4,0,0,Math.PI*2);ctx.fill();
-    // Body
     ctx.shadowColor=e.col;ctx.shadowBlur=e.type==='boss'?20:6;
     ctx.fillStyle=e.slow>0?'#88ccff':e.burn>0?'#ff6622':e.col;
     const sz=e.type==='boss'?20:e.type==='tank'?14:10;
@@ -349,7 +698,6 @@ function drawEnemies(){
     ctx.shadowBlur=0;
     ctx.font=(e.type==='boss'?'20':'14')+'px serif';ctx.textAlign='center';
     ctx.fillText(e.type==='boss'?'👹':e.type==='tank'?'🛡️':'👾',e.x,e.y+5);
-    // HP bar
     const bw=24,bh=3;
     ctx.fillStyle='#300';ctx.fillRect(e.x-bw/2,e.y-sz-7,bw,bh);
     ctx.fillStyle=e.type==='boss'?'#f84':'#f44';
@@ -359,14 +707,10 @@ function drawEnemies(){
 
 function drawBullets(){
   for(const b of bullets){
-    if(b.type==='zap'){
-      ctx.strokeStyle='#ffff44';ctx.lineWidth=2;ctx.globalAlpha=b.life/10;
-      ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.tx2.x,b.tx2.y);ctx.stroke();
-      ctx.globalAlpha=1;continue;
-    }
+    if(b.type==='zap'){ctx.strokeStyle='#ffff44';ctx.lineWidth=2;ctx.globalAlpha=b.life/10;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.tx2.x,b.tx2.y);ctx.stroke();ctx.globalAlpha=1;continue;}
     ctx.shadowColor=b.col;ctx.shadowBlur=8;
-    ctx.fillStyle=b.col;ctx.beginPath();
-    ctx.arc(b.x,b.y,b.type==='splash'?5:3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=b.isDru?'#ff8800':b.col;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.type==='splash'?5:3,0,Math.PI*2);ctx.fill();
     ctx.shadowBlur=0;
   }
 }
@@ -382,9 +726,9 @@ function drawParticles(){
 
 function drawState(){
   if(gameState==='waiting'&&wave===0){
-    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(W/2-180,H/2-30,360,60);
-    ctx.fillStyle='#88ff88';ctx.font='bold 18px monospace';ctx.textAlign='center';
-    ctx.fillText('PLACE TOWERS · PRESS SPACE TO START',W/2,H/2+7);
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(W/2-200,H/2-30,400,60);
+    ctx.fillStyle='#88ff88';ctx.font='bold 15px monospace';ctx.textAlign='center';
+    ctx.fillText('PLACE TOWERS · SPACE = START · SHIFT+CLICK = SELL',W/2,H/2+7);
   }
   if(gameState==='dead'){
     ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(0,0,W,H);
@@ -403,12 +747,18 @@ function draw(){
   drawEnemies();drawBullets();drawParticles();drawState();
 }
 
+// ─────────────────────────────────────────────
+// MAIN LOOP
+// ─────────────────────────────────────────────
 function loop(){
   tick++;
   if(gameState==='wave'||gameState==='waiting'){updEnemies();updTowers();updBullets();}
   draw();requestAnimationFrame(loop);
 }
 
+// ─────────────────────────────────────────────
+// INPUT
+// ─────────────────────────────────────────────
 C.addEventListener('mousemove',e=>{
   const r=C.getBoundingClientRect();
   hovCol=Math.floor((e.clientX-r.left)/TS);
@@ -426,22 +776,358 @@ C.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.code==='Space'){e.preventDefault();startWave();}
-  if(e.key>='1'&&e.key<='5')selTower(parseInt(e.key)-1);
+  if(e.key>='1'&&e.key<='7')selTower(parseInt(e.key)-1);
   if((e.key==='r'||e.key==='R')&&gameState==='dead'){
     towers=[];enemies=[];bullets=[];particles=[];
-    gold=150;hp=20;wave=0;kills=0;gameState='waiting';
-    // Reset to forest map on restart
-    if(activeMap==='lava'){
-      activeMap='forest';
+    gold=150;hp=20;wave=0;kills=0;gameState='waiting';stakeCooldownWave=0;
+    if(infiniteGold)gold=999999;
+    if(activeMap==='lava'){activateLavaMap();}
+    else{
       PATH_PTS.length=0;
-      [[0,5],[2,5],[2,2],[5,2],[5,8],[9,8],[9,3],[13,3],[13,7],[16,7],[16,5],[17,5]]
-        .map(([c,r])=>({x:c*TS+TS/2,y:r*TS+TS/2})).forEach(p=>PATH_PTS.push(p));
-      for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) IS_PATH[r][c]=onPath(c,r);
+      STAGES[currentStage].path.map(([c,r])=>({x:c*TS+TS/2,y:r*TS+TS/2})).forEach(p=>PATH_PTS.push(p));
+      rebuildIsPath();
     }
     updateHUD();
   }
 });
+
+// ─────────────────────────────────────────────
+// LAVA MAP
+// ─────────────────────────────────────────────
+function activateLavaMap(){
+  activeMap='lava';
+  PATH_PTS.length=0;
+  LAVA_PATH_PTS.forEach(p=>PATH_PTS.push(p));
+  rebuildIsPath();
+  towers=[];enemies=[];bullets=[];particles=[];
+  wave=0;hp=25;gameState='waiting';stakeCooldownWave=0;
+  if(infiniteGold)gold=999999;
+  updateHUD();
+  showMsg('🌋 LAVA MAP ACTIVATED! Place towers & press SPACE!');
+}
+
+// ─────────────────────────────────────────────
+// STAGE SELECT
+// ─────────────────────────────────────────────
+function openStageSelect(){
+  const g=document.getElementById('stage-grid');g.innerHTML='';
+  STAGES.forEach((st,i)=>{
+    const d=document.createElement('div');d.className='scard';
+    d.style.borderColor=st.col;
+    d.innerHTML=`<div class="sname">${st.emoji} ${st.name}</div>
+      <div class="sdesc">${st.desc}</div>
+      <div class="sdiff">${st.diff}</div>`;
+    d.onclick=()=>loadStage(i);
+    g.appendChild(d);
+  });
+  document.getElementById('stage-screen').classList.add('open');
+}
+function closeStageSelect(){document.getElementById('stage-screen').classList.remove('open');}
+function loadStage(i){
+  currentStage=i;
+  activeMap='stage';
+  const st=STAGES[i];
+  PATH_PTS.length=0;
+  st.path.map(([c,r])=>({x:c*TS+TS/2,y:r*TS+TS/2})).forEach(p=>PATH_PTS.push(p));
+  rebuildIsPath();
+  towers=[];enemies=[];bullets=[];particles=[];
+  gold=150;hp=20;wave=0;kills=0;stakeCooldownWave=0;
+  if(infiniteGold)gold=999999;
+  updateHUD();
+  closeStageSelect();
+  showMsg(`${st.emoji} ${st.name} loaded! Place towers & start!`);
+}
+
+// ─────────────────────────────────────────────
+// MAP MAKER
+// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════
+// MAP MAKER — full system
+// ═══════════════════════════════════════════
+// TILE TYPES (stored per cell):
+// null = empty background
+// 'path','path2','bridge' = walkable path tiles
+// 'spawn' = enemy entry  'bosszone' = boss marker
+// 'tree','rock','water','flower','torch','ruin',
+// 'crystal','mushroom','lava_deco','snow','cactus','skull' = decorations
+// 'gold','trap','base' = special
+
+const MM_PATH_TILES=new Set(['path','path2','bridge']);
+const MM_DECO_TILES=new Set(['tree','rock','water','flower','torch','ruin','crystal','mushroom','lava_deco','snow','cactus','skull']);
+const MM_SPECIAL_TILES=new Set(['gold','trap','base']);
+const MM_SPAWN_TILES=new Set(['spawn','bosszone']);
+
+// Tile render definitions: [bg color, emoji/char, overlay color]
+const MM_TILE_STYLE={
+  path:      {bg:'#5a3a1a',ol:'rgba(180,120,60,.25)',emoji:null},
+  path2:     {bg:'#666',ol:'rgba(200,200,200,.15)',emoji:null},
+  bridge:    {bg:'#8B6914',ol:'rgba(240,200,80,.2)',emoji:'🌉'},
+  spawn:     {bg:'#3a0000',ol:'rgba(255,60,60,.3)',emoji:'🔴'},
+  bosszone:  {bg:'#1a001a',ol:'rgba(180,0,180,.3)',emoji:'💀'},
+  tree:      {bg:null,ol:null,emoji:'🌲'},
+  rock:      {bg:null,ol:null,emoji:'🪨'},
+  water:     {bg:'#0a1a3a',ol:'rgba(40,100,255,.35)',emoji:'💧'},
+  flower:    {bg:null,ol:null,emoji:'🌸'},
+  torch:     {bg:null,ol:'rgba(255,160,0,.18)',emoji:'🔦'},
+  ruin:      {bg:'#1a1408',ol:null,emoji:'🏚'},
+  crystal:   {bg:null,ol:'rgba(100,200,255,.2)',emoji:'💎'},
+  mushroom:  {bg:null,ol:null,emoji:'🍄'},
+  lava_deco: {bg:'#2a0800',ol:'rgba(255,80,0,.3)',emoji:'🔥'},
+  snow:      {bg:'#d0e8f0',ol:null,emoji:'⛄'},
+  cactus:    {bg:null,ol:null,emoji:'🌵'},
+  skull:     {bg:null,ol:null,emoji:'💀'},
+  gold:      {bg:'#1a1500',ol:'rgba(255,215,0,.3)',emoji:'💰'},
+  trap:      {bg:'#1a0a00',ol:'rgba(255,100,0,.25)',emoji:'⚠️'},
+  base:      {bg:'#0a0028',ol:'rgba(100,60,255,.2)',emoji:'🏰'},
+  erase:     {bg:null,ol:null,emoji:null},
+};
+
+// Theme backgrounds
+const MM_THEMES={
+  grass:  {bg:'#0e170e',grid:'#1a2a1a',label:'🌿 Grass',fog:'#3a5a2a'},
+  lava:   {bg:'#1a0500',grid:'#2a0e00',label:'🌋 Lava', fog:'#5a2000'},
+  ice:    {bg:'#0a1828',grid:'#1a2a3a',label:'❄️ Ice',  fog:'#3a6088'},
+  desert: {bg:'#1a1400',grid:'#2a2000',label:'🏜 Desert',fog:'#6a5010'},
+  night:  {bg:'#050510',grid:'#0e0e22',label:'🌙 Night', fog:'#1a1a44'},
+  candy:  {bg:'#1a0014',grid:'#2a0028',label:'🍭 Candy', fog:'#5a0050'},
+  space:  {bg:'#000008',grid:'#0a0a18',label:'🚀 Space', fog:'#101040'},
+  swamp:  {bg:'#0a1000',grid:'#141e08',label:'🐸 Swamp', fog:'#2a4010'},
+};
+
+let mmGrid=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+let mmHistory=[]; // undo stack (last 20 states)
+let mmDrawing=false;
+let mmCurTool='path';
+let mmTheme='grass';
+
+const MMC=document.getElementById('mm-c');
+const mctx=MMC.getContext('2d');
+
+function mmSetTheme(t){
+  mmTheme=t;
+  document.querySelectorAll('.mm-theme').forEach(b=>{
+    b.classList.toggle('sel',b.dataset.theme===t);
+  });
+  drawMM();
+}
+
+function mmSelTool(t){
+  mmCurTool=t;
+  document.querySelectorAll('.mm-tool').forEach(b=>{
+    b.classList.toggle('sel',b.dataset.tool===t);
+  });
+  mmStatus(t==='erase'?'Right-click also erases':
+    MM_PATH_TILES.has(t)?'Draw path from 🟢 LEFT to 🔴 RIGHT edge':
+    MM_SPAWN_TILES.has(t)?'Place on the path to mark enemy entry points':
+    MM_SPECIAL_TILES.has(t)?'Special tile — affects gameplay':
+    'Decoration only — does not block towers');
+}
+
+function mmStatus(txt){
+  const el=document.getElementById('mm-status');
+  if(el)el.textContent=txt;
+}
+
+function mmPushHistory(){
+  mmHistory.push(mmGrid.map(row=>[...row]));
+  if(mmHistory.length>20)mmHistory.shift();
+}
+
+function mmUndo(){
+  if(!mmHistory.length){mmStatus('Nothing to undo');return;}
+  mmGrid=mmHistory.pop();
+  drawMM();
+}
+
+function mmClear(){
+  mmPushHistory();
+  mmGrid=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  drawMM();
+}
+
+function mmFillBg(){
+  // Fill all empty cells with the current deco tool (only deco/special)
+  if(!MM_DECO_TILES.has(mmCurTool)&&!MM_SPECIAL_TILES.has(mmCurTool)){
+    mmStatus('Select a decoration tool first, then Fill BG');return;
+  }
+  mmPushHistory();
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(!mmGrid[r][c])mmGrid[r][c]=mmCurTool;
+  }
+  drawMM();
+}
+
+function mmCell(e){
+  const rect=MMC.getBoundingClientRect();
+  const scaleX=W/rect.width, scaleY=H/rect.height;
+  const col=Math.floor((e.clientX-rect.left)*scaleX/TS);
+  const row=Math.floor((e.clientY-rect.top)*scaleY/TS);
+  if(col<0||col>=COLS||row<0||row>=ROWS)return;
+  if(e.buttons===2){mmGrid[row][col]=null;drawMM();return;}
+  if(mmCurTool==='erase'){mmGrid[row][col]=null;}
+  else{mmGrid[row][col]=mmCurTool;}
+  drawMM();
+}
+
+MMC.addEventListener('mousedown',e=>{
+  if(!mmDrawing)mmPushHistory();
+  mmDrawing=true;mmCell(e);
+});
+MMC.addEventListener('mousemove',e=>{if(mmDrawing)mmCell(e);});
+window.addEventListener('mouseup',()=>mmDrawing=false);
+MMC.addEventListener('contextmenu',e=>e.preventDefault());
+
+// ── PATH TRACER — DFS that finds a connected path ──
+function mmTracePath(){
+  // Find all path-type tiles
+  const isPath=(r,c)=>c>=0&&c<COLS&&r>=0&&r<ROWS&&MM_PATH_TILES.has(mmGrid[r][c]);
+  // Find entry on left edge (col 0)
+  let startRow=-1;
+  for(let r=0;r<ROWS;r++){if(isPath(r,0)){startRow=r;break;}}
+  if(startRow===-1)return{ok:false,msg:'No path on the LEFT edge. Draw path tiles touching the left side.'};
+  // DFS to trace path — greedy: prefer moving right then toward right edge
+  const visited=new Set();
+  const order=[];
+  const key=(r,c)=>`${r},${c}`;
+  function dfs(r,c){
+    if(!isPath(r,c)||visited.has(key(r,c)))return false;
+    visited.add(key(r,c));
+    order.push([c,r]);
+    if(c===COLS-1)return true; // reached right edge
+    // Try directions in order: right, down, up, left (prefer rightward progress)
+    const dirs=[[0,1],[1,0],[-1,0],[0,-1]];
+    for(const [dr,dc] of dirs){
+      if(dfs(r+dr,c+dc))return true;
+    }
+    // Dead end — backtrack
+    order.pop();
+    visited.delete(key(r,c));
+    return false;
+  }
+  const found=dfs(startRow,0);
+  if(!found){
+    // Try all left-edge starts
+    for(let r=0;r<ROWS;r++){
+      if(r===startRow)continue;
+      if(!isPath(r,0))continue;
+      visited.clear();order.length=0;
+      if(dfs(r,0))break;
+    }
+  }
+  if(!order.length||order[order.length-1][0]!==COLS-1){
+    return{ok:false,msg:'Path does not reach the RIGHT edge. Extend path tiles to the right side.'};
+  }
+  if(order.length<4){
+    return{ok:false,msg:'Path too short! Draw at least 4 connected path tiles.'};
+  }
+  return{ok:true,path:order};
+}
+
+function drawMM(){
+  const theme=MM_THEMES[mmTheme]||MM_THEMES.grass;
+  mctx.clearRect(0,0,W,H);
+  // Background
+  mctx.fillStyle=theme.bg;
+  mctx.fillRect(0,0,W,H);
+  // Grid lines
+  mctx.strokeStyle=theme.grid;mctx.lineWidth=.5;
+  for(let r=0;r<=ROWS;r++){mctx.beginPath();mctx.moveTo(0,r*TS);mctx.lineTo(W,r*TS);mctx.stroke();}
+  for(let c=0;c<=COLS;c++){mctx.beginPath();mctx.moveTo(c*TS,0);mctx.lineTo(c*TS,H);mctx.stroke();}
+
+  // Cells
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const tile=mmGrid[r][c];
+      if(!tile)continue;
+      const style=MM_TILE_STYLE[tile];
+      if(!style)continue;
+      if(style.bg){mctx.fillStyle=style.bg;mctx.fillRect(c*TS,r*TS,TS,TS);}
+      if(style.ol){mctx.fillStyle=style.ol;mctx.fillRect(c*TS,r*TS,TS,TS);}
+      if(style.emoji){
+        mctx.font=`${TS*.55}px serif`;mctx.textAlign='center';mctx.textBaseline='middle';
+        mctx.fillText(style.emoji,c*TS+TS/2,r*TS+TS/2+1);
+      }
+    }
+  }
+
+  // Left/right edge column highlights
+  mctx.fillStyle='rgba(100,255,100,.12)';
+  for(let r=0;r<ROWS;r++)mctx.fillRect(0,r*TS,TS,TS);
+  mctx.fillStyle='rgba(255,80,80,.12)';
+  for(let r=0;r<ROWS;r++)mctx.fillRect((COLS-1)*TS,r*TS,TS,TS);
+
+  // Draw traced path preview (green line)
+  const trace=mmTracePath();
+  if(trace.ok){
+    mctx.strokeStyle='rgba(100,255,100,.6)';mctx.lineWidth=4;mctx.lineJoin='round';
+    mctx.beginPath();
+    trace.path.forEach(([c,r],i)=>{
+      const x=c*TS+TS/2,y=r*TS+TS/2;
+      i===0?mctx.moveTo(x,y):mctx.lineTo(x,y);
+    });
+    mctx.stroke();
+    mmStatus(`✅ Valid path! ${trace.path.length} tiles — hit ▶ PLAY THIS MAP`);
+  }
+
+  // Start / End labels
+  mctx.fillStyle='#88ff88';mctx.font='bold 8px monospace';mctx.textAlign='center';mctx.textBaseline='alphabetic';
+  mctx.fillText('START',TS/2,H-3);
+  mctx.fillStyle='#ff6666';
+  mctx.fillText('END',(COLS-.5)*TS,H-3);
+
+  // Current tool preview label
+  mctx.fillStyle='rgba(0,0,0,.55)';mctx.fillRect(W-120,0,120,18);
+  mctx.fillStyle='#aaa';mctx.font='8px monospace';mctx.textAlign='right';mctx.textBaseline='alphabetic';
+  const ts=MM_TILE_STYLE[mmCurTool];
+  mctx.fillText('Tool: '+(ts?.emoji||'')+' '+mmCurTool,W-4,13);
+
+  mctx.textBaseline='alphabetic';
+}
+
+function mmLoad(){
+  const trace=mmTracePath();
+  if(!trace.ok){
+    mmStatus('❌ '+trace.msg);
+    // Flash status red
+    const el=document.getElementById('mm-status');
+    if(el){el.style.color='#ff4444';setTimeout(()=>el.style.color='#446644',2000);}
+    return;
+  }
+
+  // Apply to game
+  activeMap='custom';
+  PATH_PTS.length=0;
+  trace.path.forEach(([c,r])=>PATH_PTS.push({x:c*TS+TS/2,y:r*TS+TS/2}));
+  rebuildIsPath();
+
+  // Apply custom theme colors to activeMap so drawGround uses them
+  const theme=MM_THEMES[mmTheme];
+  window._mmTheme=theme;
+  window._mmThemeKey=mmTheme;
+
+  // Reset game
+  towers=[];enemies=[];bullets=[];particles=[];
+  gold=150;hp=20;wave=0;kills=0;stakeCooldownWave=0;
+  if(infiniteGold)gold=999999;
+  updateHUD();
+  closeMapMaker();
+  showMsg(`${MM_THEMES[mmTheme].label} map loaded! Let's go!`);
+}
+
+function openMapMaker(){
+  document.getElementById('mm-overlay').classList.add('open');
+  drawMM();
+}
+function closeMapMaker(){
+  document.getElementById('mm-overlay').classList.remove('open');
+  mctx.textBaseline='alphabetic'; // reset
+}
+
+// ─────────────────────────────────────────────
+// BUILD STAGE BUTTONS (INIT)
+// ─────────────────────────────────────────────
 loop();
+updateHUD();
 </script>
 </body>
 </html>
