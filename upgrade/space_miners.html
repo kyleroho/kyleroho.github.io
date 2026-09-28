@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Space Miner</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{background:#030308;overflow:hidden;height:100vh;width:100vw;font-family:'Segoe UI',sans-serif;}
 canvas{position:absolute;top:0;left:0;}
 #hud{position:fixed;top:0;left:0;right:0;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:linear-gradient(#030308dd,transparent);pointer-events:none;z-index:10;}
@@ -23,11 +23,11 @@ canvas{position:absolute;top:0;left:0;}
 .ubtn{background:transparent;border:1px solid #4488ff;color:#4488ff;padding:6px 14px;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .15s;}
 .ubtn:hover{background:#4488ff22;}
 .ubtn:disabled{opacity:.3;cursor:default;}
-#closeShop{display:block;margin-top:16px;width:100%;background:transparent;border:1px solid #222;color:#333;padding:8px;font-size:11px;letter-spacing:2px;cursor:pointer;}
+#closeShop{display:block;margin-top:16px;width:100%;background:transparent;border:1px solid #224;color:#888;padding:8px;font-size:11px;letter-spacing:2px;cursor:pointer;}
 #closeShop:hover{color:#666;}
 #msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#030308ee;z-index:30;}
 #msg h1{font-size:54px;font-weight:900;letter-spacing:4px;color:#4488ff;margin-bottom:8px;text-align:center;}
-#msg p{color:#1a2244;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.2;}
+#msg p{color:#88aaff;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.2;}
 .btn{background:transparent;border:2px solid #4488ff;color:#4488ff;padding:12px 36px;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .2s;}
 .btn:hover{background:#4488ff22;}
 canvas{touch-action:none;}
@@ -39,6 +39,11 @@ canvas{touch-action:none;}
 .ubtn{min-height:44px;min-width:64px;}
 #closeShop{min-height:44px;}
 #shopPanel{max-width:92vw;max-height:86vh;overflow:auto;}
+#muteBtn{position:fixed;top:56px;left:12px;width:44px;height:44px;background:#0a0a22cc;border:2px solid #4488ff;color:#4488ff;font-size:20px;z-index:40;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#fireInd{position:fixed;bottom:170px;right:24px;width:44px;height:44px;border-radius:50%;border:2px solid #44ccff55;z-index:15;pointer-events:none;opacity:.35;}
+#fireInd.on{opacity:1;background:#44ccff33;border-color:#44ccff;box-shadow:0 0 18px #44ccff;}
+#bombTouchBtn:active{background:#ff880066;}
+.btn:active,.ubtn:active{filter:brightness(1.6);}
 </style>
 </head>
 <body>
@@ -51,8 +56,10 @@ canvas{touch-action:none;}
 </div>
 <button id="shopBtn" onclick="openShop()">⚙ UPGRADE SHOP</button>
 <button id="pauseBtn" onclick="togglePause()">⏸</button>
+<button id="muteBtn" onclick="toggleMute()">🔊</button>
 <button id="bombTouchBtn">💣</button>
 <div id="joy"><div id="joyKnob"></div></div>
+<div id="fireInd"></div>
 <div id="shop">
   <div id="shopPanel">
     <h2>UPGRADE SHIP</h2>
@@ -68,7 +75,7 @@ canvas{touch-action:none;}
 </div>
 <div id="msg">
   <h1>SPACE<br>MINER</h1>
-  <p>WASD/Arrows to fly. Space to shoot.<br>B to drop bomb (after upgrade).<br>Touch: left side = joystick, hold right side = fire.<br>Destroy asteroids for minerals. Upgrade your ship!<br><span id="bestLine" style="color:#4488ff;font-weight:700;"></span></p>
+  <p>Touch: left side = joystick to fly, hold right side = fire.<br>💣 button appears after the Bomb upgrade.<br>Desktop: WASD/Arrows to fly, Space to shoot, B for bomb.<br>Destroy asteroids for minerals. Upgrade your ship!<br><span id="bestLine" style="color:#4488ff;font-weight:700;"></span></p>
   <button class="btn" onclick="startGame()">LAUNCH ▶</button>
 </div>
 <script>
@@ -79,8 +86,9 @@ window.addEventListener('orientationchange',function(){setTimeout(resize,100);})
 
 var keys={};
 var gameState='menu';
-var ship,bullets,asteroids,parts,floats;
-var frame,score,minerals,sector;
+var ship,bullets=[],asteroids=[],parts=[],floats=[];
+var frame=0,score=0,minerals=0,sector=1;
+var shake=0,flashA=0;
 var upgrades={engine:1,laser:1,hull:1,bomb:0,firerate:1,drone:0};
 var stars=[];
 var SAVE_KEY='pfg2_space_miners';
@@ -89,14 +97,50 @@ function loadSave(){try{var d=JSON.parse(localStorage.getItem(SAVE_KEY));if(d){i
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({best:bestScore,upgrades:upgrades}));}catch(e){}}
 function pauseGame(){if(gameState==='play')gameState='paused';}
 function resumeGame(){if(gameState==='paused')gameState='play';}
-function togglePause(){if(gameState==='play')pauseGame();else if(gameState==='paused')resumeGame();else if(gameState==='shop')closeShop();}
+function togglePause(){if(gameState==='play'){SFX.tap();pauseGame();}else if(gameState==='paused'){SFX.tap();resumeGame();}else if(gameState==='shop'){SFX.tap();closeShop();}}
 document.addEventListener('visibilitychange',function(){if(document.hidden)pauseGame();});
 loadSave();
 document.getElementById('bestLine').textContent=bestScore>0?('BEST SCORE: '+bestScore):'';
 
+// --- tiny WebAudio SFX synth (no audio assets) ---
+var muted=false;try{muted=localStorage.getItem('pfg2_sm_muted')==='1';}catch(e){}
+var AC=null,noiseBuf=null;
+function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){AC=null;}}if(AC&&AC.state==='suspended'){AC.resume();}return AC;}
+function tone(f0,f1,dur,type,vol,delay){
+  if(muted)return;var c=ac();if(!c)return;
+  var t=c.currentTime+(delay||0);
+  var o=c.createOscillator(),g=c.createGain();
+  o.type=type||'square';o.frequency.setValueAtTime(Math.max(1,f0),t);
+  if(f1&&f1!==f0)o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),t+dur);
+  g.gain.setValueAtTime(vol||.15,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur+.03);
+}
+function noiseHit(dur,vol,fc,delay){
+  if(muted)return;var c=ac();if(!c)return;
+  var t=c.currentTime+(delay||0);
+  if(!noiseBuf){noiseBuf=c.createBuffer(1,Math.floor(c.sampleRate*Math.max(.3,dur)),c.sampleRate);var d=noiseBuf.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
+  var s=c.createBufferSource();s.buffer=noiseBuf;s.loop=true;
+  var f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=fc||800;
+  var g=c.createGain();g.gain.setValueAtTime(vol||.3,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  s.connect(f);f.connect(g);g.connect(c.destination);s.start(t);s.stop(t+dur+.03);
+}
+var SFX={
+  shoot:function(){tone(880,220,.12,'square',.07);},
+  boom:function(big){noiseHit(big?.5:.25,big?.5:.3,big?400:900);tone(big?120:200,40,big?.4:.2,'sawtooth',.12);},
+  pickup:function(){tone(660,1320,.12,'sine',.11);},
+  bomb:function(){noiseHit(.8,.6,300);tone(90,30,.7,'sawtooth',.2);},
+  tap:function(){tone(520,520,.05,'square',.06);},
+  hit:function(){noiseHit(.2,.35,500);tone(150,60,.2,'sawtooth',.15);},
+  over:function(){tone(400,400,.15,'square',.12);tone(300,300,.15,'square',.12,.16);tone(200,80,.45,'sawtooth',.15,.32);}
+};
+function toggleMute(){muted=!muted;try{localStorage.setItem('pfg2_sm_muted',muted?'1':'0');}catch(e){}var b=document.getElementById('muteBtn');if(b)b.textContent=muted?'🔇':'🔊';if(!muted)SFX.tap();}
+var mb0=document.getElementById('muteBtn');if(mb0)mb0.textContent=muted?'🔇':'🔊';
+document.addEventListener('pointerdown',function(){ac();},{once:true});
+
 function genStars(){stars=[];for(var i=0;i<120;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:.5+Math.random()*1.5,twinkle:Math.random()*Math.PI*2});}
 
 function startGame(){
+  ac();SFX.tap();
   document.getElementById('msg').style.display='none';
   frame=0;score=0;minerals=0;sector=1;
   var baseHp=100+(upgrades.hull-1)*50;
@@ -155,6 +199,13 @@ function update(){
     ship.shootCd=fireRate;
     bullets.push({x:ship.x+Math.cos(ship.angle)*18,y:ship.y+Math.sin(ship.angle)*18,
       vx:ship.vx+Math.cos(ship.angle)*10,vy:ship.vy+Math.sin(ship.angle)*10,life:60,dmg:1+upgrades.laser});
+    SFX.shoot();
+  }
+  // engine thruster particles
+  if((keys['ArrowUp']||keys['w'])&&frame%2===0){
+    parts.push({x:ship.x-Math.cos(ship.angle)*16,y:ship.y-Math.sin(ship.angle)*16,
+      vx:-Math.cos(ship.angle)*2+(Math.random()-.5),vy:-Math.sin(ship.angle)*2+(Math.random()-.5),
+      life:14,r:2,col:'#ffaa33'});
   }
   if(keys['b']&&ship.bombs>0&&!keys._bHeld){
     ship.bombs--;keys._bHeld=true;bombBlast();
@@ -197,6 +248,7 @@ function update(){
     if(ship.inv<=0&&Math.hypot(a.x-ship.x,a.y-ship.y)<a.r+12){
       ship.hp-=8+sector*2;ship.inv=45;
       spawnParts(ship.x,ship.y,'#ff4444',10);
+      shake=9;SFX.hit();
       updateHUD();
       if(ship.hp<=0){gameDead();return;}
     }
@@ -212,6 +264,8 @@ function update(){
 
 function killAsteroid(idx){
   var a=asteroids[idx];
+  SFX.boom(a.r>42);SFX.pickup();
+  if(a.r>42)shake=Math.max(shake,5);
   var pts=a.type==='large'?30:a.type==='medium'?15:8;
   var min=a.type==='large'?6:a.type==='medium'?3:1;
   if(a.gold){pts*=2;min*=4;}
@@ -234,6 +288,7 @@ function killAsteroid(idx){
 
 function bombBlast(){
   var blasted=0;
+  shake=14;flashA=.4;SFX.bomb();
   for(var i=asteroids.length-1;i>=0;i--){
     if(Math.hypot(asteroids[i].x-ship.x,asteroids[i].y-ship.y)<140){killAsteroid(i);blasted++;}
   }
@@ -248,12 +303,13 @@ function spawnParts(x,y,col,n){
 }
 
 function gameDead(){gameState='over';
+  SFX.over();
   if(score>bestScore)bestScore=score;persist();
   document.getElementById('bombTouchBtn').style.display='none';
   document.getElementById('msg').style.display='flex';
   document.getElementById('msg').innerHTML=
     '<h1 style="color:#ff4444">HULL BREACH</h1>'+
-    '<p style="color:#1a2244">Sector '+sector+' | Score: '+score+'<br>Minerals: '+minerals+'<br>Best: '+bestScore+'</p>'+
+    '<p style="color:#88aaff">Sector '+sector+' | Score: '+score+'<br>Minerals: '+minerals+'<br>Best: '+bestScore+'</p>'+
     '<button class="btn" onclick="startGame()">RELAUNCH</button>';}
 
 function updateHUD(){
@@ -277,6 +333,7 @@ function refreshShop(){
 }
 function openShop(){
   if(gameState!=='play') return;
+  SFX.tap();
   gameState='shop';
   refreshShop();
   document.getElementById('shop').style.display='flex';
@@ -290,7 +347,7 @@ function refreshUpgBtn(type,btnId){
 }
 function repairHull(){
   if(minerals<25||ship.hp>=ship.maxHp)return;
-  minerals-=25;ship.hp=ship.maxHp;updateHUD();refreshShop();
+  minerals-=25;ship.hp=ship.maxHp;updateHUD();refreshShop();SFX.tap();
 }
 function syncBombBtn(){
   var btb=document.getElementById('bombTouchBtn');
@@ -298,7 +355,7 @@ function syncBombBtn(){
     btb.style.display='flex';btb.textContent='💣'+ship.bombs;
   }else{btb.style.display='none';}
 }
-function closeShop(){document.getElementById('shop').style.display='none';gameState='play';}
+function closeShop(){document.getElementById('shop').style.display='none';gameState='play';SFX.tap();}
 var UPG_COSTS={engine:80,laser:100,hull:120,bomb:200,firerate:90,drone:250};
 var UPG_MAXLV={engine:5,laser:5,hull:3,bomb:1,firerate:5,drone:1};
 function buyUpg(type){
@@ -308,6 +365,7 @@ function buyUpg(type){
   minerals-=cost;
   upgrades[type]++;
   persist();
+  SFX.tap();
   if(type==='hull'){ship.maxHp+=50;ship.hp=Math.min(ship.hp+50,ship.maxHp);}
   if(type==='bomb'){ship.bombs=3;}
   if(type==='drone'&&ship&&!ship.drone)ship.drone={ang:0,cd:0,x:ship.x,y:ship.y};
@@ -317,8 +375,12 @@ function buyUpg(type){
 }
 
 function draw(){
+  if(shake>0){shake*=.88;if(shake<.4)shake=0;}
+  if(flashA>0)flashA=Math.max(0,flashA-.03);
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#030308';ctx.fillRect(0,0,W,H);
+  ctx.save();
+  if(shake>0)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
   // stars
   stars.forEach(function(s){
     s.twinkle+=.02;var a=.4+Math.sin(s.twinkle)*.25;
@@ -383,6 +445,8 @@ function draw(){
     ctx.globalAlpha=Math.min(1,f.life/30);ctx.fillStyle=f.col;
     ctx.font='bold 15px sans-serif';ctx.textAlign='center';ctx.fillText(f.txt,f.x,f.y);
   });ctx.globalAlpha=1;ctx.textAlign='left';
+  ctx.restore();
+  if(flashA>0){ctx.fillStyle='rgba(255,170,60,'+flashA.toFixed(3)+')';ctx.fillRect(0,0,W,H);}
 
   // pause overlay
   if(gameState==='paused'){
@@ -413,6 +477,7 @@ document.addEventListener('touchstart',function(e){
       joyKnob.style.transform='translate(0px,0px)';
     }else if(t.clientX>=W/2&&fireId===null){
       fireId=t.identifier;keys[' ']=true;
+      document.getElementById('fireInd').className='on';
     }
   }
   e.preventDefault();
@@ -434,7 +499,7 @@ function endTouch(e){
   for(var i=0;i<e.changedTouches.length;i++){
     var id=e.changedTouches[i].identifier;
     if(id===joyId){joyId=null;keys['ArrowLeft']=false;keys['ArrowRight']=false;keys['w']=false;joyEl.style.display='none';}
-    if(id===fireId){fireId=null;keys[' ']=false;}
+    if(id===fireId){fireId=null;keys[' ']=false;document.getElementById('fireInd').className='';}
   }
 }
 document.addEventListener('touchend',endTouch);
