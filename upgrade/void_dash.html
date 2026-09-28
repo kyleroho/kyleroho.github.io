@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>VOID DASH — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{touch-action:none;}
+body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;font-family:"Courier New",monospace;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
+canvas{display:block;touch-action:none;}
+#ui{position:fixed;top:8px;left:0;right:0;display:flex;justify-content:center;gap:24px;font-size:13px;color:#aaa;pointer-events:none;flex-wrap:wrap;z-index:10;}
+#ui b{color:#fff;}
+a{color:#ff3fa4;font-size:11px;text-decoration:none;pointer-events:all;}a:hover{color:#fff;}
+/* Pause button (always available, touch-friendly) */
+#pauseBtn{position:fixed;top:8px;right:8px;width:48px;height:48px;font-size:22px;line-height:1;background:rgba(0,255,245,.08);border:2px solid rgba(0,255,245,.5);color:#00fff5;border-radius:10px;cursor:pointer;z-index:30;touch-action:manipulation;}
+#pauseBtn:active{background:rgba(0,255,245,.25);}
+/* Touch controls (shown only on touch devices) */
+#joy{position:fixed;left:18px;bottom:18px;width:128px;height:128px;border-radius:50%;background:rgba(204,0,255,.10);border:2px solid rgba(204,0,255,.45);display:none;z-index:20;touch-action:none;}
+#knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(204,0,255,.35);border:2px solid rgba(221,0,255,.8);}
+#dashBtn{position:fixed;right:18px;bottom:18px;width:88px;height:88px;border-radius:50%;background:rgba(255,136,0,.14);border:3px solid rgba(255,136,0,.7);color:#ffaa00;font-family:"Courier New",monospace;font-weight:bold;font-size:16px;display:none;z-index:20;touch-action:none;cursor:pointer;}
+#dashBtn:active{background:rgba(255,136,0,.35);}
+body.touch #joy{display:block;}
+body.touch #dashBtn{display:block;}
+</style>
+</head>
+<body>
+<div id="ui">
+  <span>SCORE <b id="sc">0</b></span>
+  <span>COMBO <b id="cb">x1</b></span>
+  <span>BEST <b id="bs">0</b></span>
+  <span>LIVES <b id="lv">3</b></span>
+  <span>LEVEL <b id="lv2">1</b></span>
+  <a href="index.html">Back</a>
+</div>
+<button id="pauseBtn" title="Pause (P)" aria-label="Pause">&#10074;&#10074;</button>
+<canvas id="c"></canvas>
+<div id="joy"><div id="knob"></div></div>
+<button id="dashBtn">DASH</button>
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=600,H=700;C.width=W;C.height=H;
+
+// Fit canvas to screen, preserving aspect ratio
+function fit(){
+  const s=Math.min(window.innerWidth/W,window.innerHeight/H);
+  C.style.width=(W*s)+'px';C.style.height=(H*s)+'px';
+}
+window.addEventListener('resize',fit);fit();
+
+// Player
+let px=W/2,py=H-80,pdx=0,pdy=0,pR=10,pInv=0,pTrail=[],pDash=0,pDashCD=0;
+let lives=3,score=0,level=1,phase=0,dead=false,started=false,paused=false;
+let combo=0,comboT=0; // dash-combo multiplier
+let bullets=[],particles=[],stars=[],rings=[];
+let keys={};
+
+// Best score (migrates from legacy 'vd_best' key)
+let best=Math.max(
+  parseInt(localStorage.getItem('pfg2_void_dash')||'0'),
+  parseInt(localStorage.getItem('vd_best')||'0')
+);
+
+// Stars
+for(let i=0;i<120;i++)stars.push({x:Math.random()*W,y:Math.random()*H,s:Math.random()*1.5+.3,spd:Math.random()*1+.3});
+
+// Patterns
+const PATTERNS=[
+  // Spiral
+  (t)=>{for(let i=0;i<6;i++){const a=t*.04+i/6*Math.PI*2;bullets.push({x:W/2,y:H/2,vx:Math.cos(a)*3,vy:Math.sin(a)*3,r:5,col:'#ff3fa4',life:200});}},
+  // Rain
+  ()=>{for(let i=0;i<3;i++)bullets.push({x:Math.random()*W,y:-10,vx:(Math.random()-.5),vy:2+level*.3,r:6,col:'#00fff5',life:300});},
+  // Fan from sides
+  (t)=>{if(t%60===0){const side=Math.random()<.5?0:W;for(let i=0;i<5;i++){const a=(-Math.PI/2)+((i-2)/4)*(Math.PI*.6)+(side?Math.PI:0);bullets.push({x:side,y:Math.random()*H*.6+50,vx:Math.cos(a)*4,vy:Math.sin(a)*4,r:7,col:'#ffe600',life:220});}}},
+  // Aimed burst
+  ()=>{const a=Math.atan2(py-H/3,px-W/2);for(let i=-2;i<=2;i++){const aa=a+i*.18;bullets.push({x:W/2,y:H/3,vx:Math.cos(aa)*4.5,vy:Math.sin(aa)*4.5,r:6,col:'#ff6600',life:200});}},
+  // Ring expand
+  ()=>{const n=12;for(let i=0;i<n;i++){const a=i/n*Math.PI*2;bullets.push({x:W/2,y:H/2,vx:Math.cos(a)*2.5,vy:Math.sin(a)*2.5,r:6,col:'#7fff00',life:250});}},
+  // Void seekers: slow homing orbs (level 2+)
+  ()=>{
+    if(level>=2&&Math.random()<.35){
+      const edge=Math.floor(Math.random()*4);let x,y;
+      if(edge===0){x=Math.random()*W;y=-12;}else if(edge===1){x=W+12;y=Math.random()*H;}
+      else if(edge===2){x=Math.random()*W;y=H+12;}else{x=-12;y=Math.random()*H;}
+      const a=Math.atan2(H/2-y,W/2-x);
+      bullets.push({x,y,vx:Math.cos(a)*1.6,vy:Math.sin(a)*1.6,r:8,col:'#b388ff',life:420,home:true});
+    }
+  },
+];
+
+let phaseTick=0,patternIdx=0;
+
+function spawnBullets(){
+  phaseTick++;
+  const rate=Math.max(8,30-level*2);
+  if(phaseTick%rate===0){
+    PATTERNS[patternIdx%PATTERNS.length](phaseTick);
+    if(phaseTick%80===0)patternIdx++;
+  }
+  // Boss ring occasionally
+  if(level>=3&&phaseTick%200===0)rings.push({x:W/2,y:H/2,r:20,maxR:300,spd:4,col:'#ff3fa4'});
+}
+
+function exhaust(){
+  pTrail.push({x:px,y:py,a:1});
+  if(pTrail.length>18)pTrail.shift();
+}
+
+function pEmit(col){
+  for(let i=0;i<16;i++)particles.push({x:px,y:py,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,col,life:35,sz:3});
+}
+
+// Start / retry / dash — shared by Space, tap, and the DASH button
+function doDash(){
+  if(!started){started=true;return;}
+  if(dead){reset();return;}
+  if(pDashCD===0){pDash=12;pDashCD=60;pInv=12;pEmit('#8800ff');}
+}
+
+function reset(){
+  dead=false;lives=3;score=0;level=1;bullets=[];rings=[];particles=[];pTrail=[];
+  pDash=0;pDashCD=0;pInv=0;px=W/2;py=H-80;pdx=0;pdy=0;
+  phase=0;phaseTick=0;patternIdx=0;combo=0;comboT=0;
+}
+
+function update(){
+  if(dead||!started||paused)return;
+  phase++;
+  score++;
+  if(score>best){best=score;localStorage.setItem('pfg2_void_dash',best);}
+  if(score%600===0)level=Math.min(10,level+1);
+
+  // Combo decay
+  if(comboT>0){comboT--;if(comboT===0)combo=0;}
+
+  // Stars
+  stars.forEach(s=>{s.y+=s.spd;if(s.y>H)s.y=0;});
+
+  // Move player
+  const spd=pDash>0?14:3.8;
+  if(keys['ArrowLeft']||keys['KeyA'])pdx=Math.max(-spd,pdx-.6);
+  if(keys['ArrowRight']||keys['KeyD'])pdx=Math.min(spd,pdx+.6);
+  if(keys['ArrowUp']||keys['KeyW'])pdy=Math.max(-spd,pdy-.6);
+  if(keys['ArrowDown']||keys['KeyS'])pdy=Math.min(spd,pdy+.6);
+  if(!(keys['ArrowLeft']||keys['KeyA'])&&!(keys['ArrowRight']||keys['KeyD']))pdx*=0.85;
+  if(!(keys['ArrowUp']||keys['KeyW'])&&!(keys['ArrowDown']||keys['KeyS']))pdy*=0.85;
+  px=Math.max(pR,Math.min(W-pR,px+pdx));
+  py=Math.max(pR,Math.min(H-pR,py+pdy));
+  if(pDash>0)pDash--;
+  if(pDashCD>0)pDashCD--;
+  exhaust();
+
+  // Bullets
+  spawnBullets();
+  bullets=bullets.filter(b=>b.life>0);
+  bullets.forEach(b=>{
+    b.x+=b.vx;b.y+=b.vy;b.life--;
+    if(b.home){ // seekers home gently toward the player
+      const a=Math.atan2(py-b.y,px-b.x),sp=Math.min(2.8,Math.hypot(b.vx,b.vy)+.03);
+      b.vx=Math.cos(a)*sp;b.vy=Math.sin(a)*sp;
+    }
+  });
+
+  // Rings
+  rings=rings.filter(r=>r.r<r.maxR);
+  rings.forEach(r=>r.r+=r.spd);
+
+  if(pDash>0){
+    // Dash absorb: dashing THROUGH bullets destroys them and builds combo
+    bullets.forEach(b=>{
+      if(b.life>0&&Math.hypot(b.x-px,b.y-py)<b.r+pR){
+        b.life=0;combo=Math.min(9,combo+1);comboT=240;score+=10*combo;
+        for(let i=0;i<6;i++)particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,col:'#ffaa00',life:30,sz:4});
+      }
+    });
+  }else if(pInv===0){
+    bullets.forEach(b=>{
+      const d=Math.hypot(b.x-px,b.y-py);
+      if(d<b.r+pR-3){
+        b.life=0;hit();
+      }else if(!b.g&&d<b.r+pR+14){ // graze: near-miss scores and refunds dash cooldown
+        b.g=true;score+=5;pDashCD=Math.max(0,pDashCD-6);
+        particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*2,vy:(Math.random()-.5)*2,col:'#00fff5',life:18,sz:2});
+      }
+    });
+    rings.forEach(r=>{
+      const d=Math.hypot(r.x-px,r.y-py);
+      if(Math.abs(d-r.r)<pR+3)hit();
+    });
+  }
+  if(pInv>0)pInv--;
+
+  // Particles
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vx*=.92;p.vy*=.92;p.life-=2;});
+
+  document.getElementById('sc').textContent=score;
+  document.getElementById('cb').textContent='x'+Math.max(1,combo);
+  document.getElementById('bs').textContent=best;
+  document.getElementById('lv').textContent=lives;
+  document.getElementById('lv2').textContent=level;
+  document.getElementById('dashBtn').style.opacity=pDashCD===0?'1':'.45';
+}
+
+function hit(){
+  if(pInv>0||dead)return;
+  pInv=90;lives--;combo=0;comboT=0;pEmit('#ff3fa4');
+  if(lives<=0){dead=true;pEmit('#fff');pEmit('#ff3fa4');}
+}
+
+function draw(){
+  ctx.fillStyle='#020008';ctx.fillRect(0,0,W,H);
+
+  // Stars
+  stars.forEach(s=>{ctx.fillStyle=`rgba(255,255,255,${s.s*.5})`;ctx.fillRect(s.x,s.y,s.s,s.s);});
+
+  // Rings
+  rings.forEach(r=>{
+    ctx.strokeStyle=r.col;ctx.lineWidth=3;
+    ctx.globalAlpha=Math.max(0,1-r.r/r.maxR);
+    ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=1;
+  });
+
+  // Bullets
+  bullets.forEach(b=>{
+    ctx.shadowColor=b.col;ctx.shadowBlur=10;
+    ctx.fillStyle=b.col;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();
+  });
+  ctx.shadowBlur=0;
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/35;ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();
+  });ctx.globalAlpha=1;
+
+  // Player trail
+  pTrail.forEach((t,i)=>{
+    const a=(i/pTrail.length)*.5;
+    ctx.fillStyle=pDash>0?`rgba(255,100,0,${a})`:`rgba(180,0,255,${a})`;
+    ctx.beginPath();ctx.arc(t.x,t.y,(i/pTrail.length)*pR*.7,0,Math.PI*2);ctx.fill();
+  });
+
+  // Player
+  if(!dead&&(pInv===0||Math.floor(pInv/5)%2===0)){
+    ctx.shadowColor=pDash>0?'#ff8800':'#cc00ff';ctx.shadowBlur=25;
+    ctx.fillStyle=pDash>0?'#ffaa00':'#dd00ff';
+    ctx.beginPath();ctx.arc(px,py,pR,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.arc(px-3,py-3,3,0,Math.PI*2);ctx.fill();
+  }
+
+  // Combo display above player
+  if(combo>1&&!dead){
+    ctx.fillStyle='#ffaa00';ctx.font='bold 18px monospace';ctx.textAlign='center';
+    ctx.shadowColor='#ffaa00';ctx.shadowBlur=12;
+    ctx.fillText('x'+combo,px,py-26);ctx.shadowBlur=0;
+  }
+
+  // Dash meter
+  const dashPct=1-pDashCD/60;
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(10,H-22,100,10);
+  ctx.fillStyle=dashPct>=1?'#cc00ff':'#553388';ctx.fillRect(10,H-22,100*dashPct,10);
+  ctx.fillStyle='#cc00ff';ctx.font='9px monospace';ctx.textAlign='left';ctx.fillText('DASH',10,H-26);
+
+  if(!started){drawScreen('VOID DASH','DODGE EVERYTHING\n\nARROWS / WASD = Move\nSPACE = Dash THROUGH bullets\n\nPRESS SPACE OR TAP TO START','#cc00ff');}
+  else if(dead){drawScreen('DEAD','Score: '+score+'\nBest: '+best+'\n\nPRESS SPACE OR TAP TO RETRY','#ff3fa4');}
+  else if(paused){drawScreen('PAUSED','PRESS P OR TAP PAUSE TO RESUME','#00fff5');}
+}
+
+function drawScreen(title,sub,col){
+  ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(0,0,W,H);
+  ctx.shadowColor=col;ctx.shadowBlur=40;
+  ctx.fillStyle=col;ctx.font='bold 60px monospace';ctx.textAlign='center';ctx.fillText(title,W/2,H/2-80);
+  ctx.shadowBlur=0;ctx.fillStyle='#aaa';ctx.font='16px monospace';
+  sub.split('\n').forEach((line,i)=>ctx.fillText(line,W/2,H/2+i*28));
+}
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+
+// Keyboard (desktop unchanged)
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(paused){paused=false;return;}
+    doDash();
+  }
+  if((e.code==='KeyP'||e.code==='Escape')&&started&&!dead){paused=!paused;e.preventDefault();}
+});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+window.addEventListener('blur',()=>{keys={};}); // no stuck keys after focus loss
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&started&&!dead)paused=true;});
+
+// Pause button
+document.getElementById('pauseBtn').addEventListener('click',()=>{
+  if(started&&!dead)paused=!paused;
+});
+
+// Touch controls
+if('ontouchstart' in window)document.body.classList.add('touch');
+
+C.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(paused){paused=false;return;}
+  doDash(); // tap canvas = dash / start / retry
+},{passive:false});
+C.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+
+document.getElementById('dashBtn').addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(paused){paused=false;return;}
+  doDash();
+},{passive:false});
+
+// Virtual joystick -> existing keys{} state (multi-touch safe by identifier)
+const joy=document.getElementById('joy'),knob=document.getElementById('knob');
+let joyId=null,joyCX=0,joyCY=0;
+function joyPos(t){
+  const r=joy.getBoundingClientRect();joyCX=r.left+r.width/2;joyCY=r.top+r.height/2;
+  let dx=(t.clientX-joyCX)/45,dy=(t.clientY-joyCY)/45;
+  const m=Math.hypot(dx,dy);
+  if(m>1){dx/=m;dy/=m;}
+  knob.style.transform=`translate(${dx*34}px,${dy*34}px)`;
+  keys['ArrowLeft']=dx<-0.25;keys['ArrowRight']=dx>0.25;
+  keys['ArrowUp']=dy<-0.25;keys['ArrowDown']=dy>0.25;
+}
+function joyEnd(t){
+  if(t.identifier!==joyId)return;
+  joyId=null;knob.style.transform='translate(0,0)';
+  keys['ArrowLeft']=keys['ArrowRight']=keys['ArrowUp']=keys['ArrowDown']=false;
+}
+joy.addEventListener('touchstart',e=>{e.preventDefault();joyPos(e.changedTouches[0]);joyId=e.changedTouches[0].identifier;},{passive:false});
+joy.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches)if(t.identifier===joyId)joyPos(t);
+},{passive:false});
+joy.addEventListener('touchend',e=>{e.preventDefault();for(const t of e.changedTouches)joyEnd(t);},{passive:false});
+joy.addEventListener('touchcancel',e=>{e.preventDefault();for(const t of e.changedTouches)joyEnd(t);},{passive:false});
+
+loop();
+</script>
+</body>
+</html>

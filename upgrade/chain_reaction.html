@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>CHAIN REACTION — Pixel Forge Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{touch-action:none;overscroll-behavior:none;}
+body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:"Courier New",monospace;color:#eee;overflow:hidden;user-select:none;-webkit-user-select:none;}
+#ui{display:flex;gap:16px;padding:8px 16px;font-size:13px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:8px;}
+b{color:#fff;}
+#turn-display{font-size:16px;letter-spacing:2px;}
+canvas{display:block;cursor:pointer;touch-action:none;max-width:100vw;}
+#msg{font-size:20px;letter-spacing:3px;min-height:28px;text-align:center;margin-top:8px;padding:0 12px;}
+a{color:#aaa;font-size:11px;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;padding:0 10px;}a:hover{color:#fff;}
+#pauseBtn{position:fixed;top:10px;right:10px;z-index:80;width:44px;height:44px;border-radius:10px;background:rgba(0,0,0,.55);border:1px solid #888;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#undoBtn{min-height:44px;min-width:44px;padding:0 12px;background:#111;border:1px solid #888;border-radius:10px;color:#fff;font-family:inherit;font-size:13px;cursor:pointer;}
+#undoBtn:disabled{cursor:default;}
+</style>
+</head>
+<body>
+<div id="ui">
+  <span id="turn-display">YOUR TURN</span>
+  <span>YOU <b id="yc" style="color:#00fff5;">0</b></span>
+  <span>AI <b id="ac" style="color:#ff3fa4;">0</b></span>
+  <span>LEVEL <b id="rn">1</b></span>
+  <span>MOVES <b id="mv">0</b>/<b id="par">0</b></span>
+  <button id="undoBtn" aria-label="Undo last move">↩ UNDO</button>
+  <a href="index.html">← Back</a>
+</div>
+<button id="pauseBtn" aria-label="Pause">⏸</button>
+<canvas id="c"></canvas>
+<div id="msg"></div>
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const COLS=9,ROWS=7,SZ=64,PAD=4;
+C.width=COLS*SZ;C.height=ROWS*SZ;
+
+const P1='#00fff5',P2='#ff3fa4',EMPTY='#222';
+let grid,turn=1,explosions=[],animating=false,round=1,gameOver=false;
+let p1score=0,p2score=0;
+
+// --- Levels: AI gets sharper (less random) as levels rise ---
+const LEVELS=[
+  {name:'ROOKIE',par:30,noise:30},
+  {name:'CADET',par:26,noise:14},
+  {name:'RIVAL',par:23,noise:8},
+  {name:'HUNTER',par:20,noise:4},
+  {name:'MASTER',par:17,noise:1.5},
+  {name:'GRANDMASTER',par:15,noise:0},
+];
+let level=0,state='menu',moves=0,undoSnap=null;
+let chainThisMove=0,endWin=false,lastStars=0;
+let paused=false;
+let levelBtns=[];
+let placedEver=[false,false,false]; // index by player: both sides must have placed before a win counts
+
+// --- Persistent progress ---
+const LSKEY='pfg2_chain_reaction';
+let store={unlocked:1,stars:{},bestChain:0,wins:0};
+try{const _s=JSON.parse(localStorage.getItem(LSKEY));if(_s)store=Object.assign(store,_s);}catch(e){}
+let bestChain=store.bestChain||0;
+function save(){try{localStorage.setItem(LSKEY,JSON.stringify(store));}catch(e){}}
+
+function maxOrbs(r,c){
+  let n=4;
+  if(r===0||r===ROWS-1)n--;
+  if(c===0||c===COLS-1)n--;
+  return n;
+}
+
+function initGrid(){
+  grid=Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>({owner:0,orbs:0,r,c})));
+}
+
+function reset(lv){
+  initGrid();turn=1;explosions=[];animating=false;gameOver=false;
+  round=lv+1;moves=0;undoSnap=null;chainThisMove=0;paused=false;
+  placedEver=[false,false,false];
+  document.getElementById('pauseBtn').textContent='⏸';
+  document.getElementById('rn').textContent=round;
+  document.getElementById('mv').textContent='0';
+  document.getElementById('par').textContent=LEVELS[lv].par;
+  document.getElementById('msg').textContent='Tap a cell to drop an orb — chain-react the AI!';
+  document.getElementById('msg').style.color='#aaa';
+  countScores();setTurnUI();updateUndoBtn();
+}
+
+function setTurnUI(){
+  const d=document.getElementById('turn-display');
+  d.textContent=turn===1?'YOUR TURN':'AI THINKING...';
+  d.style.color=turn===1?P1:P2;
+}
+
+function addOrb(r,c,player){
+  const cell=grid[r][c];
+  if(cell.owner!==0&&cell.owner!==player)return false;
+  cell.owner=player;cell.orbs++;
+  placedEver[player]=true;
+  if(cell.orbs>=maxOrbs(r,c)){
+    cell.orbs=0;cell.owner=0;
+    explosions.push({r,c,player,delay:0});
+  }
+  return true;
+}
+
+function spreadExplosion(r,c,player){
+  [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr,nc])=>{
+    if(nr<0||nr>=ROWS||nc<0||nc>=COLS)return;
+    const cell=grid[nr][nc];
+    cell.owner=player;cell.orbs++;
+    if(cell.orbs>=maxOrbs(nr,nc)){
+      cell.orbs=0;cell.owner=0;
+      explosions.push({r:nr,c:nc,player,delay:explosions.length*2});
+    }
+  });
+}
+
+let particles=[],flashCells=[];
+function boom(r,c,col){
+  const cx=c*SZ+SZ/2,cy=r*SZ+SZ/2;
+  for(let i=0;i<20;i++)particles.push({x:cx,y:cy,vx:(Math.random()-.5)*14,vy:(Math.random()-.5)*14,col,life:40,sz:3});
+  flashCells.push({r,c,life:15,col});
+}
+
+function processExplosions(){
+  if(paused){setTimeout(processExplosions,200);return;}
+  if(explosions.length===0){
+    animating=false;
+    if(chainThisMove>bestChain){bestChain=chainThisMove;store.bestChain=bestChain;save();}
+    checkWin();
+    if(!gameOver&&turn===2)setTimeout(aiTurn,400);
+    updateUndoBtn();
+    return;
+  }
+  const ex=explosions.shift();
+  chainThisMove++;
+  boom(ex.r,ex.c,ex.player===1?P1:P2);
+  spreadExplosion(ex.r,ex.c,ex.player);
+  countScores();
+  setTimeout(processExplosions,80);
+}
+
+function countScores(){
+  let y=0,a=0;
+  grid.forEach(row=>row.forEach(cell=>{if(cell.owner===1)y+=cell.orbs;else if(cell.owner===2)a+=cell.orbs;}));
+  document.getElementById('yc').textContent=y;
+  document.getElementById('ac').textContent=a;
+}
+
+function checkWin(){
+  // Domination only counts once both sides have placed at least one orb
+  if(!placedEver[1]||!placedEver[2])return;
+  // Count owned cells
+  let p1=0,p2=0,total=0;
+  grid.forEach(row=>row.forEach(c=>{total++;if(c.owner===1)p1++;else if(c.owner===2)p2++;}));
+  // After first moves both have placed, check domination
+  if(p1>0&&p2===0){endGame(true);}
+  else if(p2>0&&p1===0){endGame(false);}
+}
+
+function endGame(youWin){
+  gameOver=true;
+  const msg=youWin?'YOU WIN! 🎉':'AI WINS 😈';
+  if(youWin){
+    p1score++;store.wins++;
+    const par=LEVELS[level].par;
+    lastStars=moves<=par?3:(moves<=par+8?2:1);
+    if(!store.stars[level]||lastStars>store.stars[level])store.stars[level]=lastStars;
+    store.unlocked=Math.min(LEVELS.length,Math.max(store.unlocked,level+2));
+    document.getElementById('yc').style.textShadow='0 0 20px '+P1;
+  }else{
+    p2score++;
+    document.getElementById('ac').style.textShadow='0 0 20px '+P2;
+  }
+  save();
+  endWin=youWin;
+  document.getElementById('msg').textContent=msg;
+  document.getElementById('msg').style.color=youWin?P1:P2;
+  state='levelend';
+  document.getElementById('pauseBtn').style.display='none';
+  updateUndoBtn();
+}
+
+// AI: pick best move
+function aiTurn(){
+  if(paused){setTimeout(aiTurn,300);return;}
+  if(gameOver||turn!==2)return;
+  // Find all valid cells (owned by AI or empty)
+  let candidates=[];
+  grid.forEach(row=>row.forEach(cell=>{
+    if(cell.owner===0||cell.owner===2){
+      // Score: prefer cells near max, prefer corners/edges, prefer cells near player cells
+      let s=cell.orbs*3;
+      if(maxOrbs(cell.r,cell.c)-cell.orbs===1)s+=10; // about to explode
+      if(cell.owner===2)s+=5;
+      // Prefer cells near P1 cells
+      [[cell.r-1,cell.c],[cell.r+1,cell.c],[cell.r,cell.c-1],[cell.r,cell.c+1]].forEach(([nr,nc])=>{
+        if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&grid[nr][nc].owner===1)s+=7;
+      });
+      candidates.push({r:cell.r,c:cell.c,s});
+    }
+  }));
+  if(!candidates.length)return;
+  // Higher levels: less randomness, sharper AI
+  const noise=LEVELS[level].noise;
+  candidates.forEach(c=>c.s+=Math.random()*noise);
+  candidates.sort((a,b)=>b.s-a.s);
+  const pick=candidates[0];
+  chainThisMove=0;
+  addOrb(pick.r,pick.c,2);
+  countScores();
+  animating=true;
+  turn=1;setTurnUI();
+  setTimeout(processExplosions,120);
+}
+
+// --- Undo: restore board to before your last move (and the AI's reply) ---
+function snapshot(){return grid.map(row=>row.map(c=>({owner:c.owner,orbs:c.orbs})));}
+function updateUndoBtn(){
+  const b=document.getElementById('undoBtn');
+  const ok=state==='play'&&!animating&&!gameOver&&!paused&&turn===1&&!!undoSnap;
+  b.disabled=!ok;b.style.opacity=ok?'1':'0.35';
+}
+function doUndo(){
+  if(state!=='play'||animating||gameOver||paused||turn!==1||!undoSnap)return;
+  const s=undoSnap;undoSnap=null;
+  s.forEach((row,r)=>row.forEach((sv,c)=>{grid[r][c].owner=sv.owner;grid[r][c].orbs=sv.orbs;}));
+  explosions=[];moves=Math.max(0,moves-1);
+  document.getElementById('mv').textContent=moves;
+  countScores();updateUndoBtn();
+}
+document.getElementById('undoBtn').addEventListener('click',doUndo);
+
+// --- Unified pointer input: touch taps and mouse clicks, exactly one fire each ---
+let suppressClickUntil=0;
+function toGame(cx,cy){
+  const rect=C.getBoundingClientRect();
+  return {x:(cx-rect.left)*C.width/rect.width,y:(cy-rect.top)*C.height/rect.height};
+}
+function handlePress(cx,cy){
+  const p=toGame(cx,cy);
+  if(state==='menu'){menuTap(p.x,p.y);return;}
+  if(state==='levelend'){toMenu();return;}
+  if(state!=='play'||paused)return;
+  if(animating||gameOver||turn!==1)return;
+  const c=Math.floor(p.x/SZ),r=Math.floor(p.y/SZ);
+  if(r<0||r>=ROWS||c<0||c>=COLS)return;
+  if(grid[r][c].owner===2)return;
+  undoSnap=snapshot();
+  if(!addOrb(r,c,1)){undoSnap=null;return;}
+  moves++;chainThisMove=0;
+  document.getElementById('mv').textContent=moves;
+  countScores();
+  animating=true;turn=2;setTurnUI();updateUndoBtn();
+  setTimeout(processExplosions,120);
+}
+C.addEventListener('click',e=>{
+  if(Date.now()<suppressClickUntil)return;
+  handlePress(e.clientX,e.clientY);
+});
+C.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  suppressClickUntil=Date.now()+600;
+  const t=e.changedTouches[0];
+  handlePress(t.clientX,t.clientY);
+},{passive:false});
+C.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('touchmove',e=>{e.preventDefault();},{passive:false});
+
+// --- Menu / level select ---
+function toMenu(){
+  state='menu';paused=false;
+  document.getElementById('pauseBtn').style.display='none';
+  document.getElementById('pauseBtn').textContent='⏸';
+  document.getElementById('msg').textContent='';
+  const d=document.getElementById('turn-display');
+  d.textContent='SELECT LEVEL';d.style.color='#fff';
+  updateUndoBtn();
+}
+function startLevel(i){
+  if(i<0||i>=LEVELS.length||i>=store.unlocked)return;
+  level=i;reset(i);state='play';
+  document.getElementById('pauseBtn').style.display='flex';
+}
+function menuTap(x,y){
+  for(const b of levelBtns){
+    if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){startLevel(b.level);return;}
+  }
+}
+function drawMenu(){
+  ctx.fillStyle='#050010';ctx.fillRect(0,0,C.width,C.height);
+  ctx.textAlign='center';
+  ctx.shadowColor='#00fff5';ctx.shadowBlur=40;
+  ctx.fillStyle='#00fff5';ctx.font='bold 38px monospace';
+  ctx.fillText('CHAIN',C.width/2,64);
+  ctx.fillStyle='#ff3fa4';ctx.fillText('REACTION',C.width/2,108);
+  ctx.shadowBlur=0;ctx.fillStyle='#aaa';ctx.font='13px monospace';
+  ['Tap a cell to add an orb. When a cell','hits its max it EXPLODES and spreads!','Take every cell to beat the AI.','Fewer moves = more stars.'].forEach((l,i)=>ctx.fillText(l,C.width/2,140+i*20));
+  // Level buttons (76px tall logical => >=44px CSS at 360px wide)
+  levelBtns=[];
+  const cols=2,bw=200,bh=78,gx=24,gy=16;
+  const totalW=cols*bw+(cols-1)*gx;
+  const x0=(C.width-totalW)/2,y0=236;
+  LEVELS.forEach((L,i)=>{
+    const bx=x0+(i%cols)*(bw+gx),by=y0+Math.floor(i/cols)*(bh+gy);
+    levelBtns.push({x:bx,y:by,w:bw,h:bh,level:i});
+    const locked=i>=store.unlocked;
+    ctx.fillStyle=locked?'#111':'#0a1a2e';
+    ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeStyle=locked?'#333':'#00fff5';ctx.lineWidth=2;
+    ctx.strokeRect(bx+1,by+1,bw-2,bh-2);
+    ctx.fillStyle=locked?'#555':'#fff';ctx.font='bold 18px monospace';
+    ctx.fillText(locked?'🔒 LEVEL '+(i+1):('LEVEL '+(i+1)+' '+L.name),bx+bw/2,by+30);
+    const st=store.stars[i]||0;
+    ctx.font='16px monospace';ctx.fillStyle='#ffd700';
+    ctx.fillText(locked?'':'★'.repeat(st)+'☆'.repeat(3-st),bx+bw/2,by+56);
+  });
+  ctx.fillStyle='#888';ctx.font='12px monospace';
+  ctx.fillText('WINS '+store.wins+'   BEST CHAIN '+bestChain,C.width/2,C.height-16);
+}
+function drawEndOverlay(){
+  ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(0,0,C.width,C.height);
+  ctx.textAlign='center';
+  const col=endWin?P1:P2;
+  ctx.shadowColor=col;ctx.shadowBlur=30;
+  ctx.fillStyle=col;ctx.font='bold 34px monospace';
+  ctx.fillText(endWin?'YOU WIN!':'AI WINS',C.width/2,C.height/2-40);
+  ctx.shadowBlur=0;
+  if(endWin){
+    ctx.fillStyle='#ffd700';ctx.font='bold 30px monospace';
+    ctx.fillText('★'.repeat(lastStars)+'☆'.repeat(3-lastStars),C.width/2,C.height/2+4);
+    ctx.fillStyle='#aaa';ctx.font='14px monospace';
+    ctx.fillText('Moves '+moves+' / Par '+LEVELS[level].par,C.width/2,C.height/2+34);
+    ctx.fillText(level+1<LEVELS.length?('Level '+(level+2)+' unlocked!'):'All levels cleared!',C.width/2,C.height/2+58);
+  }else{
+    ctx.fillStyle='#aaa';ctx.font='14px monospace';
+    ctx.fillText('The AI took every cell.',C.width/2,C.height/2+10);
+  }
+  ctx.fillStyle='#888';ctx.font='13px monospace';
+  ctx.fillText('Tap anywhere to continue',C.width/2,C.height/2+96);
+}
+function drawPausedOverlay(){
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,C.width,C.height);
+  ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='bold 34px monospace';
+  ctx.fillText('PAUSED',C.width/2,C.height/2);
+  ctx.fillStyle='#aaa';ctx.font='14px monospace';
+  ctx.fillText('Tap ⏸ or press P to resume',C.width/2,C.height/2+36);
+}
+
+// --- Pause ---
+function togglePause(){
+  if(state!=='play')return;
+  paused=!paused;
+  document.getElementById('pauseBtn').textContent=paused?'▶':'⏸';
+  updateUndoBtn();
+}
+document.getElementById('pauseBtn').addEventListener('click',togglePause);
+document.addEventListener('keydown',e=>{
+  if(e.key==='p'||e.key==='P'||e.key==='Escape')togglePause();
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&state==='play'&&!paused)togglePause();
+});
+
+// --- Fit canvas to screen, keep aspect ---
+function fit(){
+  const uiH=document.getElementById('ui').offsetHeight||70;
+  const msgH=document.getElementById('msg').offsetHeight||40;
+  const availW=window.innerWidth;
+  const availH=window.innerHeight-uiH-msgH-48;
+  const s=Math.min(availW/C.width,availH/C.height);
+  C.style.width=Math.floor(C.width*s)+'px';
+  C.style.height=Math.floor(C.height*s)+'px';
+}
+window.addEventListener('resize',fit);
+window.addEventListener('orientationchange',()=>setTimeout(fit,100));
+
+function draw(){
+  ctx.fillStyle='#050010';ctx.fillRect(0,0,C.width,C.height);
+
+  // Cells
+  grid.forEach(row=>row.forEach(cell=>{
+    const x=cell.c*SZ,y=cell.r*SZ;
+    const col=cell.owner===1?P1:cell.owner===2?P2:EMPTY;
+
+    ctx.fillStyle=cell.owner===0?'#0a0015':'rgba(0,0,0,.3)';
+    ctx.fillRect(x+1,y+1,SZ-2,SZ-2);
+
+    // Grid lines
+    ctx.strokeStyle='#1a1a2e';ctx.lineWidth=1;
+    ctx.strokeRect(x+1,y+1,SZ-2,SZ-2);
+
+    // Max indicator (corners are dim)
+    const mx=maxOrbs(cell.r,cell.c);
+    ctx.fillStyle='rgba(255,255,255,0.04)';
+    for(let i=0;i<mx;i++){
+      const dots=[[x+12,y+12],[x+SZ-12,y+12],[x+12,y+SZ-12],[x+SZ-12,y+SZ-12]];
+      ctx.beginPath();ctx.arc(dots[i][0],dots[i][1],3,0,Math.PI*2);ctx.fill();
+    }
+
+    // Orbs
+    if(cell.orbs>0){
+      ctx.shadowColor=col;ctx.shadowBlur=14;
+      const orbPos=[
+        [[32,32]],
+        [[22,22],[42,42]],
+        [[18,18],[32,32],[46,46]],
+        [[18,18],[46,18],[18,46],[46,46]],
+      ];
+      const pos=orbPos[Math.min(cell.orbs-1,3)];
+      pos.forEach(([ox,oy])=>{
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(x+ox,y+oy,8,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,0.4)';ctx.beginPath();ctx.arc(x+ox-2,y+oy-2,2.5,0,Math.PI*2);ctx.fill();
+      });
+      ctx.shadowBlur=0;
+    }
+  }));
+
+  // Flash cells
+  flashCells=flashCells.filter(f=>f.life>0);
+  flashCells.forEach(f=>{
+    ctx.fillStyle=f.col;ctx.globalAlpha=f.life/15*.6;
+    ctx.fillRect(f.c*SZ,f.r*SZ,SZ,SZ);f.life-=3;
+  });ctx.globalAlpha=1;
+
+  // Particles
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/40;ctx.fillStyle=p.col;ctx.shadowColor=p.col;ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();
+    p.x+=p.vx;p.y+=p.vy;p.vx*=.9;p.vy*=.9;p.life-=2;
+  });ctx.globalAlpha=1;ctx.shadowBlur=0;
+
+  // Turn border glow
+  ctx.strokeStyle=turn===1?`rgba(0,255,245,${.3+Math.sin(Date.now()*.004)*.2})`:`rgba(255,63,164,${.3+Math.sin(Date.now()*.004)*.2})`;
+  ctx.lineWidth=3;ctx.strokeRect(2,2,C.width-4,C.height-4);
+}
+
+function frame(){
+  if(state==='menu'){drawMenu();}
+  else{
+    draw();
+    if(state==='levelend')drawEndOverlay();
+    else if(paused)drawPausedOverlay();
+  }
+  requestAnimationFrame(frame);
+}
+
+initGrid();toMenu();fit();frame();
+</script>
+</body>
+</html>

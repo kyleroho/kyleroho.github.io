@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Crowd Crusher</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a050f;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;}
+#app{display:flex;gap:16px;align-items:flex-start;}
+#sidebar{width:140px;display:flex;flex-direction:column;gap:12px;}
+#sidebar h2{font-size:22px;font-weight:900;letter-spacing:3px;color:#aa44ff;text-align:center;}
+.sbox{background:#0d0618;border:1px solid #2a0a4a;padding:12px;text-align:center;}
+.sl{font-size:8px;letter-spacing:2px;color:#2a0a4a;margin-bottom:4px;}
+.sv{font-size:22px;font-weight:700;color:#dd88ff;}
+.sbtn{width:100%;background:transparent;border:2px solid #aa44ff;color:#aa44ff;padding:9px;font-size:12px;letter-spacing:2px;cursor:pointer;margin-top:6px;transition:all .2s;}
+.sbtn:hover{background:#aa44ff22;}
+#grid{position:relative;cursor:pointer;}
+#notif{position:absolute;top:40%;left:50%;transform:translateX(-50%);font-size:20px;font-weight:700;color:#ffdd44;pointer-events:none;opacity:0;text-align:center;white-space:nowrap;letter-spacing:2px;}
+#msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a050fee;z-index:20;}
+#msg h1{font-size:48px;font-weight:900;letter-spacing:4px;color:#aa44ff;margin-bottom:8px;text-align:center;}
+#msg p{color:#2a0a4a;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.4;}
+.btn{background:transparent;border:2px solid #aa44ff;color:#aa44ff;padding:11px 34px;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .2s;}
+.btn:hover{background:#aa44ff22;}
+#cv{touch-action:none;display:block;}
+#grid{width:min(420px,96vw);}
+#cv{width:100%;height:auto;}
+#pauseBtn{position:absolute;top:8px;right:8px;z-index:6;width:44px;height:44px;font-size:20px;background:#0d0618cc;border:2px solid #aa44ff;color:#aa44ff;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.btn,.sbtn{min-height:44px;}
+@media (max-width:640px){
+  #app{flex-direction:column;align-items:center;gap:8px;padding:8px;}
+  #sidebar{width:min(420px,96vw);flex-direction:row;flex-wrap:wrap;gap:6px;}
+  #sidebar h2{width:100%;font-size:16px;}
+  #sidebar h2 br{display:none;}
+  .sbox{flex:1 1 0;padding:8px;min-width:70px;}
+  .sl{font-size:7px;}
+  .sv{font-size:16px;}
+  .sbtn{flex:1 1 100%;}
+  #msg h1{font-size:36px;}
+  #notif{font-size:16px;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <h2>CROWD<br>CRUSH</h2>
+    <div class="sbox"><div class="sl">SCORE</div><div class="sv" id="scoreV">0</div></div>
+    <div class="sbox"><div class="sl">MOVES</div><div class="sv" id="movesV">25</div></div>
+    <div class="sbox"><div class="sl">LEVEL</div><div class="sv" id="levelV">1</div></div>
+    <div class="sbox"><div class="sl">TARGET</div><div class="sv" id="targetV">500</div></div>
+    <div class="sbox"><div class="sl">COMBO</div><div class="sv" id="comboV">x1</div></div>
+    <button class="sbtn" onclick="shuffle()">🔀 SHUFFLE</button>
+  </div>
+  <div id="grid">
+    <canvas id="cv" width="420" height="560"></canvas>
+    <div id="notif"></div>
+    <button id="pauseBtn" onclick="togglePause()" aria-label="Pause">⏸</button>
+  </div>
+</div>
+<div id="msg">
+  <h1>CROWD<br>CRUSHER</h1>
+  <p>Click a mob to select it.<br>Click an adjacent mob to swap.<br>Match 3+ in a row to crush them!<br>Hit the target score to advance.</p>
+  <button class="btn" onclick="startGame()">CRUSH EM</button>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var T=60,COLS=7,ROWS=9,W=COLS*T,H=ROWS*T; // 420x540, bottom 20 is padding
+cv.width=W;cv.height=H;
+
+var TYPES=6;
+var COLORS=['#ff4444','#4488ff','#44ff88','#ffcc00','#ff44ff','#ff8844','#ffe14d'];
+var EMOJIS=['👹','👾','🧟','🤖','💀','👻','💣'];
+var gameState='menu';
+var BOMB=6; // special piece type: detonates its row+column when tapped
+var combo=0,frenzy=false,busy=false,loopStarted=false,lastTouchTs=0;
+var best={score:0,level:0,combo:0};
+var SAVE_KEY='pfg2_crowd_crusher';
+var grid=[],selected=null,animCells=[],particles=[];
+var score=0,moves=0,maxMoves=25,level=1,target=500;
+var frame=0;
+var notifTimer=null;
+
+function startGame(){
+  document.getElementById('msg').style.display='none';
+  score=0;level=1;target=500;maxMoves=25;moves=maxMoves;
+  combo=0;frenzy=false;busy=false;selected=null;
+  fillGrid();
+  while(findMatches().length>0)fillGrid(); // avoid starting with matches
+  gameState='play';
+  updateUI();
+  if(!loopStarted){loopStarted=true;loop();} // FIX: one rAF loop only, no stacking on restart
+}
+
+function fillGrid(){
+  grid=[];
+  for(var r=0;r<ROWS;r++){grid.push([]);for(var c=0;c<COLS;c++)grid[r].push(randCell());}
+}
+
+function randCell(){
+  var t=(level>=2&&Math.random()<0.05)?BOMB:Math.floor(Math.random()*TYPES);
+  return{type:t,y_anim:0,dead:false,scale:1};
+}
+
+function findMatches(){
+  var matches=[];
+  // horizontal
+  for(var r=0;r<ROWS;r++){
+    var streak=1;
+    for(var c=1;c<COLS;c++){
+      if(grid[r][c].type===grid[r][c-1].type&&!grid[r][c].dead&&grid[r][c].type!==BOMB){streak++;}
+      else{if(streak>=3)for(var k=0;k<streak;k++)matches.push([r,c-1-k]);streak=1;}
+    }
+    if(streak>=3)for(var k2=0;k2<streak;k2++)matches.push([r,COLS-1-k2]);
+  }
+  // vertical
+  for(var c2=0;c2<COLS;c2++){
+    var vs=1;
+    for(var r2=1;r2<ROWS;r2++){
+      if(grid[r2][c2].type===grid[r2-1][c2].type&&!grid[r2][c2].dead&&grid[r2][c2].type!==BOMB){vs++;}
+      else{if(vs>=3)for(var k3=0;k3<vs;k3++)matches.push([r2-1-k3,c2]);vs=1;}
+    }
+    if(vs>=3)for(var k4=0;k4<vs;k4++)matches.push([ROWS-1-k4,c2]);
+  }
+  // dedupe
+  var seen=new Set();var out=[];
+  matches.forEach(function(m){var k=m[0]+','+m[1];if(!seen.has(k)){seen.add(k);out.push(m);}});
+  return out;
+}
+
+function crushCells(cells,label){
+  busy=true; // block input while crush+gravity+cascade resolve (FIX: no mid-animation swaps)
+  var base=cells.length*50*(cells.length>5?2:1);
+  var pts=Math.round(base*Math.max(combo,1)*(frenzy?2:1));
+  score+=pts;
+  showNotif(label+' +'+pts);
+  cells.forEach(function(m){
+    var r=m[0],c=m[1];
+    if(grid[r]&&grid[r][c]&&!grid[r][c].dead){
+      spawnParts(c*T+T/2,r*T+T/2,COLORS[grid[r][c].type]);
+      grid[r][c].dead=true;
+    }
+  });
+  // gravity: drop cells down
+  setTimeout(function(){
+    for(var c=0;c<COLS;c++){
+      var col=[];
+      for(var r=ROWS-1;r>=0;r--)if(!grid[r][c].dead)col.unshift(grid[r][c]);
+      while(col.length<ROWS)col.unshift(randCell());
+      for(var r2=0;r2<ROWS;r2++)grid[r2][c]=col[r2];
+    }
+    updateUI();
+    // check for cascades
+    setTimeout(function(){
+      var m2=findMatches();
+      if(m2.length>0){combo++;crushCells(m2,combo>=3?('COMBO x'+combo+'! CRUSH'):'CRUSH!');}
+      else{busy=false;updateUI();if(moves<=0&&gameState==='play')checkGameOver();}
+    },250);
+  },300);
+}
+
+function processMatches(){
+  var matches=findMatches();
+  if(matches.length===0)return false;
+  crushCells(matches,matches.length>=5?'MEGA CRUSH! ✨':'CRUSH!');
+  return true;
+}
+
+function swap(r1,c1,r2,c2){
+  var tmp=grid[r1][c1];grid[r1][c1]=grid[r2][c2];grid[r2][c2]=tmp;
+}
+
+function trySwap(r1,c1,r2,c2){
+  swap(r1,c1,r2,c2);
+  var matches=findMatches();
+  if(matches.length>0){
+    moves--;combo++;updateUI();
+    processMatches();
+    // FIX: game-over is checked when the cascade finishes (no more 600ms race)
+  } else {
+    // swap back
+    swap(r1,c1,r2,c2);
+    combo=0;updateUI();
+    showNotif('No match!');
+  }
+  selected=null;
+}
+
+function detonateBomb(r,c){
+  moves--;combo++;busy=true;
+  var cells=[];
+  for(var cc=0;cc<COLS;cc++)cells.push([r,cc]);
+  for(var rr=0;rr<ROWS;rr++)if(rr!==r)cells.push([rr,c]);
+  updateUI();
+  crushCells(cells,'💣 BOMB!');
+  selected=null;
+}
+
+function shuffle(){
+  if(moves<=0||busy||gameState!=='play')return; // FIX: no shuffle mid-cascade
+  moves--;combo=0;
+  fillGrid();
+  while(findMatches().length>0)fillGrid();
+  updateUI();
+  if(moves<=0)checkGameOver();
+}
+
+function showNotif(txt){
+  var el=document.getElementById('notif');
+  el.textContent=txt;el.style.opacity='1';
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(function(){el.style.opacity='0';},900);
+}
+
+function checkGameOver(){
+  if(gameState!=='play')return;
+  if(score>=target){
+    level++;target=Math.floor(target*1.8);
+    frenzy=(level%3===0); // every 3rd level: fewer moves, 2x points
+    maxMoves=frenzy?20:25;moves=maxMoves;combo=0;
+    showNotif(frenzy?('FRENZY LEVEL '+level+'! 2x PTS ⚡'):('LEVEL '+level+'! ⭐'));
+    fillGrid();while(findMatches().length>0)fillGrid();
+    updateUI();
+  } else if(moves<=0){
+    saveBest();
+    gameState='over';
+    document.getElementById('msg').style.display='flex';
+    document.getElementById('msg').innerHTML=
+      '<h1 style="color:#ff4444">GAME OVER</h1>'+
+      '<p style="color:#2a0a4a">Score: '+score+'<br>Level: '+level+
+      '<br>Best: '+best.score+' (Lvl '+best.level+') · x'+best.combo+' combo</p>'+
+      '<button class="btn" onclick="startGame()">PLAY AGAIN</button>';
+  }
+}
+
+function updateUI(){
+  document.getElementById('scoreV').textContent=score;
+  document.getElementById('movesV').textContent=moves;
+  document.getElementById('levelV').textContent=level;
+  document.getElementById('targetV').textContent=target;
+  document.getElementById('comboV').textContent='x'+Math.max(combo,1);
+}
+
+function spawnParts(x,y,col){
+  for(var i=0;i<12;i++){var a=Math.random()*Math.PI*2,s=2+Math.random()*5;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,col,life:20+Math.random()*15,r:2+Math.random()*3});}
+}
+
+function handleCell(r,c){
+  if(gameState!=='play'||busy)return;
+  if(grid[r][c].type===BOMB&&!selected){detonateBomb(r,c);return;}
+  if(!selected){selected={r,c};return;}
+  // check adjacent
+  var dr=Math.abs(r-selected.r),dc=Math.abs(c-selected.c);
+  if(dr+dc===1){trySwap(selected.r,selected.c,r,c);}
+  else if(r===selected.r&&c===selected.c){selected=null;}
+  else{selected={r,c};}
+}
+
+cv.addEventListener('click',function(e){
+  if(Date.now()-lastTouchTs<600)return; // ignore synthetic click after a touch tap
+  if(gameState!=='play') return;
+  var rect=cv.getBoundingClientRect();
+  var mx=(e.clientX-rect.left)*(cv.width/rect.width)|0;
+  var my=(e.clientY-rect.top)*(cv.height/rect.height)|0;
+  var c=mx/T|0,r=my/T|0;
+  if(c<0||c>=COLS||r<0||r>=ROWS)return;
+  handleCell(r,c);
+});
+
+// MOBILE: single-finger tap on canvas, identifier-tracked, multi-touch safe
+var touchId=null,touchSX=0,touchSY=0,touchST=0;
+cv.addEventListener('touchstart',function(e){
+  e.preventDefault();
+  if(touchId!==null)return; // second finger ignored
+  var t=e.changedTouches[0];
+  touchId=t.identifier;touchSX=t.clientX;touchSY=t.clientY;touchST=Date.now();
+},{passive:false});
+cv.addEventListener('touchend',function(e){
+  e.preventDefault();
+  for(var i=0;i<e.changedTouches.length;i++){
+    var t=e.changedTouches[i];
+    if(t.identifier!==touchId)continue;
+    touchId=null;lastTouchTs=Date.now();
+    var dx=t.clientX-touchSX,dy=t.clientY-touchSY;
+    if(Date.now()-touchST<500&&Math.abs(dx)<12&&Math.abs(dy)<12){ // tap, not drag
+      var rect=cv.getBoundingClientRect();
+      var mx=(t.clientX-rect.left)*(cv.width/rect.width)|0;
+      var my=(t.clientY-rect.top)*(cv.height/rect.height)|0;
+      var c=mx/T|0,r=my/T|0;
+      if(c>=0&&c<COLS&&r>=0&&r<ROWS)handleCell(r,c);
+    }
+  }
+},{passive:false});
+cv.addEventListener('touchcancel',function(e){
+  for(var i=0;i<e.changedTouches.length;i++)
+    if(e.changedTouches[i].identifier===touchId)touchId=null;
+});
+document.addEventListener('touchmove',function(e){e.preventDefault();},{passive:false});
+
+// STANDARD KIT: pause (button + P/Esc + auto-pause on tab hide)
+function togglePause(){
+  if(gameState==='play'){
+    gameState='paused';
+    var m=document.getElementById('msg');
+    m.style.display='flex';
+    m.innerHTML='<h1>PAUSED</h1><p>Take a breather.</p>'+
+      '<button class="btn" onclick="togglePause()">RESUME</button>';
+  }else if(gameState==='paused'){
+    document.getElementById('msg').style.display='none';
+    gameState='play';
+  }
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='p'||e.key==='P'||e.key==='Escape')togglePause();
+});
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden&&gameState==='play')togglePause();
+});
+
+// STANDARD KIT: persist best score/level/combo (never wiped, legacy keys migrated)
+function loadBest(){
+  try{
+    var raw=localStorage.getItem(SAVE_KEY);
+    if(raw){var d=JSON.parse(raw);
+      best.score=d.score||0;best.level=d.level||0;best.combo=d.combo||0;}
+    var leg=localStorage.getItem('crowdCrusherBest')||localStorage.getItem('crowd_crusher_best');
+    if(leg&&best.score===0){var n=parseInt(leg,10);if(!isNaN(n))best.score=n;}
+  }catch(e){}
+}
+function saveBest(){
+  if(score>best.score)best.score=score;
+  if(level>best.level)best.level=level;
+  if(combo>best.combo)best.combo=combo;
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(best));}catch(e){}
+}
+loadBest();
+if(best.score>0){
+  var mp=document.querySelector('#msg p');
+  if(mp)mp.innerHTML+='<br>Best: '+best.score+' (Lvl '+best.level+')';
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0a050f';ctx.fillRect(0,0,W,H);
+
+  for(var r=0;r<ROWS;r++){
+    for(var c=0;c<COLS;c++){
+      var cell=grid[r][c];
+      if(cell.dead)continue;
+      var sel=selected&&selected.r===r&&selected.c===c;
+      var pulse=.8+Math.sin(frame*.08+r*.4+c*.3)*.2;
+      ctx.globalAlpha=cell.dead?0:1;
+      // bg
+      ctx.fillStyle=sel?COLORS[cell.type]+'44':'#120820';
+      ctx.fillRect(c*T+1,r*T+1,T-2,T-2);
+      // border
+      ctx.strokeStyle=sel?COLORS[cell.type]:COLORS[cell.type]+'55';
+      ctx.lineWidth=sel?2:1;ctx.strokeRect(c*T+2,r*T+2,T-4,T-4);
+      // glow
+      if(sel){ctx.shadowColor=COLORS[cell.type];ctx.shadowBlur=18;}
+      // emoji
+      ctx.font=(T*.56)+'px sans-serif';ctx.textAlign='center';
+      ctx.fillText(EMOJIS[cell.type],c*T+T/2,r*T+T*.68);
+      ctx.shadowBlur=0;ctx.globalAlpha=1;
+    }
+  }
+  ctx.textAlign='left';
+
+  // particles
+  for(var i=particles.length-1;i>=0;i--){
+    var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life--;
+    ctx.globalAlpha=p.life/35;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  }ctx.globalAlpha=1;
+  frame++;
+}
+
+function loop(){if(gameState!=='paused')draw();requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

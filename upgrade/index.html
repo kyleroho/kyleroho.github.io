@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>PIXEL FORGE · UPGRADED</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a14;color:#e8e8f2;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:10;background:rgba(10,10,20,.92);backdrop-filter:blur(8px);border-bottom:2px solid #1de9b6;padding:14px 16px}
+h1{font-size:clamp(20px,5vw,32px);letter-spacing:3px;background:linear-gradient(90deg,#1de9b6,#38e1ff,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:#8b8ba3;font-size:12px;letter-spacing:2px;margin-top:2px}
+#search{width:100%;margin-top:10px;padding:12px 14px;border-radius:10px;border:1px solid #2a2a44;background:#14141f;color:#fff;font-size:16px;outline:none}
+#search:focus{border-color:#1de9b6}
+#count{color:#8b8ba3;font-size:12px;margin:10px 16px 0;letter-spacing:1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:12px;padding:12px 16px 40px;max-width:1200px;margin:0 auto}
+.card{position:relative;display:block;background:#14141f;border:1px solid #26263a;border-radius:14px;overflow:hidden;text-decoration:none;color:inherit;transition:transform .12s,border-color .12s}
+.card:active{transform:scale(.97)}
+.card:hover{border-color:#1de9b6}
+.badge{position:absolute;top:8px;right:8px;z-index:2;background:linear-gradient(90deg,#1de9b6,#38e1ff);color:#06131a;font-size:10px;font-weight:800;letter-spacing:1px;padding:3px 8px;border-radius:20px}
+.tile{height:86px;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:900;color:var(--c);background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--c) 22%,transparent),transparent 70%),#0d0d18;text-shadow:0 0 24px var(--c)}
+.cbody{padding:10px 12px 14px}
+.ctitle{font-weight:800;font-size:14px;line-height:1.25;min-height:35px}
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;color:var(--c);border:1px solid var(--c);border-radius:20px;padding:2px 8px;margin:6px 0}
+.card p{font-size:12px;color:#a9a9c4;line-height:1.45;min-height:52px}
+.play{display:inline-block;margin-top:8px;background:#1de9b6;color:#06131a;font-weight:800;font-size:13px;letter-spacing:1px;padding:8px 18px;border-radius:8px}
+footer{text-align:center;color:#55556e;font-size:12px;padding:24px;letter-spacing:1px}
+footer a{color:#1de9b6;text-decoration:none}
+.empty{display:none;text-align:center;color:#8b8ba3;padding:40px;grid-column:1/-1}
+</style>
+</head>
+<body>
+<header>
+  <h1>◆ PIXEL FORGE · UPGRADED</h1>
+  <div class="sub">TEST BUILD — /upgrade · MOBILE READY · 59 GAMES</div>
+  <input id="search" type="search" placeholder="Search games…" autocomplete="off">
+</header>
+<div id="count">59 games</div>
+<div class="grid" id="grid">
+
+  <a class="card" href="./the_blue_guy.html" data-search="the blue guy platformer 15 handcrafted levels, double-jump, spikes, coins, boss fights — plus an upgrades shop.">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#38e1ff">T</div>
+    <div class="cbody">
+      <div class="ctitle">The Blue Guy</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>15 handcrafted levels, double-jump, spikes, coins, boss fights — plus an upgrades shop.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./the_blue_guy_2.html" data-search="the blue guy 2 platformer return of blue. dash ability, enemy hp bars, boss rage mode. 10 levels.">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#38e1ff">T</div>
+    <div class="cbody">
+      <div class="ctitle">The Blue Guy 2</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>Return of Blue. Dash ability, enemy HP bars, boss RAGE mode. 10 levels.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./the_blue_guy_3.html" data-search="the blue guy 3 platformer dark world. teleport dash, gem combos, dark boss encounters. 15 levels.">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#38e1ff">T</div>
+    <div class="cbody">
+      <div class="ctitle">The Blue Guy 3</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>Dark World. Teleport dash, gem combos, dark boss encounters. 15 levels.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./the_blue_guy_4.html" data-search="the blue guy 4: red uprising platformer the biggest yet! 30 levels, flying bosses, 4 enemy types, upgrades shop.">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#38e1ff">T</div>
+    <div class="cbody">
+      <div class="ctitle">The Blue Guy 4: Red Uprising</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>The biggest yet! 30 levels, flying bosses, 4 enemy types, upgrades shop.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./blue_guy_world.html" data-search="blue guy world platformer a brand new blue guy adventure. new worlds, new enemies, new universe.">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#38e1ff">B</div>
+    <div class="cbody">
+      <div class="ctitle">Blue Guy World</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>A brand new Blue Guy adventure. New worlds, new enemies, new universe.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./poopatropas.html" data-search="poopatropas platformer eli, liam, sammy or kyle. 4 worlds: forest, desert, snow and space.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#38e1ff">P</div>
+    <div class="cbody">
+      <div class="ctitle">Poopatropas</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>Eli, Liam, Sammy or Kyle. 4 worlds: Forest, Desert, Snow and Space.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./poopatropas_2.html" data-search="poopatropas 2 platformer 5 chars, 6 worlds, star invincibility, jetpack, magnet, speed powerups!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#38e1ff">P</div>
+    <div class="cbody">
+      <div class="ctitle">Poopatropas 2</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>5 chars, 6 worlds, Star invincibility, Jetpack, Magnet, Speed powerups!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./poopatropas_3.html" data-search="poopatropas 3 platformer blue guy universe! blue guy, dru, or nico. 6 worlds, 24 levels.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#38e1ff">P</div>
+    <div class="cbody">
+      <div class="ctitle">Poopatropas 3</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>Blue Guy Universe! Blue Guy, Dru, or Nico. 6 worlds, 24 levels.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./gravity_shift.html" data-search="gravity shift platformer 12 levels. flip gravity, dash, ghost powerup. score attack + best times!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#38e1ff">G</div>
+    <div class="cbody">
+      <div class="ctitle">Gravity Shift</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>12 levels. Flip gravity, dash, ghost powerup. Score attack + best times!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./rocket_kid.html" data-search="rocket kid platformer jetpack platformer. blast through levels, collect fuel, dodge hazards.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#38e1ff">R</div>
+    <div class="cbody">
+      <div class="ctitle">Rocket Kid</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>Jetpack platformer. Blast through levels, collect fuel, dodge hazards.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./run_kid.html" data-search="run kid run platformer endless runner: double jump, shield, coin magnet, slow-mo, revive upgrades.">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#38e1ff">R</div>
+    <div class="cbody">
+      <div class="ctitle">Run Kid Run</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>Endless runner: double jump, shield, coin magnet, slow-mo, revive upgrades.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./pixel_upgrade.html" data-search="pixel upgrade platformer run, earn coins, upgrade speed, jump, ammo, armor, fire rate. gets insane!">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#38e1ff">P</div>
+    <div class="cbody">
+      <div class="ctitle">Pixel Upgrade</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>Run, earn coins, upgrade speed, jump, ammo, armor, fire rate. Gets insane!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./pizza_rush.html" data-search="pizza rush platformer pick up pizzas, deliver to the matching door before time runs out.">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#38e1ff">P</div>
+    <div class="cbody">
+      <div class="ctitle">Pizza Rush</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>Pick up pizzas, deliver to the matching door before time runs out.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./void_dash.html" data-search="void dash platformer dash through bullet storms. dodge everything.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#38e1ff">V</div>
+    <div class="cbody">
+      <div class="ctitle">Void Dash</div>
+      <span class="tag" style="--c:#38e1ff">Platformer</span>
+      <p>Dash through bullet storms. Dodge everything.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./pixel_drift.html" data-search="pixel drift shooter twin-stick arena shooter. drift to dodge, blast waves of pixel enemies.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff4d6d">P</div>
+    <div class="cbody">
+      <div class="ctitle">Pixel Drift</div>
+      <span class="tag" style="--c:#ff4d6d">Shooter</span>
+      <p>Twin-stick arena shooter. Drift to dodge, blast waves of pixel enemies.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./pixel_drift_2.html" data-search="pixel drift 2 shooter new waves, boss fights, upgrades and weapons. harder, faster, deadlier.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff4d6d">P</div>
+    <div class="cbody">
+      <div class="ctitle">Pixel Drift 2</div>
+      <span class="tag" style="--c:#ff4d6d">Shooter</span>
+      <p>New waves, boss fights, upgrades and weapons. Harder, faster, deadlier.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./neon_blast.html" data-search="neon blast shooter twin-stick bullet hell! 6 enemy types, bosses, orb pickups, dash + bomb.">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#ff4d6d">N</div>
+    <div class="cbody">
+      <div class="ctitle">Neon Blast</div>
+      <span class="tag" style="--c:#ff4d6d">Shooter</span>
+      <p>Twin-stick bullet hell! 6 enemy types, bosses, orb pickups, dash + bomb.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./star_swarm.html" data-search="star swarm shooter bullet-hell survival. how long can you last in deep space?">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff4d6d">S</div>
+    <div class="cbody">
+      <div class="ctitle">Star Swarm</div>
+      <span class="tag" style="--c:#ff4d6d">Shooter</span>
+      <p>Bullet-hell survival. How long can you last in deep space?</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./space_miners.html" data-search="space miner shooter blast asteroids for minerals. upgrade laser, engine, hull, fire rate.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff4d6d">S</div>
+    <div class="cbody">
+      <div class="ctitle">Space Miner</div>
+      <span class="tag" style="--c:#ff4d6d">Shooter</span>
+      <p>Blast asteroids for minerals. Upgrade laser, engine, hull, fire rate.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./the_game_that_learns.html" data-search="the game that learns shooter a platformer shooter where the ai adapts to your playstyle. 5 sectors.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff4d6d">T</div>
+    <div class="cbody">
+      <div class="ctitle">The Game That Learns</div>
+      <span class="tag" style="--c:#ff4d6d">Shooter</span>
+      <p>A platformer shooter where the AI adapts to your playstyle. 5 sectors.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./star_dodge.html" data-search="star dodge arcade dodge endless waves of stars. one touch and it's over.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffd23f">S</div>
+    <div class="cbody">
+      <div class="ctitle">Star Dodge</div>
+      <span class="tag" style="--c:#ffd23f">Arcade</span>
+      <p>Dodge endless waves of stars. One touch and it's over.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./snake_evolved.html" data-search="snake evolved arcade classic snake evolved. ghost mode, speed bursts, score multipliers!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffd23f">S</div>
+    <div class="cbody">
+      <div class="ctitle">Snake Evolved</div>
+      <span class="tag" style="--c:#ffd23f">Arcade</span>
+      <p>Classic Snake evolved. Ghost mode, speed bursts, score multipliers!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./flip_master.html" data-search="flip master arcade bounce on the trampoline and pull off flips! combos, perfect landings.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffd23f">F</div>
+    <div class="cbody">
+      <div class="ctitle">Flip Master</div>
+      <span class="tag" style="--c:#ffd23f">Arcade</span>
+      <p>Bounce on the trampoline and pull off flips! Combos, perfect landings.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./keyboard_chaos.html" data-search="keyboard chaos arcade every key triggers a different ability. discover all 26!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffd23f">K</div>
+    <div class="cbody">
+      <div class="ctitle">Keyboard Chaos</div>
+      <span class="tag" style="--c:#ffd23f">Arcade</span>
+      <p>Every key triggers a different ability. Discover all 26!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./speed_typer.html" data-search="speed typer arcade words fall from above — type before they land! combos, wpm tracker.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffd23f">S</div>
+    <div class="cbody">
+      <div class="ctitle">Speed Typer</div>
+      <span class="tag" style="--c:#ffd23f">Arcade</span>
+      <p>Words fall from above — type before they land! Combos, WPM tracker.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./BALLS.HTML" data-search="balls arcade pure physics chaos. balls everywhere. bounce, collide, explode.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffd23f">B</div>
+    <div class="cbody">
+      <div class="ctitle">Balls</div>
+      <span class="tag" style="--c:#ffd23f">Arcade</span>
+      <p>Pure physics chaos. Balls everywhere. Bounce, collide, explode.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./block_blast.html" data-search="block blast puzzle stack and blast falling blocks. combos score big.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#7CFF6b">B</div>
+    <div class="cbody">
+      <div class="ctitle">Block Blast</div>
+      <span class="tag" style="--c:#7CFF6b">Puzzle</span>
+      <p>Stack and blast falling blocks. Combos score big.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./chain_reaction.html" data-search="chain reaction puzzle click to explode — trigger chain reactions. wipe out the enemy cells!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#7CFF6b">C</div>
+    <div class="cbody">
+      <div class="ctitle">Chain Reaction</div>
+      <span class="tag" style="--c:#7CFF6b">Puzzle</span>
+      <p>Click to explode — trigger chain reactions. Wipe out the enemy cells!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./crowd_crusher.html" data-search="crowd crusher puzzle swap monsters to match 3+. crush mega combos. hit the target!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#7CFF6b">C</div>
+    <div class="cbody">
+      <div class="ctitle">Crowd Crusher</div>
+      <span class="tag" style="--c:#7CFF6b">Puzzle</span>
+      <p>Swap monsters to match 3+. Crush mega combos. Hit the target!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./parking_panic.html" data-search="parking panic puzzle slide cars out of the way to free the red car. 5 tricky levels!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#7CFF6b">P</div>
+    <div class="cbody">
+      <div class="ctitle">Parking Panic</div>
+      <span class="tag" style="--c:#7CFF6b">Puzzle</span>
+      <p>Slide cars out of the way to free the red car. 5 tricky levels!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./bloons_pop.html" data-search="bloons pop puzzle shoot darts to pop balloons. chain pops for massive combos!">
+    <span class="badge">UPGRADED</span>
+    <div class="tile" style="--c:#7CFF6b">B</div>
+    <div class="cbody">
+      <div class="ctitle">Bloons Pop</div>
+      <span class="tag" style="--c:#7CFF6b">Puzzle</span>
+      <p>Shoot darts to pop balloons. Chain pops for massive combos!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./button_factory.html" data-search="button factory puzzle 15 levels of button-pushing mayhem. 14 wild button types.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#7CFF6b">B</div>
+    <div class="cbody">
+      <div class="ctitle">Button Factory</div>
+      <span class="tag" style="--c:#7CFF6b">Puzzle</span>
+      <p>15 levels of button-pushing mayhem. 14 wild button types.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./the_map_is_alive.html" data-search="the map is alive puzzle the maze changes as you move. sliding walls, toggling doors.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#7CFF6b">T</div>
+    <div class="cbody">
+      <div class="ctitle">The Map Is Alive</div>
+      <span class="tag" style="--c:#7CFF6b">Puzzle</span>
+      <p>The maze changes as you move. Sliding walls, toggling doors.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./computer.html" data-search="computer puzzle navigate a retro os. solve puzzles, hack minigames, find the exit.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#7CFF6b">C</div>
+    <div class="cbody">
+      <div class="ctitle">Computer</div>
+      <span class="tag" style="--c:#7CFF6b">Puzzle</span>
+      <p>Navigate a retro OS. Solve puzzles, hack minigames, find the exit.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./skull_stack.html" data-search="skull stack puzzle stack skulls sky-high. one wrong drop and it's over.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#7CFF6b">S</div>
+    <div class="cbody">
+      <div class="ctitle">Skull Stack</div>
+      <span class="tag" style="--c:#7CFF6b">Puzzle</span>
+      <p>Stack skulls sky-high. One wrong drop and it's over.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./goofy_cards.html" data-search="goofy cards cards collect 120 cards across 9 rarities. secret codes unlock bonus packs!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#c084fc">G</div>
+    <div class="cbody">
+      <div class="ctitle">Goofy Cards</div>
+      <span class="tag" style="--c:#c084fc">Cards</span>
+      <p>Collect 120 cards across 9 rarities. Secret codes unlock bonus packs!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./goofy_cards_2.html" data-search="goofy cards 2 cards 150 cards, smash bros-style fighting! 15 stages.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#c084fc">G</div>
+    <div class="cbody">
+      <div class="ctitle">Goofy Cards 2</div>
+      <span class="tag" style="--c:#c084fc">Cards</span>
+      <p>150 cards, Smash Bros-style fighting! 15 stages.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./goofy_cards_3.html" data-search="goofy cards 3 cards the goofiest card battle yet. new cards, new chaos.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#c084fc">G</div>
+    <div class="cbody">
+      <div class="ctitle">Goofy Cards 3</div>
+      <span class="tag" style="--c:#c084fc">Cards</span>
+      <p>The goofiest card battle yet. New cards, new chaos.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./forge_clicker.html" data-search="forge clicker idle buildings, golden cookies, seasons, 158 achievements, casino, prestige.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffb020">F</div>
+    <div class="cbody">
+      <div class="ctitle">Forge Clicker</div>
+      <span class="tag" style="--c:#ffb020">Idle</span>
+      <p>Buildings, golden cookies, seasons, 158 achievements, casino, prestige.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./clicker_club.html" data-search="poopatropas &amp; clicker club idle click cookies, recruit members, buy upgrades, prestige!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffb020">P</div>
+    <div class="cbody">
+      <div class="ctitle">Poopatropas &amp; Clicker Club</div>
+      <span class="tag" style="--c:#ffb020">Idle</span>
+      <p>Click cookies, recruit members, buy upgrades, prestige!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./city_legacy.html" data-search="city legacy idle build from a single house to a megacity. unlock eras, manage resources.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffb020">C</div>
+    <div class="cbody">
+      <div class="ctitle">City Legacy</div>
+      <span class="tag" style="--c:#ffb020">Idle</span>
+      <p>Build from a single house to a megacity. Unlock eras, manage resources.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./slime_lab.html" data-search="slime lab idle drag and merge 18 slime species. coins, upgrades, auto-mixer!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ffb020">S</div>
+    <div class="cbody">
+      <div class="ctitle">Slime Lab</div>
+      <span class="tag" style="--c:#ffb020">Idle</span>
+      <p>Drag and merge 18 slime species. Coins, upgrades, auto-mixer!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./box_royale.html" data-search="box royale party 4 players, same keyboard. bots, coin shop, hats, research tree!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff7ad9">B</div>
+    <div class="cbody">
+      <div class="ctitle">Box Royale</div>
+      <span class="tag" style="--c:#ff7ad9">Party</span>
+      <p>4 players, same keyboard. Bots, coin shop, hats, research tree!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./blob_party.html" data-search="blob party party eat smaller blobs, dodge bigger ones. ai bots, power-ups!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff7ad9">B</div>
+    <div class="cbody">
+      <div class="ctitle">Blob Party</div>
+      <span class="tag" style="--c:#ff7ad9">Party</span>
+      <p>Eat smaller blobs, dodge bigger ones. AI bots, power-ups!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./pixel_tanks.html" data-search="pixel tanks party 2-player local tank battle. bounce bullets. first to 5 kills!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff7ad9">P</div>
+    <div class="cbody">
+      <div class="ctitle">Pixel Tanks</div>
+      <span class="tag" style="--c:#ff7ad9">Party</span>
+      <p>2-player local tank battle. Bounce bullets. First to 5 kills!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./worm_wars.html" data-search="worm wars party 2-player worm battle. eat to grow, crash your opponent. first to 5!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff7ad9">W</div>
+    <div class="cbody">
+      <div class="ctitle">Worm Wars</div>
+      <span class="tag" style="--c:#ff7ad9">Party</span>
+      <p>2-player worm battle. Eat to grow, crash your opponent. First to 5!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./bow_pillows.html" data-search="bow pillows party upgrade your archer, take turns throwing pillows. wind, physics, best of 5!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff7ad9">B</div>
+    <div class="cbody">
+      <div class="ctitle">Bow Pillows</div>
+      <span class="tag" style="--c:#ff7ad9">Party</span>
+      <p>Upgrade your archer, take turns throwing pillows. Wind, physics, best of 5!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./night_shift.html" data-search="night shift horror watch cameras, manage power, survive until 6am. 7 nights.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#a3a3ff">N</div>
+    <div class="cbody">
+      <div class="ctitle">Night Shift</div>
+      <span class="tag" style="--c:#a3a3ff">Horror</span>
+      <p>Watch cameras, manage power, survive until 6AM. 7 nights.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./night_shift_2.html" data-search="night shift 2 horror 7 animatronics, vents, generator &amp; music box. survive 7 nights.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#a3a3ff">N</div>
+    <div class="cbody">
+      <div class="ctitle">Night Shift 2</div>
+      <span class="tag" style="--c:#a3a3ff">Horror</span>
+      <p>7 animatronics, vents, generator &amp; music box. Survive 7 nights.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./dead_static.html" data-search="dead static horror tune your radio to find ghosts before they find you. survive the night.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#a3a3ff">D</div>
+    <div class="cbody">
+      <div class="ctitle">Dead Static</div>
+      <span class="tag" style="--c:#a3a3ff">Horror</span>
+      <p>Tune your radio to find ghosts before they find you. Survive the night.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./neon_kart.html" data-search="neon kart racing kart racing with items. online via peerjs or solo vs bots.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#4dffc3">N</div>
+    <div class="cbody">
+      <div class="ctitle">Neon Kart</div>
+      <span class="tag" style="--c:#4dffc3">Racing</span>
+      <p>Kart racing with items. Online via PeerJS or solo vs bots.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./drift_zone.html" data-search="drift zone racing top-down drift racer. score by sliding corners. 3 laps!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#4dffc3">D</div>
+    <div class="cbody">
+      <div class="ctitle">Drift Zone</div>
+      <span class="tag" style="--c:#4dffc3">Racing</span>
+      <p>Top-down drift racer. Score by sliding corners. 3 laps!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./hoop_dreams.html" data-search="hoop dreams sports basketball arcade. shoot from anywhere, combos, bank shots.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff9f43">H</div>
+    <div class="cbody">
+      <div class="ctitle">Hoop Dreams</div>
+      <span class="tag" style="--c:#ff9f43">Sports</span>
+      <p>Basketball arcade. Shoot from anywhere, combos, bank shots.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./pixel_brawler.html" data-search="pixel brawler fighter side-scrolling beat-em-up. punch, kick, combo through waves.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff5d5d">P</div>
+    <div class="cbody">
+      <div class="ctitle">Pixel Brawler</div>
+      <span class="tag" style="--c:#ff5d5d">Fighter</span>
+      <p>Side-scrolling beat-em-up. Punch, kick, combo through waves.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./forge_fighters.html" data-search="forge fighters fighter platform fighter: 11 characters, story mode, 2-player battles.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#ff5d5d">F</div>
+    <div class="cbody">
+      <div class="ctitle">Forge Fighters</div>
+      <span class="tag" style="--c:#ff5d5d">Fighter</span>
+      <p>Platform fighter: 11 characters, story mode, 2-player battles.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./dungeon_depths.html" data-search="dungeon depths rpg roguelike rpg. level up, loot, slay monsters, descend forever.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#9df01d">D</div>
+    <div class="cbody">
+      <div class="ctitle">Dungeon Depths</div>
+      <span class="tag" style="--c:#9df01d">RPG</span>
+      <p>Roguelike RPG. Level up, loot, slay monsters, descend forever.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./dungeon_crawler.html" data-search="dungeon crawler rpg procedural caves. find the key, reach the stairs. goblin to demon!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#9df01d">D</div>
+    <div class="cbody">
+      <div class="ctitle">Dungeon Crawler</div>
+      <span class="tag" style="--c:#9df01d">RPG</span>
+      <p>Procedural caves. Find the key, reach the stairs. Goblin to Demon!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./tower_siege.html" data-search="tower siege strategy 5 tower types, endless waves, upgrade paths. defend your base!">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#5db4ff">T</div>
+    <div class="cbody">
+      <div class="ctitle">Tower Siege</div>
+      <span class="tag" style="--c:#5db4ff">Strategy</span>
+      <p>5 tower types, endless waves, upgrade paths. Defend your base!</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+
+  <a class="card" href="./covidgen_x.html" data-search="covidgen-x strategy spread. mutate. infect everyone. like plague, but goofier.">
+    <span class="badge">UPGRADED</span>
+    
+    <div class="tile" style="--c:#5db4ff">C</div>
+    <div class="cbody">
+      <div class="ctitle">Covidgen-X</div>
+      <span class="tag" style="--c:#5db4ff">Strategy</span>
+      <p>Spread. Mutate. Infect everyone. Like Plague, but goofier.</p>
+      <span class="play">▶ PLAY</span>
+    </div>
+  </a>
+  <div class="empty" id="empty">No games found — try a different search.</div>
+</div>
+<footer><a href="../">← back to kyleroho.github.io</a><br><br>PIXEL FORGE GAMES · upgrade test build</footer>
+<script>
+const s=document.getElementById('search'),grid=document.getElementById('grid'),
+cards=[...grid.querySelectorAll('.card')],empty=document.getElementById('empty'),
+count=document.getElementById('count');
+s.addEventListener('input',()=>{const q=s.value.trim().toLowerCase();let n=0;
+cards.forEach(c=>{const hit=!q||c.dataset.search.includes(q);c.style.display=hit?'':'none';if(hit)n++;});
+empty.style.display=n?'none':'block';count.textContent=n+' game'+(n===1?'':'s');});
+</script>
+</body>
+</html>

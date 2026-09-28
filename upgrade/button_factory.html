@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Button Factory</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d0520;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;font-family:'Nunito',sans-serif;color:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+#wrap{position:relative;width:100%;max-width:724px;background:#0d0520;border:2px solid #3a1a6a;border-radius:6px;overflow:hidden;}
+#hud{min-height:38px;background:#110825;border-bottom:2px solid #2a1050;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 14px;font-size:12px;letter-spacing:1px;color:#9966ff;flex-shrink:0;flex-wrap:wrap;}
+#hud b{color:#fff;}
+#gc{display:block;width:100%;height:auto;max-width:720px;}
+#btnPanel{min-height:84px;background:#0d0520;border-top:2px solid #2a1050;display:flex;align-items:center;justify-content:center;gap:6px;padding:4px 8px;flex-wrap:wrap;overflow:hidden;flex-shrink:0;}
+.gbtn{padding:6px 11px;min-height:34px;border:2px solid;border-radius:7px;font-family:'Fredoka One',cursive;font-size:11px;cursor:pointer;background:#080318;white-space:nowrap;transition:all .12s;touch-action:manipulation;}
+.gbtn:hover{transform:scale(1.08);filter:brightness(1.3);}
+.gbtn.used{opacity:.28;cursor:default;transform:none!important;filter:none!important;}
+#fx{position:absolute;top:42px;right:6px;display:flex;flex-direction:column;gap:3px;pointer-events:none;z-index:5;}
+.ftag{background:#0d0520ee;border:1px solid #9966ff55;padding:2px 7px;font-size:9px;color:#bb88ff;border-radius:3px;}
+#tools{position:absolute;top:44px;left:6px;display:flex;gap:6px;z-index:6;}
+.ttool{width:44px;height:44px;font-size:19px;line-height:1;background:#1e0a40ee;border:2px solid #3a1a6a;border-radius:9px;color:#fff;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;}
+.ttool:active{transform:scale(.93);background:#2a1258;}
+.ovl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d0520ee;z-index:20;border-radius:4px;padding:16px;text-align:center;overflow-y:auto;}
+.ovl h1{font-family:'Fredoka One',cursive;font-size:42px;margin-bottom:8px;text-align:center;}
+.ovl p{color:#bb88ff;font-size:13px;margin-bottom:16px;text-align:center;line-height:2;}
+.sbtn{background:#5533aa;border:none;color:#fff;padding:12px 36px;min-height:48px;font-family:'Fredoka One',cursive;font-size:18px;cursor:pointer;border-radius:10px;transition:all .2s;margin:4px;touch-action:manipulation;}
+.sbtn:hover{background:#7755cc;transform:scale(1.06);}
+#lvlSel{margin:10px 0 4px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;max-width:560px;}
+#lvlSel span{font-size:11px;letter-spacing:2px;color:#6644aa;width:100%;}
+.lchip{min-width:44px;min-height:44px;background:#1e0a40;border:2px solid #5522aa;color:#cc88ff;font-family:'Fredoka One',cursive;font-size:15px;border-radius:8px;cursor:pointer;touch-action:manipulation;}
+.lchip:active{background:#33156a;}
+#shopTabs{display:flex;gap:8px;margin-bottom:10px;}
+.stab{background:#1e0a40;border:2px solid #3a1a6a;color:#bb88ff;font-family:'Fredoka One',cursive;font-size:14px;padding:10px 22px;min-height:44px;border-radius:8px;cursor:pointer;touch-action:manipulation;}
+.stab.on{background:#5533aa;color:#fff;border-color:#9966ff;}
+#perkList,#statList{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;width:min(460px,94%);}
+.perk{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#150a2e;border:2px solid #3a1a6a;border-radius:10px;padding:10px 12px;text-align:left;}
+.perk .pn{font-family:'Fredoka One',cursive;font-size:14px;color:#ffdd44;}
+.perk .pd{font-size:11px;color:#bb88ff;line-height:1.5;}
+.perk.owned{border-color:#44cc44;}
+.buy{background:#5533aa;border:none;color:#fff;font-family:'Fredoka One',cursive;font-size:14px;min-width:76px;min-height:44px;border-radius:8px;cursor:pointer;touch-action:manipulation;flex-shrink:0;}
+.buy:disabled{opacity:.35;cursor:default;}
+.srow{display:flex;justify-content:space-between;background:#150a2e;border:1px solid #2a1050;border-radius:8px;padding:9px 14px;font-size:13px;}
+.srow b{color:#ffdd44;}
+#touchBar{display:none;justify-content:space-between;align-items:center;padding:8px 10px;background:#0d0520;border-top:2px solid #2a1050;gap:10px;}
+body.touch #touchBar{display:flex;}
+.tgrp{display:flex;gap:10px;}
+.tbtn{min-width:84px;min-height:60px;font-size:24px;background:#1e0a40;border:2px solid #5522aa;border-radius:12px;color:#cc88ff;font-family:'Fredoka One',cursive;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer;}
+.tbtn:active{background:#33156a;transform:scale(.95);}
+#tJump{border-color:#ffaa00;color:#ffdd44;min-width:110px;}
+@media (max-width:640px){
+  body{overflow-y:auto;justify-content:flex-start;height:100dvh;}
+  #wrap{border-left:none;border-right:none;border-radius:0;}
+  #hud{font-size:10px;padding:4px 8px;}
+  #btnPanel{min-height:0;max-height:132px;overflow-y:auto;}
+  .gbtn{min-height:44px;padding:10px 14px;font-size:13px;}
+  .ovl h1{font-size:30px;}
+  .ovl{justify-content:flex-start;padding-top:34px;}
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <span>LEVEL <b id="lvlN">-</b></span>
+    <span>⚙ <b id="gearN">0</b></span>
+    <span id="fxList">No active effects</span>
+    <span>BUTTONS: <b id="btnCount">-</b></span>
+  </div>
+  <canvas id="gc"></canvas>
+  <div id="tools">
+    <button class="ttool" id="tPause" title="Pause (P)">⏸</button>
+    <button class="ttool" id="tShop" title="Factory perks">⚙</button>
+    <button class="ttool" id="tStats" title="Statistics">📊</button>
+  </div>
+  <div id="btnPanel"></div>
+  <div id="fx"></div>
+  <div id="touchBar">
+    <div class="tgrp">
+      <button class="tbtn" id="tLeft">◀</button>
+      <button class="tbtn" id="tRight">▶</button>
+    </div>
+    <button class="tbtn" id="tJump">JUMP</button>
+  </div>
+  <div class="ovl" id="msg">
+    <h1 style="color:#cc88ff">BUTTON<br>FACTORY</h1>
+    <p>Buttons do <b style="color:#ffdd44">weird things.</b><br>Reach the <span style="color:#ffdd44">✦ EXIT ✦</span> to escape!<br>WASD / Arrows to move, Space to jump.<br><span style="color:#6644aa">P = pause · R = restart level · mobile: on-screen pad</span></p>
+    <button class="sbtn" onclick="startGame(1)">PRESS START</button>
+    <div id="lvlSel"></div>
+    <a href="index.html" style="display:inline-block;margin-top:8px;color:#6644aa;font-size:10px;letter-spacing:2px;text-decoration:none;font-family:monospace;">← BACK TO ARCADE</a>
+  </div>
+  <div class="ovl" id="pauseOv" style="display:none">
+    <h1 style="color:#cc88ff">⏸ PAUSED</h1>
+    <p>Take a breath. The buttons can wait.</p>
+    <button class="sbtn" id="resumeBtn">RESUME</button>
+    <button class="sbtn" id="restartBtn">RESTART LEVEL</button>
+    <button class="sbtn" id="quitBtn" style="background:#33156a">QUIT TO MENU</button>
+  </div>
+  <div class="ovl" id="shopOv" style="display:none">
+    <h1 style="color:#ffdd44">⚙ FACTORY</h1>
+    <div id="shopTabs">
+      <button class="stab on" id="tabPerks">PERKS</button>
+      <button class="stab" id="tabStats">STATS</button>
+    </div>
+    <div id="perkList"></div>
+    <div id="statList" style="display:none"></div>
+    <p style="margin-bottom:12px">YOUR GEARS: <b id="shopGears" style="color:#ffdd44">0</b></p>
+    <button class="sbtn" id="shopClose">CLOSE</button>
+  </div>
+</div>
+
+<script>
+// ---- CANVAS SETUP ----
+const C = document.getElementById('gc'), ctx = C.getContext('2d');
+const T = 30;          // tile size px
+const COLS = 24;       // grid columns
+const ROWS = 12;       // grid rows (play area only)
+const CW = COLS * T;   // 720
+const CH = ROWS * T;   // 360
+C.width = CW; C.height = CH;
+
+// ---- SAVE SYSTEM ----
+const SAVE_KEY = 'pfg2_button_factory';
+const LEGACY_KEYS = ['button_factory', 'buttonFactory', 'bf_save'];
+function defSave() {
+  return {gears:0, perks:{slot:0,dur:0,jump:0,gear:0}, best:0, escapes:0,
+          pressed:0, cleared:0, playSec:0, gearsEarned:0};
+}
+let save = defSave();
+function loadGame() {
+  for (const k of [SAVE_KEY, ...LEGACY_KEYS]) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const d = JSON.parse(raw);
+      if (!d || typeof d !== 'object') continue;
+      const s = defSave();
+      for (const f of ['gears','best','escapes','pressed','cleared','playSec','gearsEarned'])
+        if (typeof d[f] === 'number' && isFinite(d[f])) s[f] = d[f];
+      if (d.perks && typeof d.perks === 'object')
+        for (const p of ['slot','dur','jump','gear']) if (d.perks[p]) s.perks[p] = 1;
+      save = s;
+      if (k !== SAVE_KEY) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e){} }
+      break;
+    } catch(e){}
+  }
+}
+function saveGame() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e){}
+  updateGearHud();
+}
+function updateGearHud() {
+  document.getElementById('gearN').textContent = save.gears;
+  const sg = document.getElementById('shopGears');
+  if (sg) sg.textContent = save.gears;
+}
+
+// ---- FACTORY PERKS (persistent meta-progression) ----
+const PERKS = [
+  {id:'slot', name:'EXTRA SLOT',  cost:8, desc:'+1 effect button offered every level'},
+  {id:'dur',  name:'LONG EFFECTS',cost:6, desc:'Timed effects last 40% longer'},
+  {id:'jump', name:'HIGH JUMP',   cost:5, desc:'Jump 12% higher, always'},
+  {id:'gear', name:'GEAR BOOST',  cost:4, desc:'+50% gears earned from levels'},
+];
+function buyPerk(id) {
+  const p = PERKS.find(x => x.id === id);
+  if (!p || save.perks[id]) return;
+  if (save.gears < p.cost) return;
+  save.gears -= p.cost;
+  save.perks[id] = 1;
+  notif(p.name + ' installed! ⚙');
+  saveGame();
+  renderShop();
+}
+
+// ---- BUTTON DEFS ----
+const BTNS = [
+  {id:'flip',   label:'FLIP CTRL', col:'#ff6644',bc:'#ff2200', fn:()=>{addFx('flip',300);  notif('Controls Flipped! ↔');}},
+  {id:'wall',   label:'WALL',      col:'#ff8844',bc:'#cc4400', fn:()=>{spawnWall();         notif('Wall Spawned!');}},
+  {id:'freeze', label:'FREEZE',    col:'#44ccff',bc:'#0088cc', fn:()=>{const deep=!!fx.shrink; addFx('freeze', deep?220:110); notif(deep?'Deep Freeze! 🧊🧊':'Time Frozen! ❄');}},
+  {id:'warp',   label:'WARP',      col:'#ff44ff',bc:'#cc00cc', fn:()=>{teleport();          notif('Teleported! 💫');}},
+  {id:'shrink', label:'SHRINK',    col:'#ffff44',bc:'#aaaa00', fn:()=>{addFx('shrink',240); notif('You Shrunk!');}},
+  {id:'bounce', label:'BOING',     col:'#ff9944',bc:'#cc5500', fn:()=>{addFx('bounce',220); notif('Super Jump! ↑');}},
+  {id:'dark',   label:'LIGHTS OUT',col:'#8844ff',bc:'#5500cc', fn:()=>{addFx('dark',180);   notif('Lights Out! 🌑');}},
+  {id:'mirror', label:'MIRROR',    col:'#44ffff',bc:'#00aaaa', fn:()=>{addFx('mirror',240); notif('Mirror! 👥');}},
+  {id:'speed',  label:'SPEED UP',  col:'#ffaa00',bc:'#cc7700', fn:()=>{addFx('speed',200);  notif('Speed Boost! ⚡');}},
+  {id:'grav',   label:'ANTI-GRAV', col:'#00ffaa',bc:'#00aa66', fn:()=>{addFx('grav',220);  notif('Gravity Flipped! 🔼');}},
+  {id:'fake',   label:'CLONE EXIT',col:'#ff88cc',bc:'#cc0088', fn:()=>{spawnFake();          notif('Fake Exit! 😈');}},
+  {id:'swap',   label:'SWAP EXIT', col:'#aaffaa',bc:'#44cc44', fn:()=>{swapExit();           notif('Swapped! 🔀');}},
+  {id:'spin',   label:'DIZZY',     col:'#ffaaff',bc:'#cc44cc', fn:()=>{addFx('spin',160);   notif('Getting Dizzy! 💫');}},
+  {id:'invis',  label:'VANISH',    col:'#aaaaaa',bc:'#666666', fn:()=>{addFx('invis',160);  notif('You Vanished! 👁');}},
+];
+
+// ---- GAME STATE ----
+const keys = {};
+let state = 'menu';
+let level = 1;
+let paused = false;
+let player, exit_, walls, fakeExits, fx, notifs, usedBtns, availBtns, frame, jumpHeld, prevMega;
+
+// safe defaults so draw() never crashes before startGame()
+function resetState() {
+  player    = {x:T*1.5, y:T*1.5, w:18, h:18, vx:0, vy:0, onGround:false};
+  exit_     = {x:T*(COLS-3), y:T*(ROWS-3), w:T, h:T};
+  walls     = [];
+  fakeExits = [];
+  fx        = {};
+  notifs    = [];
+  usedBtns  = new Set();
+  availBtns = [];
+  frame     = 0;
+  jumpHeld  = false;
+  prevMega  = false;
+}
+resetState();
+
+// ---- START / MENU ----
+function startGame(lvl) {
+  document.getElementById('msg').style.display = 'none';
+  document.getElementById('pauseOv').style.display = 'none';
+  document.getElementById('shopOv').style.display = 'none';
+  paused = false;
+  level = lvl || 1;
+  initLevel();
+}
+function showMenu() {
+  state = 'menu'; paused = false;
+  document.getElementById('pauseOv').style.display = 'none';
+  document.getElementById('shopOv').style.display = 'none';
+  document.getElementById('msg').style.display = 'flex';
+  buildLvlSel();
+}
+function buildLvlSel() {
+  const el = document.getElementById('lvlSel');
+  const un = Math.min(save.best, 15);
+  if (un < 2) { el.innerHTML = ''; return; }
+  let h = '<span>OR START AT LEVEL:</span>';
+  for (let i = 1; i <= un; i++) h += `<button class="lchip" onclick="startGame(${i})">${i}</button>`;
+  el.innerHTML = h;
+}
+
+function initLevel() {
+  state = 'play';
+  paused = false;
+  document.getElementById('pauseOv').style.display = 'none';
+  frame = 0; fx = {}; fakeExits = []; notifs = []; prevMega = false;
+  usedBtns = new Set();
+  buildRoom();
+  const n = Math.min(14, level + 1 + (save.perks.slot ? 1 : 0));
+  const shuffled = [...BTNS].sort(() => Math.random() - .5);
+  availBtns = shuffled.slice(0, n);
+  renderBtns();
+  document.getElementById('lvlN').textContent = level;
+  document.getElementById('btnCount').textContent = n;
+  updateFxDisplay();
+}
+
+// ---- ROOM BUILDER ----
+const PATS = [
+  [{c:5,r:3,w:4,h:1},{c:10,r:5,w:1,h:4},{c:3,r:7,w:5,h:1},{c:15,r:4,w:1,h:4},{c:8,r:9,w:5,h:1},{c:18,r:6,w:3,h:1}],
+  [{c:4,r:4,w:1,h:5},{c:7,r:2,w:5,h:1},{c:12,r:5,w:1,h:4},{c:16,r:3,w:1,h:5},{c:5,r:9,w:5,h:1},{c:19,r:6,w:3,h:1}],
+  [{c:3,r:3,w:6,h:1},{c:9,r:2,w:1,h:5},{c:13,r:5,w:4,h:1},{c:14,r:6,w:1,h:4},{c:5,r:8,w:5,h:1},{c:19,r:3,w:2,h:5}],
+  [{c:6,r:2,w:1,h:6},{c:10,r:5,w:5,h:1},{c:14,r:5,w:1,h:4},{c:3,r:5,w:4,h:1},{c:8,r:9,w:5,h:1},{c:18,r:3,w:3,h:1}],
+  [{c:4,r:2,w:7,h:1},{c:4,r:5,w:1,h:4},{c:8,r:7,w:5,h:1},{c:12,r:3,w:1,h:4},{c:16,r:5,w:4,h:1},{c:7,r:10,w:7,h:1}],
+];
+
+function mkWall(col, row) { return {x: col*T, y: row*T, w:T, h:T}; }
+
+function buildRoom() {
+  walls = [];
+  // border walls
+  for (let c=0; c<COLS; c++) { walls.push(mkWall(c,0)); walls.push(mkWall(c,ROWS-1)); }
+  for (let r=1; r<ROWS-1; r++) { walls.push(mkWall(0,r)); walls.push(mkWall(COLS-1,r)); }
+  // pattern
+  const pat = PATS[(level-1) % PATS.length];
+  for (const b of pat)
+    for (let dc=0; dc<b.w; dc++)
+      for (let dr=0; dr<b.h; dr++)
+        walls.push(mkWall(b.c+dc, b.r+dr));
+  // extra walls for higher levels
+  if (level > 3) {
+    for (let i=0; i<(level-3)*2; i++) {
+      let c,r,t=0;
+      do { c=2+Math.floor(Math.random()*(COLS-4)); r=2+Math.floor(Math.random()*(ROWS-4)); t++; }
+      while (t<40 && (dist2(c*T,r*T,2*T,2*T)<80 || dist2(c*T,r*T,exit_.x,exit_.y)<80));
+      walls.push(mkWall(c,r));
+    }
+  }
+  player = {x:T*1.5+4, y:T*1.5+4, w:18, h:18, vx:0, vy:0, onGround:false};
+  exit_ = {x:T*(COLS-3), y:T*(ROWS-3), w:T, h:T};
+}
+
+function dist2(ax,ay,bx,by) { return Math.hypot(ax-bx,ay-by); }
+
+// ---- EFFECTS ----
+function addFx(name, dur) {
+  if (save.perks.dur) dur = Math.round(dur * 1.4);
+  fx[name] = (fx[name]||0) + dur;
+  updateFxDisplay();
+}
+function updateFxDisplay() {
+  const el = document.getElementById('fx'); el.innerHTML = '';
+  const lab = {flip:'FLIP ↔',freeze:'FROZEN ❄',shrink:'TINY',bounce:'BOUNCY ↑',dark:'DARK 🌑',mirror:'MIRROR',speed:'FAST ⚡',grav:'ANTI-GRAV 🔼',spin:'DIZZY',invis:'INVISIBLE'};
+  const list = [];
+  for (const [k,v] of Object.entries(fx)) if (v>0) {
+    list.push(lab[k]||k);
+    const t=document.createElement('div'); t.className='ftag'; t.textContent=lab[k]||k; el.appendChild(t);
+  }
+  // synergy tag: SPEED + BOING active at once
+  if (fx.speed && fx.bounce) {
+    list.push('MEGA 🚀');
+    const t=document.createElement('div'); t.className='ftag'; t.textContent='MEGA 🚀'; el.appendChild(t);
+  }
+  document.getElementById('fxList').textContent = list.join(' | ') || 'No active effects';
+}
+
+// ---- BUTTON ACTIONS ----
+function spawnWall() {
+  let c,r,t=0;
+  do { c=2+Math.floor(Math.random()*(COLS-4)); r=2+Math.floor(Math.random()*(ROWS-4)); t++; }
+  while (t<40 && (dist2(c*T,r*T,player.x,player.y)<40 || dist2(c*T,r*T,exit_.x,exit_.y)<40));
+  walls.push({x:c*T,y:r*T,w:T,h:T,temp:true,life:300});
+}
+function teleport() {
+  let c,r,t=0;
+  do { c=2+Math.floor(Math.random()*(COLS-4)); r=2+Math.floor(Math.random()*(ROWS-4)); t++; }
+  while (t<40 && walls.some(w=>dist2(c*T,r*T,w.x,w.y)<T));
+  player.x=c*T+6; player.y=r*T+6; player.vx=0; player.vy=0;
+}
+function spawnFake() {
+  let c,r,t=0;
+  do { c=2+Math.floor(Math.random()*(COLS-4)); r=2+Math.floor(Math.random()*(ROWS-4)); t++; }
+  while (t<30 && (dist2(c*T,r*T,exit_.x,exit_.y)<60 || walls.some(w=>dist2(c*T,r*T,w.x,w.y)<T)));
+  fakeExits.push({x:c*T,y:r*T,w:T,h:T,life:260});
+}
+function swapExit() {
+  const ox=player.x, oy=player.y;
+  player.x=exit_.x+6; player.y=exit_.y+6;
+  exit_.x=ox; exit_.y=oy;
+}
+
+// ---- RENDER BUTTONS ----
+function renderBtns() {
+  const p = document.getElementById('btnPanel'); p.innerHTML = '';
+  for (const b of availBtns) {
+    const el = document.createElement('button');
+    el.className = 'gbtn' + (usedBtns.has(b.id) ? ' used' : '');
+    el.textContent = b.label;
+    el.style.borderColor = b.bc; el.style.color = b.col;
+    el.style.boxShadow = `0 0 5px ${b.bc}55`;
+    // plain click only (touch-action:manipulation kills the tap delay) — no
+    // synthesized touchend->click, so a tap can never register twice.
+    el.onclick = () => { if (usedBtns.has(b.id)) return; b.fn(); usedBtns.add(b.id); save.pressed++; renderBtns(); };
+    p.appendChild(el);
+  }
+}
+
+// ---- PAUSE ----
+function togglePause() {
+  if (state !== 'play') return;
+  paused = !paused;
+  document.getElementById('pauseOv').style.display = paused ? 'flex' : 'none';
+}
+
+// ---- SHOP / STATS OVERLAY ----
+function fmtTime(s) {
+  s = Math.floor(s);
+  return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+}
+function renderShop() {
+  const pl = document.getElementById('perkList');
+  let h = '';
+  for (const p of PERKS) {
+    const owned = !!save.perks[p.id];
+    const afford = save.gears >= p.cost;
+    h += `<div class="perk${owned?' owned':''}"><div><div class="pn">${owned?'✅ ':''}${p.name}</div><div class="pd">${p.desc}</div></div>` +
+         (owned ? '' : `<button class="buy" onclick="buyPerk('${p.id}')"${afford?'':' disabled'}>⚙${p.cost}</button>`) + `</div>`;
+  }
+  pl.innerHTML = h;
+  const sl = document.getElementById('statList');
+  sl.innerHTML =
+    `<div class="srow"><span>Best level reached</span><b>${save.best || '-'}</b></div>` +
+    `<div class="srow"><span>Escapes (all 15 levels)</span><b>${save.escapes}</b></div>` +
+    `<div class="srow"><span>Levels cleared</span><b>${save.cleared}</b></div>` +
+    `<div class="srow"><span>Buttons pressed</span><b>${save.pressed}</b></div>` +
+    `<div class="srow"><span>Play time</span><b>${fmtTime(save.playSec)}</b></div>` +
+    `<div class="srow"><span>Gears earned (all time)</span><b>${save.gearsEarned}</b></div>`;
+  updateGearHud();
+}
+function openShop(tab) {
+  if (state === 'play' && !paused) togglePause();
+  renderShop();
+  showShopTab(tab || 'perks');
+  document.getElementById('shopOv').style.display = 'flex';
+}
+function showShopTab(tab) {
+  const perks = tab === 'perks';
+  document.getElementById('tabPerks').className = 'stab' + (perks ? ' on' : '');
+  document.getElementById('tabStats').className = 'stab' + (perks ? '' : ' on');
+  document.getElementById('perkList').style.display = perks ? 'flex' : 'none';
+  document.getElementById('statList').style.display = perks ? 'none' : 'flex';
+}
+
+// ---- GEAR ECONOMY ----
+function awardGears() {
+  const n = availBtns.length, unused = n - usedBtns.size;
+  let g = 1 + (unused * 2 >= n ? 1 : 0); // bonus gear for sparing half+ of the buttons
+  if (save.perks.gear) g = Math.round(g * 1.5);
+  save.gears += g; save.gearsEarned += g; save.cleared++;
+  notif('+' + g + ' ⚙');
+}
+
+// ---- PHYSICS ----
+const GRAV=0.55, SPD=3.4;
+
+function rr(a,b) { return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+
+function update() {
+  if (state !== 'play' || paused) return;
+  frame++;
+  save.playSec += 1/60;
+  if (frame % 600 === 0) saveGame(); // periodic autosave
+
+  // decay effects
+  let changed = false;
+  for (const k in fx) { if(fx[k]>0){fx[k]--; if(fx[k]<=0){delete fx[k]; changed=true;}} }
+  if (changed) updateFxDisplay();
+  if (fx.freeze) return;
+
+  const flip  = !!fx.flip;
+  const sp    = fx.speed ? SPD*1.9 : SPD;
+  const shrunk= !!fx.shrink;
+  const gFlip = !!fx.grav;
+  const g     = gFlip ? -GRAV : GRAV;
+  // synergy: SPEED + BOING at once = MEGA JUMP
+  const mega  = fx.speed && fx.bounce;
+  let jspd    = fx.bounce ? (gFlip?14:-14) : (gFlip?9:-11);
+  if (mega) jspd *= 1.55;
+  if (save.perks.jump) jspd *= 1.12;
+  if (mega && !prevMega) { notif('MEGA JUMP! 🚀'); updateFxDisplay(); }
+  prevMega = !!mega;
+  const pw    = shrunk ? 10 : player.w;
+  const ph    = shrunk ? 10 : player.h;
+
+  const L = keys['ArrowLeft']||keys['a'];
+  const R = keys['ArrowRight']||keys['d'];
+  const J = keys['ArrowUp']||keys['w']||keys[' '];
+
+  if (flip?R:L)      { player.vx = -sp; }
+  else if (flip?L:R) { player.vx =  sp; }
+  else                 player.vx *= .72;
+
+  if (J && player.onGround && !jumpHeld) { player.vy = jspd; jumpHeld = true; }
+  if (!J) jumpHeld = false;
+
+  player.vy += g;
+  player.x  += player.vx;
+  player.y  += player.vy;
+
+  // wall collisions
+  player.onGround = false;
+  for (const w of walls) {
+    if (rr({x:player.x,y:player.y,w:pw,h:ph}, w)) {
+      const cx=player.x+pw/2, cy=player.y+ph/2;
+      const wx=w.x+w.w/2,     wy=w.y+w.h/2;
+      const overX = pw/2+w.w/2 - Math.abs(cx-wx);
+      const overY = ph/2+w.h/2 - Math.abs(cy-wy);
+      if (overX < overY) {
+        player.x += cx>wx ? overX : -overX;
+        player.vx = 0;
+      } else {
+        player.y += cy>wy ? overY : -overY;
+        player.vy = 0;
+        // onGround: player is above wall (cy < wy) in normal gravity
+        if (!gFlip && cy < wy) player.onGround = true;
+        if  (gFlip && cy > wy) player.onGround = true;
+      }
+    }
+  }
+
+  // hard clamp inside border
+  player.x = Math.max(T, Math.min(CW-T-pw, player.x));
+  player.y = Math.max(T, Math.min(CH-T-ph, player.y));
+
+  // temp walls
+  for (let i=walls.length-1; i>=0; i--)
+    if (walls[i].temp && --walls[i].life <= 0) walls.splice(i,1);
+
+  // fake exits
+  for (let i=fakeExits.length-1; i>=0; i--) {
+    fakeExits[i].life--;
+    if (fakeExits[i].life <= 0) { fakeExits.splice(i,1); continue; }
+    if (rr({x:player.x,y:player.y,w:pw,h:ph}, fakeExits[i])) {
+      notif('FAKE EXIT! 😈'); fakeExits.splice(i,1);
+    }
+  }
+
+  // real exit
+  if (exit_ && rr({x:player.x,y:player.y,w:pw,h:ph}, exit_)) nextLevel();
+
+  // notif decay
+  for (let i=notifs.length-1; i>=0; i--) { notifs[i].t--; if(notifs[i].t<=0) notifs.splice(i,1); }
+}
+
+function nextLevel() {
+  awardGears();
+  level++;
+  if (level > 15) {
+    state = 'win';
+    save.best = 15; save.escapes++;
+    saveGame();
+    document.getElementById('msg').style.display = 'flex';
+    document.getElementById('msg').innerHTML = `<h1 style="color:#ffdd44;font-family:'Fredoka One',cursive;">YOU ESCAPED!</h1><p style="color:#bb88ff">All 15 levels cleared! 🎉<br>+${save.gears} ⚙ in the bank — spend them on factory perks!</p><button class="sbtn" onclick="startGame(1)">PLAY AGAIN</button><br><a href="index.html" style="display:inline-block;margin-top:8px;color:#6644aa;font-size:10px;letter-spacing:2px;text-decoration:none;font-family:monospace;">← BACK TO ARCADE</a>`;
+    return;
+  }
+  save.best = Math.max(save.best, level);
+  saveGame();
+  initLevel(); notif('LEVEL ' + level + '! 🎉');
+}
+function notif(txt) { notifs.push({txt, t:130}); }
+
+// ---- DRAW ----
+function draw() {
+  ctx.clearRect(0,0,CW,CH);
+
+  if (state === 'menu') {
+    ctx.fillStyle='#0d0520'; ctx.fillRect(0,0,CW,CH);
+    return;
+  }
+
+  const dark = !!fx.dark, spin = !!fx.spin, gFlip = !!fx.grav;
+  if (spin) { ctx.save(); ctx.translate(CW/2,CH/2); ctx.rotate(Math.sin(frame*.09)*.18); ctx.translate(-CW/2,-CH/2); }
+
+  ctx.fillStyle = dark ? '#000' : '#0d0520';
+  ctx.fillRect(0,0,CW,CH);
+  if (!dark) {
+    ctx.fillStyle = '#1e0a38';
+    for (let x=0; x<CW; x+=T) for (let y=0; y<CH; y+=T) {
+      ctx.beginPath(); ctx.arc(x,y,1,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // walls
+  for (const w of walls) {
+    const a = w.temp ? Math.min(1, w.life/50) : 1;
+    ctx.globalAlpha = a;
+    ctx.fillStyle   = dark ? '#330d22' : (w.temp ? '#442200' : '#1e0a40');
+    ctx.fillRect(w.x,w.y,w.w,w.h);
+    ctx.strokeStyle = dark ? '#771133' : (w.temp ? '#ff6600' : '#5522aa');
+    ctx.lineWidth=1.5; ctx.strokeRect(w.x+.5,w.y+.5,w.w-1,w.h-1);
+    ctx.globalAlpha=1;
+  }
+
+  // fake exits
+  for (const fe of fakeExits) {
+    ctx.globalAlpha = Math.min(1, fe.life/30);
+    drawExit(fe.x, fe.y, '#ff4444');
+    ctx.globalAlpha=1;
+  }
+
+  // real exit
+  drawExit(exit_.x, exit_.y, '#ffdd44');
+
+  // mirror
+  if (fx.mirror) {
+    const pw=fx.shrink?10:player.w, ph=fx.shrink?10:player.h;
+    ctx.globalAlpha=.35;
+    drawPlayer(CW-player.x-pw, player.y, pw, ph, '#aaffff');
+    ctx.globalAlpha=1;
+  }
+
+  // player
+  const pw=fx.shrink?10:player.w, ph=fx.shrink?10:player.h;
+  ctx.globalAlpha = fx.invis ? .15 : 1;
+  drawPlayer(player.x, player.y, pw, ph, '#cc88ff');
+  ctx.globalAlpha=1;
+
+  if (gFlip) { ctx.fillStyle='#00ffaa33'; ctx.fillRect(0,0,CW,3); ctx.fillRect(0,CH-3,CW,3); }
+  if (spin) ctx.restore();
+
+  // notifs
+  for (let i=0; i<notifs.length; i++) {
+    ctx.globalAlpha = Math.min(1, notifs[i].t/20);
+    ctx.font='bold 20px Fredoka One,cursive'; ctx.fillStyle='#ffdd44'; ctx.textAlign='center';
+    ctx.fillText(notifs[i].txt, CW/2, CH/2-30-i*26);
+    ctx.globalAlpha=1;
+  }
+  ctx.textAlign='left';
+}
+
+function drawPlayer(x,y,pw,ph,col) {
+  ctx.shadowColor=col; ctx.shadowBlur=13;
+  ctx.fillStyle=col; ctx.fillRect(x,y,pw,ph);
+  if(pw>=14) { ctx.fillStyle='#fff8'; ctx.fillRect(x+3,y+3,pw-6,4); }
+  ctx.shadowBlur=0;
+}
+
+function drawExit(x,y,col) {
+  const p = .6+Math.sin(frame*.09)*.4;
+  ctx.shadowColor=col; ctx.shadowBlur=14*p;
+  ctx.fillStyle=col+'33'; ctx.fillRect(x,y,T,T);
+  ctx.strokeStyle=col; ctx.lineWidth=2; ctx.strokeRect(x+1,y+1,T-2,T-2);
+  ctx.fillStyle=col; ctx.font='16px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('✦', x+T/2, y+T/2+6);
+  ctx.shadowBlur=0; ctx.textAlign='left';
+}
+
+// ---- INPUT (desktop keyboard; key names normalized so Shift doesn't break WASD) ----
+function keyName(e) { return e.key.length === 1 ? e.key.toLowerCase() : e.key; }
+document.addEventListener('keydown', e => {
+  const k = keyName(e);
+  keys[k] = true;
+  if (k === ' ' || k.startsWith('Arrow')) e.preventDefault();
+  if (k === 'p') togglePause();
+  if (k === 'Escape') togglePause();
+  if (k === 'r' && state === 'play' && !paused) { initLevel(); notif('Level restarted'); }
+});
+document.addEventListener('keyup',   e => { keys[keyName(e)] = false; });
+
+// ---- TOUCH CONTROLS (movement pad; hold-to-move sets the same `keys` the keyboard uses) ----
+if ('ontouchstart' in window || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0))
+  document.body.classList.add('touch');
+function bindHold(el, key) {
+  const on  = e => { e.preventDefault(); keys[key] = true; };
+  const off = e => { e.preventDefault(); keys[key] = false; };
+  el.addEventListener('touchstart', on, {passive:false});
+  el.addEventListener('touchend', off);
+  el.addEventListener('touchcancel', off);
+  el.addEventListener('touchleave', off);
+}
+bindHold(document.getElementById('tLeft'),  'ArrowLeft');
+bindHold(document.getElementById('tRight'), 'ArrowRight');
+bindHold(document.getElementById('tJump'),  ' ');
+
+// toolbar buttons (plain click — single registration, same as effect buttons)
+document.getElementById('tPause').onclick = togglePause;
+document.getElementById('tShop').onclick  = () => openShop('perks');
+document.getElementById('tStats').onclick = () => openShop('stats');
+document.getElementById('resumeBtn').onclick  = togglePause;
+document.getElementById('restartBtn').onclick = () => { initLevel(); };
+document.getElementById('quitBtn').onclick    = showMenu;
+document.getElementById('shopClose').onclick  = () => { document.getElementById('shopOv').style.display = 'none'; };
+document.getElementById('tabPerks').onclick   = () => showShopTab('perks');
+document.getElementById('tabStats').onclick   = () => showShopTab('stats');
+
+// ---- AUTOSAVE ----
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
+window.addEventListener('beforeunload', saveGame);
+
+// ---- BOOT ----
+loadGame();
+buildLvlSel();
+updateGearHud();
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>

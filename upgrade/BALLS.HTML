@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Sound Balls</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #111; overflow: hidden; color: white; font-family: 'Courier New', monospace; }
+#canvas { position: fixed; inset: 0; display: block; touch-action: none; }
+#ui {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  background: rgba(0,0,0,0.75); display: flex; align-items: center;
+  gap: 10px; padding: 8px 12px; flex-wrap: wrap;
+  border-bottom: 1px solid rgba(105,255,148,0.2);
+}
+.stat { color: #69ff94; font-size: 12px; font-weight: bold; white-space: nowrap; }
+.stat span { color: #ffd700; }
+#shop-btn { background: #ffd700; color: #000; border: none; padding: 5px 12px; min-height: 44px;
+  font-family:'Courier New',monospace; font-weight:bold; font-size:12px; cursor:pointer;
+  border-radius:3px; margin-left:auto; letter-spacing:1px; }
+#shop-btn:hover { background:#fff; }
+#clear-btn { background:#ff4444; color:#fff; border:none; padding:5px 10px; min-height: 44px;
+  font-family:'Courier New',monospace; font-weight:bold; font-size:12px;
+  cursor:pointer; border-radius:3px; letter-spacing:1px; }
+#toolbar {
+  position: fixed; right: 8px; top: 50%; transform: translateY(-50%);
+  z-index: 10; display: flex; flex-direction: column; gap: 8px;
+}
+.tool-btn {
+  width: 44px; height: 44px; border-radius: 8px; font-size: 20px; line-height: 1;
+  background: rgba(0,0,0,0.65); color: #fff; border: 1px solid rgba(255,255,255,0.25);
+  cursor: pointer; padding: 0;
+}
+.tool-btn.active { border-color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.7); }
+#pause-overlay {
+  display: none; position: fixed; inset: 0; z-index: 50;
+  align-items: center; justify-content: center; pointer-events: none;
+}
+#pause-overlay.show { display: flex; }
+#pause-overlay div {
+  background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.25);
+  padding: 18px 28px; font-size: 16px; letter-spacing: 2px; color: #ffd700;
+  border-radius: 8px;
+}
+#hint { position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
+  color:rgba(255,255,255,0.35); font-size:12px; pointer-events:none; text-align:center;
+  padding: 0 12px; max-width: 100%; }
+#flash { position:fixed; bottom:44px; left:50%; transform:translateX(-50%);
+  color:#ffd700; font-size:13px; font-weight:bold; pointer-events:none;
+  text-align:center; opacity:0; transition:opacity 0.3s; }
+#shop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88);
+  z-index:100; align-items:center; justify-content:center; }
+#shop.open { display:flex; }
+#shop-box { background:#0a0a12; border:2px solid #4fc3f7; padding:22px;
+  max-width:500px; width:95%; max-height:90vh; overflow-y:auto; }
+#shop h2 { color:#ffd700; font-size:18px; letter-spacing:3px; margin-bottom:4px; text-align:center; }
+.coins-disp { color:#69ff94; text-align:center; margin-bottom:14px; font-size:13px; }
+.upg-item { display:flex; align-items:center; justify-content:space-between;
+  border:1px solid rgba(255,255,255,0.1); padding:10px 12px; margin-bottom:7px;
+  background:rgba(255,255,255,0.03); }
+.upg-info { flex:1; }
+.upg-name { color:#4fc3f7; font-size:13px; font-weight:bold; }
+.upg-desc { color:rgba(255,255,255,0.5); font-size:11px; margin-top:2px; }
+.upg-level { color:#ffd700; font-size:11px; margin-top:2px; }
+.buy-btn { background:#4fc3f7; color:#000; border:none; padding:6px 14px; min-height: 44px;
+  font-family:'Courier New',monospace; font-weight:bold; font-size:12px;
+  cursor:pointer; white-space:nowrap; margin-left:12px; }
+.buy-btn:disabled { background:#333; color:#666; cursor:not-allowed; }
+.buy-btn:not(:disabled):hover { background:#fff; }
+#close-shop { display:block; width:100%; margin-top:14px; min-height: 44px;
+  background:transparent; border:1px solid rgba(255,255,255,0.2);
+  color:#fff; padding:8px; font-family:'Courier New',monospace;
+  font-size:12px; cursor:pointer; letter-spacing:2px; }
+#close-shop:hover { background:rgba(255,255,255,0.08); }
+</style>
+</head>
+<body>
+<div id="ui">
+  <div class="stat">🎵 Balls: <span id="ballCount">0</span></div>
+  <div class="stat">💰 Coins: <span id="coinCount">0</span></div>
+  <div class="stat">🎼 <span id="scaleName">Pentatonic</span></div>
+  <div class="stat">🔁 Bounces: <span id="bounceCount">0</span></div>
+  <button id="clear-btn">CLEAR</button>
+  <button id="shop-btn">⬆ UPGRADES</button>
+</div>
+<canvas id="canvas"></canvas>
+<div id="toolbar">
+  <button class="tool-btn" id="pause-btn" title="Pause (P)">⏸</button>
+  <button class="tool-btn" id="mute-btn" title="Mute (M)">🔊</button>
+  <button class="tool-btn" id="type-btn" title="Ball type (T)">⚪</button>
+  <button class="tool-btn" id="hole-btn" title="Place black hole (B)">⚫</button>
+  <button class="tool-btn" id="slow-btn" title="Slow-mo (S)">🐌</button>
+</div>
+<div id="pause-overlay"><div>⏸ PAUSED — press P to resume</div></div>
+<div id="flash"></div>
+<div id="hint">Tap / click: add ball · Drag a ball: fling it · P pause · M mute</div>
+
+<div id="shop">
+  <div id="shop-box">
+    <h2>⬆ UPGRADES</h2>
+    <div class="coins-disp">💰 <span id="shopCoins">0</span> coins</div>
+    <div id="upg-list"></div>
+    <button id="close-shop">✕ CLOSE</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+let balls = [], coins = 0, totalBounces = 0, particles = [];
+let autoSpawnTimer = 0;
+let paused = false, muted = false, slowmo = false;
+
+// Upgrade-controlled vars
+let ballSizeBonus=0, speedMult=1, trailAlpha=0.2, coinsPerBounce=1;
+let currentScaleIdx=0, gravityStrength=0;
+let rainbowMode=false, echoMode=false, burstMode=false, autoSpawnCount=0;
+
+// Signature: ball types (newly spawned balls use the selected type)
+const BALL_TYPES = {
+  normal: { name:'Normal', emoji:'⚪', r:1.0, spd:1.0,  coin:1, pitch:1.0 },
+  comet:  { name:'Comet',  emoji:'☄️', r:0.7, spd:1.6,  coin:1, pitch:1.5 },
+  titan:  { name:'Titan',  emoji:'🪐', r:1.6, spd:0.55, coin:3, pitch:0.5 },
+};
+const TYPE_KEYS = Object.keys(BALL_TYPES);
+let currentType = 'normal';
+
+// Signature: black holes (placeable gravity wells)
+let blackHoles = [], placingHole = false;
+const HOLE_COST = 15, MAX_HOLES = 3, HOLE_PULL = 0.55, HOLE_R = 130, HOLE_EAT = 18;
+
+const SCALES = {
+  Pentatonic: [261.63,293.66,329.63,392.00,440.00],
+  Blues:      [261.63,311.13,349.23,369.99,392.00,466.16],
+  Minor:      [261.63,293.66,311.13,349.23,392.00,415.30,466.16],
+  Major:      [261.63,293.66,329.63,349.23,392.00,440.00,493.88],
+  Whole:      [261.63,293.66,329.63,369.99,415.30,466.16],
+  Chromatic:  [261.63,277.18,293.66,311.13,329.63,349.23,369.99,392.00,415.30,440.00,466.16,493.88],
+};
+const SCALE_KEYS = Object.keys(SCALES);
+
+const upgrades = [
+  { id:'size',    name:'Mega Balls',    desc:'Bigger ball radius (+5 each)',       baseCost:10,  costMult:1.6,  level:0, maxLevel:8,  effect:v=>{ ballSizeBonus=v*5; } },
+  { id:'speed',   name:'Hyperspeed',    desc:'New balls start faster',             baseCost:15,  costMult:1.8,  level:0, maxLevel:6,  effect:v=>{ speedMult=1+v*0.12; } },
+  { id:'trail',   name:'Ghost Trails',  desc:'Longer glowing trails',              baseCost:20,  costMult:1.5,  level:0, maxLevel:5,  effect:v=>{ trailAlpha=Math.max(0.04,0.22-v*0.04); } },
+  { id:'coins',   name:'Gold Rush',     desc:'Earn more coins per bounce',         baseCost:25,  costMult:2.0,  level:0, maxLevel:10, effect:v=>{ coinsPerBounce=1+v; } },
+  { id:'scale',   name:'New Scale',     desc:'Unlock a new musical scale',         baseCost:40,  costMult:2.5,  level:0, maxLevel:SCALE_KEYS.length-1, effect:v=>{ currentScaleIdx=Math.min(v,SCALE_KEYS.length-1); document.getElementById('scaleName').textContent=SCALE_KEYS[currentScaleIdx]; } },
+  { id:'gravity', name:'Gravity',       desc:'Gentle downward pull on all balls',  baseCost:35,  costMult:2.0,  level:0, maxLevel:5,  effect:v=>{ gravityStrength=v*0.045; } },
+  { id:'rainbow', name:'Rainbow Mode',  desc:'Balls cycle colors as they move',    baseCost:50,  costMult:999,  level:0, maxLevel:1,  effect:v=>{ rainbowMode=v>0; } },
+  { id:'echo',    name:'Echo Reverb',   desc:'Sound gets a cool reverb effect',    baseCost:60,  costMult:999,  level:0, maxLevel:1,  effect:v=>{ echoMode=v>0; } },
+  { id:'burst',   name:'Bounce Burst',  desc:'Particle burst every bounce',        baseCost:45,  costMult:999,  level:0, maxLevel:1,  effect:v=>{ burstMode=v>0; } },
+  { id:'auto',    name:'Auto Spawn',    desc:'Auto-add a ball every 8 seconds',    baseCost:80,  costMult:3.0,  level:0, maxLevel:5,  effect:v=>{ autoSpawnCount=v; } },
+];
+
+function upgCost(u){ return Math.floor(u.baseCost*Math.pow(u.costMult,u.level)); }
+
+// Save / load
+const SAVE_KEY = 'pfg2_BALLS';
+let saveDirty = false;
+function saveGame(){
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      coins: Math.floor(coins),
+      totalBounces: totalBounces,
+      muted: muted,
+      currentType: currentType,
+      levels: upgrades.map(u=>u.level),
+    }));
+    saveDirty = false;
+  }catch(err){}
+}
+function loadGame(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return;
+    const s = JSON.parse(raw);
+    if(typeof s.coins === 'number') coins = Math.floor(s.coins);
+    if(typeof s.totalBounces === 'number') totalBounces = s.totalBounces;
+    if(typeof s.muted === 'boolean') muted = s.muted;
+    if(s.currentType && BALL_TYPES[s.currentType]) currentType = s.currentType;
+    if(Array.isArray(s.levels)){
+      upgrades.forEach((u,i)=>{ if(typeof s.levels[i] === 'number'){ u.level = Math.min(s.levels[i], u.maxLevel); } });
+    }
+    upgrades.forEach(u=>u.effect(u.level));
+  }catch(err){}
+}
+function markSave(){ saveDirty = true; }
+
+// Audio
+let convolver=null;
+function mkConvolver(){
+  if(convolver)return convolver;
+  const len=audioCtx.sampleRate*1.5;
+  const buf=audioCtx.createBuffer(2,len,audioCtx.sampleRate);
+  for(let c=0;c<2;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);}
+  convolver=audioCtx.createConvolver(); convolver.buffer=buf; convolver.connect(audioCtx.destination);
+  return convolver;
+}
+function playTone(freq){
+  if(muted||audioCtx.state==='suspended')return;
+  const osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(freq,audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.18,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+1.3);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  if(echoMode){const eg=audioCtx.createGain();eg.gain.value=0.28;osc.connect(eg);eg.connect(mkConvolver());}
+  osc.start(); osc.stop(audioCtx.currentTime+1.3);
+}
+function pickNote(type){ const s=SCALES[SCALE_KEYS[currentScaleIdx]]; return s[Math.floor(Math.random()*s.length)]*(type?type.pitch:1); }
+
+// Canvas
+function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+resize(); window.addEventListener('resize',resize);
+
+// Ball
+class Ball {
+  constructor(x,y,type){
+    this.x=x; this.y=y; this.type=type||'normal';
+    const t=BALL_TYPES[this.type];
+    const spd=(5+Math.random()*5)*speedMult*t.spd;
+    const ang=Math.random()*Math.PI*2;
+    this.vx=Math.cos(ang)*spd; this.vy=Math.sin(ang)*spd;
+    this.hue=Math.random()*360; this.trail=[];
+  }
+  get radius(){ return (15+ballSizeBonus)*BALL_TYPES[this.type].r; }
+  update(){
+    this.vy+=gravityStrength;
+    for(const h of blackHoles){
+      const dx=h.x-this.x, dy=h.y-this.y;
+      const d=Math.hypot(dx,dy)||1;
+      if(d<HOLE_R){ const a=HOLE_PULL*(1-d/HOLE_R); this.vx+=dx/d*a; this.vy+=dy/d*a; }
+    }
+    this.vx=Math.max(-30,Math.min(30,this.vx));
+    this.vy=Math.max(-30,Math.min(30,this.vy));
+    this.trail.push({x:this.x,y:this.y});
+    if(this.trail.length>22)this.trail.shift();
+    this.x+=this.vx; this.y+=this.vy;
+    if(rainbowMode)this.hue=(this.hue+1.2)%360;
+    const r=this.radius; let bounced=false;
+    if(this.x-r<0){this.x=r;this.vx=Math.abs(this.vx);bounced=true;}
+    if(this.x+r>canvas.width){this.x=canvas.width-r;this.vx=-Math.abs(this.vx);bounced=true;}
+    if(this.y-r<0){this.y=r;this.vy=Math.abs(this.vy);bounced=true;}
+    if(this.y+r>canvas.height){this.y=canvas.height-r;this.vy=-Math.abs(this.vy);bounced=true;}
+    if(bounced){
+      playTone(pickNote(BALL_TYPES[this.type]));
+      totalBounces++; coins+=coinsPerBounce*BALL_TYPES[this.type].coin;
+      if(burstMode)spawnBurst(this.x,this.y,this.hue);
+      updateStats(); markSave();
+    }
+  }
+  draw(){
+    const r=this.radius;
+    this.trail.forEach((t,i)=>{
+      const a=(i/this.trail.length)*0.28;
+      ctx.beginPath(); ctx.arc(t.x,t.y,r*(i/this.trail.length),0,Math.PI*2);
+      ctx.fillStyle=`hsla(${this.hue},90%,60%,${a})`; ctx.fill();
+    });
+    ctx.shadowColor=`hsl(${this.hue},90%,60%)`; ctx.shadowBlur=20;
+    ctx.beginPath(); ctx.arc(this.x,this.y,r,0,Math.PI*2);
+    ctx.fillStyle=`hsl(${this.hue},90%,60%)`; ctx.fill();
+    ctx.shadowBlur=0;
+    if(this.type==='titan'){
+      ctx.strokeStyle='rgba(255,215,0,0.85)'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(this.x,this.y,r+5,0,Math.PI*2); ctx.stroke();
+    }
+    ctx.font=`${Math.max(9,r*0.6)}px serif`; ctx.textAlign='center';
+    ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.fillText('♪',this.x,this.y+r*0.3);
+  }
+}
+
+function spawnBurst(x,y,hue){
+  for(let i=0;i<14;i++){
+    const ang=Math.random()*Math.PI*2, spd=2+Math.random()*4;
+    particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,life:30,maxLife:30,hue:hue+Math.random()*40-20});
+  }
+}
+
+// Signature: black hole drawing
+let holeSpin = 0;
+function drawHoles(){
+  for(const h of blackHoles){
+    const g=ctx.createRadialGradient(h.x,h.y,2,h.x,h.y,HOLE_R);
+    g.addColorStop(0,'rgba(0,0,0,1)');
+    g.addColorStop(0.18,'rgba(20,0,40,0.95)');
+    g.addColorStop(0.5,'rgba(60,0,90,0.25)');
+    g.addColorStop(1,'rgba(60,0,90,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(h.x,h.y,HOLE_R,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(160,80,255,0.8)'; ctx.lineWidth=2.5;
+    for(let k=0;k<2;k++){
+      ctx.beginPath();
+      ctx.arc(h.x,h.y,HOLE_EAT+6+k*9,holeSpin*(k?1:-1)+k,holeSpin*(k?1:-1)+k+Math.PI*1.5);
+      ctx.stroke();
+    }
+  }
+}
+function eatBall(b){
+  coins+=25;
+  spawnBurst(b.x,b.y,280);
+  playTone(70);
+  updateStats(); markSave();
+}
+
+function updateStats(){
+  document.getElementById('ballCount').textContent=balls.length;
+  document.getElementById('coinCount').textContent=Math.floor(coins);
+  document.getElementById('bounceCount').textContent=totalBounces;
+  document.getElementById('shopCoins').textContent=Math.floor(coins);
+}
+
+function flash(msg){
+  const el=document.getElementById('flash');
+  el.textContent=msg; el.style.opacity='1';
+  clearTimeout(flash._t);
+  flash._t=setTimeout(()=>{el.style.opacity='0';},1400);
+}
+
+// Shop
+function renderShop(){
+  const list=document.getElementById('upg-list');
+  list.innerHTML='';
+  upgrades.forEach((u,idx)=>{
+    if(u.level>=u.maxLevel){
+      list.innerHTML+=`<div class="upg-item"><div class="upg-info"><div class="upg-name">✅ ${u.name}</div><div class="upg-desc">${u.desc}</div><div class="upg-level">MAXED</div></div></div>`;
+      return;
+    }
+    const cost=upgCost(u), can=coins>=cost;
+    list.innerHTML+=`<div class="upg-item"><div class="upg-info"><div class="upg-name">${u.name}</div><div class="upg-desc">${u.desc}</div><div class="upg-level">Lv ${u.level}/${u.maxLevel} · 💰${cost}</div></div><button class="buy-btn" data-idx="${idx}" ${can?'':'disabled'}>BUY</button></div>`;
+  });
+  list.querySelectorAll('.buy-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      const u=upgrades[+btn.dataset.idx], cost=upgCost(u);
+      if(coins>=cost&&u.level<u.maxLevel){coins-=cost;u.level++;u.effect(u.level);updateStats();markSave();renderShop();}
+    };
+  });
+}
+document.getElementById('shop-btn').onclick=()=>{
+  document.getElementById('shopCoins').textContent=Math.floor(coins);
+  renderShop(); document.getElementById('shop').classList.add('open');
+};
+document.getElementById('close-shop').onclick=()=>{document.getElementById('shop').classList.remove('open');saveGame();};
+document.getElementById('clear-btn').onclick=()=>{balls=[];blackHoles=[];updateStats();};
+
+// Input: shared press/move/release path for mouse + multi-touch
+const grabs = {}; // id -> {ball,lastX,lastY,lastT,vx,vy}
+function findBall(x,y){
+  for(let i=balls.length-1;i>=0;i--){
+    const b=balls[i], r=b.radius+10;
+    if((x-b.x)*(x-b.x)+(y-b.y)*(y-b.y)<=r*r)return b;
+  }
+  return null;
+}
+function press(x,y,id){
+  if(paused)return;
+  if(placingHole){
+    if(coins>=HOLE_COST){
+      coins-=HOLE_COST;
+      blackHoles.push({x,y});
+      if(blackHoles.length>MAX_HOLES)blackHoles.shift();
+      updateStats(); markSave();
+    }else{
+      flash(`Need 💰${HOLE_COST} for a black hole`);
+    }
+    setPlacingHole(false);
+    return;
+  }
+  const b=findBall(x,y);
+  if(b){
+    b.vx=0; b.vy=0;
+    grabs[id]={ball:b,lastX:x,lastY:y,lastT:performance.now(),vx:0,vy:0};
+  }else{
+    addBall(x,y);
+  }
+}
+function moveP(x,y,id){
+  const g=grabs[id];
+  if(!g)return;
+  const now=performance.now(), dtm=Math.max(1,now-g.lastT);
+  g.vx=(x-g.lastX)/dtm*16.67; g.vy=(y-g.lastY)/dtm*16.67;
+  g.lastX=x; g.lastY=y; g.lastT=now;
+  g.ball.x=Math.max(g.ball.radius,Math.min(canvas.width-g.ball.radius,x));
+  g.ball.y=Math.max(g.ball.radius,Math.min(canvas.height-g.ball.radius,y));
+}
+function release(id){
+  const g=grabs[id];
+  if(!g)return;
+  g.ball.vx=Math.max(-30,Math.min(30,g.vx));
+  g.ball.vy=Math.max(-30,Math.min(30,g.vy));
+  delete grabs[id];
+}
+function addBall(x,y){
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  balls.push(new Ball(x,y,currentType)); updateStats(); markSave();
+}
+canvas.addEventListener('mousedown',e=>{press(e.clientX,e.clientY,'mouse');});
+window.addEventListener('mousemove',e=>{moveP(e.clientX,e.clientY,'mouse');});
+window.addEventListener('mouseup',()=>{release('mouse');});
+canvas.addEventListener('touchstart',e=>{
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  e.preventDefault();
+  for(const t of e.changedTouches)press(t.clientX,t.clientY,'t'+t.identifier);
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();},{passive:false});
+canvas.addEventListener('touchend',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches)release('t'+t.identifier);
+},{passive:false});
+canvas.addEventListener('touchcancel',e=>{
+  for(const t of e.changedTouches)release('t'+t.identifier);
+},{passive:false});
+
+// Toolbar + keyboard
+const pauseBtn=document.getElementById('pause-btn');
+const muteBtn=document.getElementById('mute-btn');
+const typeBtn=document.getElementById('type-btn');
+const holeBtn=document.getElementById('hole-btn');
+const slowBtn=document.getElementById('slow-btn');
+const pauseOverlay=document.getElementById('pause-overlay');
+function setPaused(p){
+  paused=p;
+  pauseBtn.textContent=p?'▶':'⏸';
+  pauseOverlay.classList.toggle('show',p);
+}
+function setMuted(m){
+  muted=m;
+  muteBtn.textContent=m?'🔇':'🔊';
+  markSave();
+}
+function setSlowmo(s){
+  slowmo=s;
+  slowBtn.classList.toggle('active',s);
+}
+function setPlacingHole(p){
+  placingHole=p;
+  holeBtn.classList.toggle('active',p);
+  if(p)flash('Tap anywhere to place a black hole');
+}
+function cycleType(){
+  currentType=TYPE_KEYS[(TYPE_KEYS.indexOf(currentType)+1)%TYPE_KEYS.length];
+  const t=BALL_TYPES[currentType];
+  typeBtn.textContent=t.emoji;
+  typeBtn.title=`Ball type: ${t.name} (T)`;
+  flash(`${t.emoji} ${t.name} balls`);
+  markSave();
+}
+pauseBtn.onclick=()=>setPaused(!paused);
+muteBtn.onclick=()=>setMuted(!muted);
+typeBtn.onclick=cycleType;
+holeBtn.onclick=()=>setPlacingHole(!placingHole);
+slowBtn.onclick=()=>setSlowmo(!slowmo);
+window.addEventListener('keydown',e=>{
+  if(e.key==='p'||e.key==='P'||e.key==='Escape')setPaused(!paused);
+  else if(e.key==='m'||e.key==='M')setMuted(!muted);
+  else if(e.key==='s'||e.key==='S')setSlowmo(!slowmo);
+  else if(e.key==='t'||e.key==='T')cycleType();
+  else if(e.key==='b'||e.key==='B')setPlacingHole(!placingHole);
+});
+document.addEventListener('visibilitychange',()=>{ if(document.hidden){ setPaused(true); saveGame(); } });
+window.addEventListener('pagehide',saveGame);
+
+// Loop
+let lastTime=0, frameCount=0;
+function animate(ts){
+  const dt=Math.min(ts-lastTime,50); lastTime=ts;
+  const sdt=slowmo?dt*0.35:dt;
+  ctx.fillStyle=`rgba(17,17,17,${trailAlpha})`; ctx.fillRect(0,0,canvas.width,canvas.height);
+  if(!paused){
+    holeSpin+=sdt*0.004;
+    if(autoSpawnCount>0){ autoSpawnTimer+=sdt; if(autoSpawnTimer>=8000){autoSpawnTimer=0;for(let i=0;i<autoSpawnCount;i++)addBall(Math.random()*canvas.width,Math.random()*canvas.height);} }
+    for(let i=balls.length-1;i>=0;i--){
+      const b=balls[i]; b.update();
+      let eaten=false;
+      for(const h of blackHoles){
+        const dx=h.x-b.x, dy=h.y-b.y;
+        if(Math.hypot(dx,dy)<HOLE_EAT){eaten=true;break;}
+      }
+      if(eaten){eatBall(b);balls.splice(i,1);}
+    }
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.15; p.life--;
+      ctx.globalAlpha=p.life/p.maxLife; ctx.fillStyle=`hsl(${p.hue},90%,65%)`; ctx.fillRect(p.x-2,p.y-2,4,4);
+      if(p.life<=0)particles.splice(i,1);
+    }
+    ctx.globalAlpha=1;
+    frameCount++;
+    if(saveDirty&&frameCount%300===0)saveGame();
+  }
+  drawHoles();
+  balls.forEach(b=>b.draw());
+  requestAnimationFrame(animate);
+}
+loadGame();
+setMuted(muted);
+typeBtn.textContent=BALL_TYPES[currentType].emoji;
+updateStats();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

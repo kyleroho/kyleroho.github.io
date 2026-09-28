@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Drift Zone</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{touch-action:none;overscroll-behavior:none;}
+body{background:#0a0a0a;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;}
+canvas{display:block;touch-action:none;}
+#hud{width:640px;max-width:100vw;height:40px;background:#0d0d0d;border:2px solid #222;border-bottom:none;display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
+#hud span{font-size:11px;letter-spacing:2px;color:#555;white-space:nowrap;}
+#hud b{color:#ffcc00;}
+#pauseBtn{position:fixed;top:10px;right:10px;z-index:80;width:44px;height:44px;border-radius:10px;background:rgba(0,0,0,.55);border:1px solid #888;color:#fff;font-size:20px;cursor:pointer;display:none;align-items:center;justify-content:center;}
+.tbtn{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));width:76px;height:76px;border-radius:50%;background:rgba(255,255,255,.10);border:2px solid rgba(255,255,255,.45);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;z-index:70;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;}
+.tbtn:active{background:rgba(255,255,255,.30);}
+#msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a0aee;z-index:20;}
+#msg h1{font-size:52px;font-weight:900;letter-spacing:4px;color:#ffcc00;margin-bottom:8px;text-align:center;text-shadow:0 0 30px #ffcc0044;}
+#msg p{color:#444;font-size:13px;margin-bottom:22px;text-align:center;line-height:2.2;}
+.btn{background:transparent;border:2px solid #ffcc00;color:#ffcc00;padding:12px 36px;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .2s;}
+.btn:hover{background:#ffcc0022;}
+</style>
+</head>
+<body>
+<div id="hud">
+  <span>LAP <b id="lapV">1/3</b></span>
+  <span id="h2">DRIFT <b id="driftV">0</b> pts</span>
+  <span id="h3">SCORE <b id="scoreV">0</b></span>
+  <span id="h4">BEST <b id="bestV">0</b></span>
+  <span>SPEED <b id="spdV">0</b></span>
+</div>
+<canvas id="cv" width="640" height="480"></canvas>
+<button id="pauseBtn" aria-label="Pause">⏸</button>
+<div id="touchUI" style="display:none">
+  <div class="tbtn" id="tL" style="left:16px;">◀</div>
+  <div class="tbtn" id="tR" style="left:108px;">▶</div>
+  <div class="tbtn" id="tBrake" style="right:108px;width:64px;height:64px;font-size:16px;">BRK</div>
+  <div class="tbtn" id="tNitro" style="right:16px;bottom:calc(108px + env(safe-area-inset-bottom));width:64px;height:64px;font-size:15px;">N₂O</div>
+  <div class="tbtn" id="tGas" style="right:16px;">▲</div>
+</div>
+<div id="msg">
+  <h1>DRIFT ZONE</h1>
+  <p>Arrows/WASD to steer. Hold to drift!<br>Score points by drifting through corners.<br>3 laps — biggest drift score wins!</p>
+  <button class="btn" onclick="startGame()">▶ RACE</button>
+</div>
+<script>
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var W=640,H=480;
+var keys={};
+var gameState='menu';
+var car,lap,totalScore,driftScore,driftActive,frame,bestScore,lapResetFrame;
+var skidMarks=[],parts=[];
+// standard kit + signature upgrades
+var paused=false,mode='race';
+var combo=0,comboT=0,comboBest=0;
+var nitro=0,nitroPicks=[];
+var raceStart=0,lapStart=0,bestLap=0,bestTotal=0;
+var IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+
+// Track defined as centerline waypoints
+var TRACK=[
+  {x:320,y:80},{x:520,y:80},{x:580,y:140},{x:580,y:200},{x:520,y:220},
+  {x:460,y:200},{x:420,y:240},{x:440,y:300},{x:500,y:340},{x:540,y:400},
+  {x:500,y:440},{x:380,y:440},{x:320,y:400},{x:260,y:440},{x:140,y:440},
+  {x:100,y:400},{x:140,y:340},{x:200,y:300},{x:220,y:240},{x:180,y:200},
+  {x:120,y:220},{x:60,y:200},{x:60,y:140},{x:120,y:80},{x:220,y:60},
+];
+var TW=54; // track half-width
+var checkpoints=[];
+
+function buildCheckpoints(){
+  checkpoints=[];
+  for(var i=0;i<TRACK.length;i++){
+    var a=TRACK[i],b=TRACK[(i+1)%TRACK.length];
+    checkpoints.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2,passed:false});
+  }
+}
+
+function fmtTime(f){
+  var t=f/60,m=Math.floor(t/60),s=t%60;
+  return m+':'+(s<10?'0':'')+s.toFixed(1);
+}
+
+function loadBest(){
+  try{
+    var s=JSON.parse(localStorage.getItem('pfg2_drift_zone'));
+    if(s){bestScore=s.bestScore||0;bestLap=s.bestLap||0;bestTotal=s.bestTotal||0;}
+  }catch(e){}
+}
+
+function saveBest(){
+  try{
+    localStorage.setItem('pfg2_drift_zone',JSON.stringify({bestScore:bestScore,bestLap:bestLap,bestTotal:bestTotal}));
+  }catch(e){}
+}
+
+function togglePause(){
+  if(gameState!=='play')return;
+  paused=!paused;
+  document.getElementById('pauseBtn').textContent=paused?'▶':'⏸';
+}
+
+function showMenu(){
+  gameState='menu';paused=false;
+  document.getElementById('pauseBtn').style.display='none';
+  var m=document.getElementById('msg');
+  var hint=IS_TOUCH?
+    '◀ ▶ steer · ▲ gas · BRK brake · N₂O nitro<br>Chain drifts for combo multipliers!':
+    'Arrows/WASD to steer. Hold <b>SHIFT</b> for NITRO!<br>Chain drifts for combo multipliers!';
+  var bests='Best score: '+bestScore;
+  if(bestLap>0)bests+=' · Best lap: '+fmtTime(bestLap);
+  if(bestTotal>0)bests+=' · Best time: '+fmtTime(bestTotal);
+  m.style.display='flex';
+  m.innerHTML=
+    '<h1>DRIFT ZONE</h1>'+
+    '<p>'+hint+'<br>Score points by drifting through corners.<br>3 laps — biggest drift score wins!<br>'+bests+'</p>'+
+    '<button class="btn" onclick="startGame(\'race\')">▶ RACE</button><br>'+
+    '<button class="btn" onclick="startGame(\'time\')" style="margin-top:10px;border-color:#44ccff;color:#44ccff">⏱ TIME ATTACK</button>';
+}
+
+function startGame(m){
+  document.getElementById('msg').style.display='none';
+  mode=(m==='time')?'time':'race';
+  bestScore=bestScore||0;
+  lap=1;totalScore=0;driftScore=0;driftActive=false;frame=0;skidMarks=[];parts=[];lapResetFrame=0;
+  combo=0;comboT=0;comboBest=0;nitro=0;
+  raceStart=frame;lapStart=frame;
+  paused=false;
+  document.getElementById('pauseBtn').style.display='flex';
+  document.getElementById('pauseBtn').textContent='⏸';
+  buildCheckpoints();
+  spawnNitro();
+  if(mode==='time'){
+    document.getElementById('h2').innerHTML='LAPTIME <b id="driftV">0:00.0</b>';
+    document.getElementById('h3').innerHTML='BEST LAP <b id="scoreV">'+(bestLap>0?fmtTime(bestLap):'--:--')+'</b>';
+    document.getElementById('h4').innerHTML='BEST <b id="bestV">'+(bestTotal>0?fmtTime(bestTotal):'--:--')+'</b>';
+  }else{
+    document.getElementById('h2').innerHTML='DRIFT <b id="driftV">0</b> pts';
+    document.getElementById('h3').innerHTML='SCORE <b id="scoreV">0</b>';
+    document.getElementById('h4').innerHTML='BEST <b id="bestV">'+bestScore+'</b>';
+  }
+  var start=TRACK[0];
+  car={x:start.x,y:start.y+30,angle:-Math.PI/2,spd:0,steer:0,
+    vx:0,vy:0,driftT:0,driftAngle:0,prevSeg:0,lapProgress:0};
+  gameState='play';
+  updateHUD();
+  fitScreen();
+}
+
+function spawnNitro(){
+  nitroPicks=[];
+  for(var i=0;i<4;i++){
+    var cp=checkpoints[(Math.random()*checkpoints.length)|0];
+    nitroPicks.push({x:cp.x+(Math.random()*44-22),y:cp.y+(Math.random()*44-22),taken:0});
+  }
+}
+
+function ptLineDist(px,py,ax,ay,bx,by){
+  var dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy;
+  if(len2===0)return Math.hypot(px-ax,py-ay);
+  var t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/len2));
+  return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));
+}
+
+function onTrack(x,y){
+  for(var i=0;i<TRACK.length;i++){
+    var a=TRACK[i],b=TRACK[(i+1)%TRACK.length];
+    if(ptLineDist(x,y,a.x,a.y,b.x,b.y)<TW) return true;
+  }
+  return false;
+}
+
+function nearestTrackDist(x,y){
+  var min=Infinity;
+  for(var i=0;i<TRACK.length;i++){
+    var a=TRACK[i],b=TRACK[(i+1)%TRACK.length];
+    var d=ptLineDist(x,y,a.x,a.y,b.x,b.y);
+    if(d<min)min=d;
+  }
+  return min;
+}
+
+function update(){
+  if(gameState!=='play'||paused) return;
+  frame++;
+  var LEFT=keys['ArrowLeft']||keys['a'];
+  var RIGHT=keys['ArrowRight']||keys['d'];
+  var UP=keys['ArrowUp']||keys['w'];
+  var DOWN=keys['ArrowDown']||keys['s'];
+  var NITRO=keys['Shift'];
+
+  // Arcade drift physics (driftGrip tuned so hard steering at speed breaks traction)
+  var grip=0.85,driftGrip=0.3;
+  var accel=0.22,brake=0.15,maxSpd=6.5;
+  var steerSpd=0.065;
+
+  // Nitro boost
+  var boosting=NITRO&&nitro>0&&car.spd>0.5;
+  if(boosting){maxSpd=9.5;accel=0.34;nitro=Math.max(0,nitro-1.2);
+    if(frame%2===0)parts.push({x:car.x-Math.cos(car.angle)*15,y:car.y-Math.sin(car.angle)*15,life:20,vy:0,flame:true,r:8});
+  }
+
+  if(UP) car.spd=Math.min(maxSpd,car.spd+accel);
+  else if(DOWN) car.spd=Math.max(-2,car.spd-brake);
+  else car.spd*=0.97;
+
+  if(LEFT) car.angle-=steerSpd*(0.4+Math.abs(car.spd)/maxSpd*.6)*(car.spd<0?-1:1);
+  if(RIGHT) car.angle+=steerSpd*(0.4+Math.abs(car.spd)/maxSpd*.6)*(car.spd<0?-1:1);
+
+  // Velocity
+  var targetVx=Math.cos(car.angle)*car.spd;
+  var targetVy=Math.sin(car.angle)*car.spd;
+  var gCoeff=(LEFT||RIGHT)?driftGrip:grip;
+  car.vx=car.vx*(1-gCoeff)+targetVx*gCoeff;
+  car.vy=car.vy*(1-gCoeff)+targetVy*gCoeff;
+
+  // Drift detection
+  var vel=Math.hypot(car.vx,car.vy);
+  var velAngle=Math.atan2(car.vy,car.vx);
+  var angleDiff=Math.abs(Math.atan2(Math.sin(velAngle-car.angle),Math.cos(velAngle-car.angle)));
+  var isDrifting=angleDiff>0.12&&vel>2;
+
+  if(isDrifting){
+    car.driftT++;
+    if(!driftActive){
+      // new drift: chain combo if the previous one ended recently
+      combo=(combo>0&&comboT<=90)?combo+1:1;
+      if(combo>comboBest)comboBest=combo;
+      comboT=0;
+      driftActive=true;
+    }
+    var mult=(mode==='race')?combo:1;
+    var dpts=Math.floor(angleDiff*vel*8)*mult;
+    driftScore+=dpts;
+    // skid marks
+    if(frame%3===0){
+      skidMarks.push({x:car.x-Math.cos(car.angle)*8,y:car.y-Math.sin(car.angle)*8,
+        x2:car.x-Math.cos(car.angle)*8+Math.sin(car.angle)*5,
+        y2:car.y-Math.sin(car.angle)*8-Math.cos(car.angle)*5,a:.5});
+      skidMarks.push({x:car.x-Math.cos(car.angle)*8,y:car.y-Math.sin(car.angle)*8,
+        x2:car.x-Math.cos(car.angle)*8-Math.sin(car.angle)*5,
+        y2:car.y-Math.sin(car.angle)*8+Math.cos(car.angle)*5,a:.5});
+    }
+  } else if(driftActive){
+    // score the drift
+    if(mode==='race'&&driftScore>0){totalScore+=driftScore;
+      parts.push({txt:'+'+driftScore+(combo>1?' x'+combo:''),x:car.x,y:car.y-20,life:60,vy:-1});}
+    driftScore=0;driftActive=false;car.driftT=0;comboT=0;
+  } else if(combo>0){
+    // combo decays if no drift starts within 1.5s
+    comboT++;
+    if(comboT>90)combo=0;
+  }
+
+  car.x+=car.vx;car.y+=car.vy;
+
+  // Off track penalty
+  if(!onTrack(car.x,car.y)){
+    car.vx*=0.85;car.vy*=0.85;car.spd*=0.9;
+    car.x-=car.vx*.3;car.y-=car.vy*.3;
+  }
+
+  // Clamp
+  car.x=Math.max(0,Math.min(W,car.x));
+  car.y=Math.max(0,Math.min(H,car.y));
+
+  // Nitro pickups
+  for(var ni=0;ni<nitroPicks.length;ni++){
+    var np=nitroPicks[ni];
+    if(np.taken>0){np.taken--;continue;}
+    if(Math.hypot(car.x-np.x,car.y-np.y)<24){
+      np.taken=300;nitro=Math.min(100,nitro+50);
+      parts.push({txt:'+NITRO',x:car.x,y:car.y-24,life:50,vy:-1});
+    }
+  }
+
+  // Checkpoint / lap
+  checkpoints.forEach(function(cp,i){
+    if(!cp.passed&&Math.hypot(car.x-cp.x,car.y-cp.y)<40){
+      cp.passed=true;
+    }
+  });
+  // Lap completion: after passing all checkpoints, cross cp[0] again
+  var allOthersPassed=checkpoints.slice(1).every(function(c){return c.passed;});
+  if(allOthersPassed&&checkpoints[0].passed&&frame>lapResetFrame+60){
+    if(mode==='time'){
+      var lt=frame-lapStart;
+      if(bestLap===0||lt<bestLap)bestLap=lt;
+      lapStart=frame;
+    }
+    lap++;
+    lapResetFrame=frame;
+    if(lap>3){finishRace();return;}
+    checkpoints.forEach(function(c){c.passed=false;});
+  }
+
+  // age skidmarks
+  for(var i=skidMarks.length-1;i>=0;i--){skidMarks[i].a-=.002;if(skidMarks[i].a<=0)skidMarks.splice(i,1);}
+  for(var i2=parts.length-1;i2>=0;i2--){var p=parts[i2];p.y+=p.vy;p.life--;if(p.life<=0)parts.splice(i2,1);}
+
+  updateHUD();
+}
+
+function finishRace(){
+  if(driftActive&&mode==='race'){totalScore+=driftScore;driftScore=0;driftActive=false;}
+  var m=document.getElementById('msg');
+  m.style.display='flex';
+  document.getElementById('pauseBtn').style.display='none';
+  if(mode==='race'){
+    if(totalScore>bestScore)bestScore=totalScore;
+    saveBest();
+    m.innerHTML=
+      '<h1 style="color:#ffcc00">RACE OVER!</h1>'+
+      '<p style="color:#444">Drift Score: '+totalScore+'<br>Best: '+bestScore+'<br>Best combo: x'+comboBest+'</p>'+
+      '<button class="btn" onclick="startGame(\'race\')">RACE AGAIN</button><br>'+
+      '<button class="btn" onclick="showMenu()" style="margin-top:10px">MENU</button>';
+  }else{
+    var total=frame-raceStart;
+    if(bestTotal===0||total<bestTotal)bestTotal=total;
+    saveBest();
+    m.innerHTML=
+      '<h1 style="color:#44ccff">TIME UP!</h1>'+
+      '<p style="color:#444">Total time: '+fmtTime(total)+'<br>Best lap: '+(bestLap>0?fmtTime(bestLap):'--:--')+'<br>Best total: '+fmtTime(bestTotal)+'</p>'+
+      '<button class="btn" onclick="startGame(\'time\')">RETRY</button><br>'+
+      '<button class="btn" onclick="showMenu()" style="margin-top:10px">MENU</button>';
+  }
+  gameState='over';
+}
+
+function updateHUD(){
+  document.getElementById('lapV').textContent=Math.min(3,lap)+'/3';
+  if(mode==='time'){
+    document.getElementById('driftV').textContent=fmtTime(frame-lapStart);
+    document.getElementById('scoreV').textContent=bestLap>0?fmtTime(bestLap):'--:--';
+    document.getElementById('bestV').textContent=bestTotal>0?fmtTime(bestTotal):'--:--';
+  }else{
+    document.getElementById('driftV').textContent=driftScore;
+    document.getElementById('scoreV').textContent=totalScore;
+    document.getElementById('bestV').textContent=bestScore||0;
+  }
+  document.getElementById('spdV').textContent=Math.round(Math.hypot(car.vx,car.vy)*20);
+}
+
+function drawTrack(){
+  // shadow
+  ctx.strokeStyle='#1a1a1a';ctx.lineWidth=TW*2+16;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();TRACK.forEach(function(p,i){i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});ctx.closePath();ctx.stroke();
+  // asphalt
+  ctx.strokeStyle='#1e1e1e';ctx.lineWidth=TW*2;
+  ctx.beginPath();TRACK.forEach(function(p,i){i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});ctx.closePath();ctx.stroke();
+  // lane lines
+  ctx.strokeStyle='#333333';ctx.lineWidth=1;ctx.setLineDash([14,10]);
+  ctx.beginPath();TRACK.forEach(function(p,i){i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});ctx.closePath();ctx.stroke();
+  ctx.setLineDash([]);
+  // edge lines
+  ctx.strokeStyle='#444';ctx.lineWidth=2;ctx.setLineDash([]);
+  // start/finish
+  var sf=TRACK[0];
+  ctx.strokeStyle='#ffffff33';ctx.lineWidth=TW*2;ctx.lineCap='butt';
+  ctx.beginPath();ctx.moveTo(sf.x-4,sf.y-TW);ctx.lineTo(sf.x-4,sf.y+TW);ctx.stroke();
+  ctx.strokeStyle='#ffcc0066';ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(sf.x,sf.y-TW);ctx.lineTo(sf.x,sf.y+TW);ctx.stroke();
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // bg
+  ctx.fillStyle='#111';ctx.fillRect(0,0,W,H);
+  // bg grid
+  ctx.strokeStyle='#161616';ctx.lineWidth=.5;
+  for(var x=0;x<W;x+=40)ctx.strokeRect(x,0,40,H);
+
+  drawTrack();
+
+  // nitro pickups
+  nitroPicks.forEach(function(np){
+    if(np.taken>0)return;
+    var pul=1+Math.sin(frame/10)*0.12;
+    ctx.save();ctx.translate(np.x,np.y);ctx.scale(pul,pul);
+    ctx.shadowColor='#44ccff';ctx.shadowBlur=12;
+    ctx.fillStyle='#114455';ctx.beginPath();ctx.arc(0,0,11,0,7);ctx.fill();
+    ctx.shadowBlur=0;ctx.strokeStyle='#44ccff';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#aaeeff';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText('N',0,4);ctx.textAlign='left';
+    ctx.restore();
+  });
+
+  // skid marks
+  skidMarks.forEach(function(s){
+    ctx.globalAlpha=s.a;ctx.strokeStyle='#000';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s.x2,s.y2);ctx.stroke();
+  });ctx.globalAlpha=1;
+
+  if(gameState!=='play') return;
+
+  // Car
+  ctx.save();ctx.translate(car.x,car.y);ctx.rotate(car.angle);
+  // body glow
+  ctx.shadowColor='#ffcc00';ctx.shadowBlur=driftActive?18:8;
+  ctx.fillStyle=driftActive?'#ffcc00':'#ff4422';
+  ctx.fillRect(-14,-8,28,16);
+  ctx.fillStyle=driftActive?'#ffee88':'#ff8866';
+  ctx.fillRect(-10,-7,20,5);
+  // wheels
+  ctx.shadowBlur=0;ctx.fillStyle='#333';
+  ctx.fillRect(-14,-11,7,5);ctx.fillRect(7,-11,7,5);
+  ctx.fillRect(-14,6,7,5);ctx.fillRect(7,6,7,5);
+  ctx.restore();
+
+  // drift score popup + nitro flames
+  parts.forEach(function(p){
+    if(p.flame){
+      ctx.globalAlpha=Math.max(0,p.life/20);ctx.fillStyle='#44aaff';
+      ctx.beginPath();ctx.arc(p.x,p.y,Math.max(0.5,p.r*(p.life/20)),0,7);ctx.fill();
+    }else{
+      ctx.globalAlpha=p.life/60;ctx.fillStyle='#ffcc00';
+      ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText(p.txt,p.x,p.y);
+    }
+  });ctx.globalAlpha=1;ctx.textAlign='left';
+
+  // drift indicator (real combo multiplier)
+  if(driftActive){
+    ctx.fillStyle='rgba(255,204,0,0.8)';
+    ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+    ctx.fillText('DRIFT x'+combo+'  +'+driftScore,car.x,car.y-30);
+    ctx.textAlign='left';
+  }
+
+  // nitro bar
+  ctx.fillStyle='#222';ctx.fillRect(W/2-60,H-18,120,10);
+  ctx.fillStyle=nitro>0?'#44ccff':'#333';ctx.fillRect(W/2-60,H-18,120*Math.min(1,nitro/100),10);
+  ctx.fillStyle='#888';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('NITRO',W/2,H-22);ctx.textAlign='left';
+
+  // paused overlay
+  if(paused&&gameState==='play'){
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#ffcc00';ctx.font='bold 42px sans-serif';ctx.textAlign='center';
+    ctx.fillText('PAUSED',W/2,H/2);ctx.textAlign='left';
+  }
+}
+
+document.addEventListener('keydown',function(e){
+  keys[e.key]=true;
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();
+  if(e.key==='p'||e.key==='P'||e.key==='Escape')togglePause();
+});
+document.addEventListener('keyup',function(e){keys[e.key]=false;});
+document.addEventListener('visibilitychange',function(){if(document.hidden&&gameState==='play'&&!paused)togglePause();});
+
+// touch controls -> same keys[] flags as the keyboard
+function bindTouch(id,code){
+  var el=document.getElementById(id);
+  if(!el)return;
+  var n=0;
+  el.addEventListener('touchstart',function(e){e.preventDefault();n++;if(code)keys[code]=true;},{passive:false});
+  var end=function(e){e.preventDefault();n=Math.max(0,n-1);if(n===0&&code)keys[code]=false;};
+  el.addEventListener('touchend',end,{passive:false});
+  el.addEventListener('touchcancel',end,{passive:false});
+  el.addEventListener('contextmenu',function(e){e.preventDefault();});
+}
+document.addEventListener('touchmove',function(e){e.preventDefault();},{passive:false});
+
+if(IS_TOUCH){
+  document.getElementById('touchUI').style.display='block';
+  bindTouch('tL','ArrowLeft');
+  bindTouch('tR','ArrowRight');
+  bindTouch('tGas','ArrowUp');
+  bindTouch('tBrake','ArrowDown');
+  bindTouch('tNitro','Shift');
+}
+document.getElementById('pauseBtn').addEventListener('click',function(e){e.preventDefault();togglePause();});
+
+// canvas fit-to-screen preserving aspect
+function fitScreen(){
+  var pad=document.getElementById('hud').offsetHeight||40;
+  var s=Math.min(window.innerWidth/W,Math.max(0.2,(window.innerHeight-pad-8)/H));
+  cv.style.width=(W*s)+'px';cv.style.height=(H*s)+'px';
+}
+window.addEventListener('resize',fitScreen);
+window.addEventListener('orientationchange',fitScreen);
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+loadBest();
+showMenu();
+fitScreen();
+loop();
+</script>
+</body>
+</html>
